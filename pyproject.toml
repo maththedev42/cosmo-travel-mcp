@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosmo-travel-mcp"
+version = "0.1.0"
+description = "MCP server bundling travel-planning tools: flights, accommodations, driving, and setup checks"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=1.0.0",
+    "httpx>=0.28.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "respx>=0.22.0",
+    "pytest-asyncio>=0.25.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
