@@ -101,6 +101,7 @@ async def test_check_setup_serpapi_key_unset(monkeypatch):
         tool = [t for t in result["tools"] if t["tool"] == name][0]
         assert tool["ready"] is False
         assert "not set" in tool["reason"]
+        assert "serpapi.com" in tool["reason"]
 
     # Driving should still be checked independently
     driving = [t for t in result["tools"] if t["tool"] == "compare_drive_or_fly"][0]
@@ -122,6 +123,7 @@ async def test_check_setup_serpapi_key_invalid():
     ]:
         tool = [t for t in result["tools"] if t["tool"] == name][0]
         assert tool["ready"] is False
+        assert "rejected" in tool["reason"]
         assert "Invalid API key" in tool["reason"]
 
     driving = [t for t in result["tools"] if t["tool"] == "compare_drive_or_fly"][0]
@@ -143,6 +145,8 @@ async def test_check_setup_maps_key_unset(monkeypatch):
     driving = [t for t in result["tools"] if t["tool"] == "compare_drive_or_fly"][0]
     assert driving["ready"] is False
     assert "not set" in driving["reason"]
+    assert "console.cloud.google.com" in driving["reason"]
+    assert "Routes API" in driving["reason"]
 
     flights = [t for t in result["tools"] if t["tool"] == "search_flights"][0]
     assert flights["ready"] is True
@@ -160,6 +164,7 @@ async def test_check_setup_maps_key_invalid():
     driving = [t for t in result["tools"] if t["tool"] == "compare_drive_or_fly"][0]
     assert driving["ready"] is False
     assert "403" in driving["reason"]
+    assert "not set" not in driving["reason"].lower()  # distinguishable from missing
 
     flights = [t for t in result["tools"] if t["tool"] == "search_flights"][0]
     assert flights["ready"] is True
@@ -176,9 +181,14 @@ async def test_check_setup_neither_key_set(monkeypatch):
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
     result = await check_setup()
 
+    serpapi_tools = ["search_flights", "search_multi_city", "search_accommodations", "search_cheapest_dates"]
     for tool in result["tools"]:
         assert tool["ready"] is False
         assert "not set" in tool["reason"]
+        if tool["tool"] in serpapi_tools:
+            assert "serpapi.com" in tool["reason"]
+        else:
+            assert "console.cloud.google.com" in tool["reason"]
 
 
 # ---------------------------------------------------------------------------
@@ -196,3 +206,5 @@ async def test_check_setup_serpapi_http_error():
     flights = [t for t in result["tools"] if t["tool"] == "search_flights"][0]
     assert flights["ready"] is False
     assert "500" in flights["reason"]
+    assert "could not complete" in flights["reason"]
+    assert "not set" not in flights["reason"].lower()

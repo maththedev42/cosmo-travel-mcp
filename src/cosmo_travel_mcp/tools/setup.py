@@ -57,7 +57,7 @@ async def check_setup() -> dict[str, Any]:
             accommodations_status,
             cheapest_dates_status,
         ]:
-            s["reason"] = "SERPAPI_API_KEY is not set"
+            s["reason"] = "SERPAPI_API_KEY is not set — sign up for a free account (100 searches/month) at https://serpapi.com/users/sign_up, then export SERPAPI_API_KEY or pass -e SERPAPI_API_KEY=… on the claude mcp add command (see README)"
     else:
         try:
             async with httpx.AsyncClient() as client:
@@ -76,7 +76,7 @@ async def check_setup() -> dict[str, Any]:
                     accommodations_status,
                     cheapest_dates_status,
                 ]:
-                    s["reason"] = f"SerpAPI key error: {reason}"
+                    s["reason"] = f"SerpAPI key was rejected: {reason}. The key may be invalid or expired — get a new one at https://serpapi.com/users/sign_up"
             else:
                 plan_searches_left = account.get("plan_searches_left", "?")
                 this_month_usage = account.get("this_month_usage", "?")
@@ -100,7 +100,7 @@ async def check_setup() -> dict[str, Any]:
                 accommodations_status,
                 cheapest_dates_status,
             ]:
-                s["reason"] = f"SerpAPI account check failed: {reason}"
+                s["reason"] = f"SerpAPI account check could not complete (HTTP {reason}). The key may be fine — SerpAPI servers may be temporarily unreachable."
         except Exception as exc:
             for s in [
                 flights_status,
@@ -108,13 +108,13 @@ async def check_setup() -> dict[str, Any]:
                 accommodations_status,
                 cheapest_dates_status,
             ]:
-                s["reason"] = f"SerpAPI account check failed: {exc}"
+                s["reason"] = f"SerpAPI account check could not complete: {exc}. The key may be fine — SerpAPI servers may be temporarily unreachable."
 
     # --- Google Maps check (one real API call) ---
     maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
     if not maps_key:
-        driving_status["reason"] = "GOOGLE_MAPS_API_KEY is not set"
+        driving_status["reason"] = "GOOGLE_MAPS_API_KEY is not set — create a key at https://console.cloud.google.com/ with the Routes API enabled (not the legacy Distance Matrix API), then export GOOGLE_MAPS_API_KEY or pass -e GOOGLE_MAPS_API_KEY=… on the claude mcp add command (see README)"
     else:
         try:
             async with httpx.AsyncClient() as client:
@@ -149,10 +149,10 @@ async def check_setup() -> dict[str, Any]:
                     driving_status["ready"] = True
         except httpx.HTTPStatusError as exc:
             driving_status["reason"] = (
-                f"Maps API returned HTTP {exc.response.status_code}"
+                f"Maps API check could not complete (HTTP {exc.response.status_code}). The key may be rejected or the Routes API may not be enabled — verify the key at https://console.cloud.google.com/"
             )
         except Exception as exc:
-            driving_status["reason"] = f"Maps API check failed: {exc}"
+            driving_status["reason"] = f"Maps API check could not complete: {exc}. The key may be fine — Google servers may be temporarily unreachable."
 
     return {
         "tools": [
