@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -64,10 +65,51 @@ def _map_stops(max_stops: str | None) -> int | None:
     return mapped
 
 
+async def _call_serpapi(params: dict[str, Any]) -> dict[str, Any]:
+    """Call SerpAPI and return the JSON response, propagating errors."""
+    api_key = _get_api_key()
+    params = {**params, "engine": "google_flights", "api_key": api_key}
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(SERPAPI_BASE, params=params)
+        resp.raise_for_status()
+        data: dict[str, Any] = resp.json()
+    if "error" in data:
+        raise ValueError(data["error"])
+    return data
+
+
+def _build_base_params(
+    *,
+    adults: int,
+    children: int,
+    cabin_class: str,
+    currency: str,
+    country: str | None,
+    language: str | None,
+    max_stops: str | None,
+) -> dict[str, Any]:
+    """Build the shared query-param dict for SerpAPI flight searches."""
+    params: dict[str, Any] = {
+        "adults": adults,
+        "children": children,
+        "travel_class": _map_cabin_class(cabin_class),
+        "currency": currency,
+    }
+    stops = _map_stops(max_stops)
+    if stops is not None:
+        params["stops"] = stops
+    if country:
+        params["gl"] = country
+    if language:
+        params["hl"] = language
+    return params
+
+
 def _parse_leg(leg: dict[str, Any]) -> dict[str, Any]:
     """Parse a single flight leg from SerpAPI."""
     return {
         "airline": leg.get("airline", ""),
+        "airline_logo": leg.get("airline_logo", ""),
         "flight_number": leg.get("flight_number", ""),
         "departure_airport": leg.get("departure_airport", {}).get("id", ""),
         "departure_airport_name": leg.get("departure_airport", {}).get("name", ""),
@@ -79,95 +121,99 @@ def _parse_leg(leg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _parse_layovers(legs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Extract layovers between consecutive legs."""
-    layovers: list[dict[str, Any]] = []
+def _parse_layovers(legs: list[dict[str, Any]], item: dict[str, Any]) -> list[dict[str, Any]]:
+    """Parse layovers from a flight item.
+
+    Real SerpAPI responses carry a top-level ``layovers`` array on the flight item
+    with ``duration``, ``name``, and ``id`` keys.  If that array is absent, fall
+    back to inferring layover airports from consecutive legs (no duration).
+    """
+    raw_layovers: list[dict[str, Any]] = item.get("layovers", [])
+    if raw_layovers:
+        result: list[dict[str, Any]] = []
+        for lo in raw_layovers:
+            parsed: dict[str, Any] = {
+                "airport": lo.get("id", ""),
+                "airport_name": lo.get("name", ""),
+            }
+            dur = lo.get("duration")
+            if dur is not None:
+                parsed["duration_minutes"] = dur
+            result.append(parsed)
+        return result
+
+    # Fallback: infer layover airports from consecutive legs (no duration data).
+    # _parse_leg maps airport fields to plain IATA strings (not dicts), so we
+    # compare directly instead of calling .get("id") on them.
+    fallback: list[dict[str, Any]] = []
     for i in range(len(legs) - 1):
-        current_arrival = legs[i].get("arrival_airport", {})
-        next_departure = legs[i + 1].get("departure_airport", {})
-        layover_duration = legs[i].get("layover_duration", 0)
-        layovers.append({
-            "airport": current_arrival.get("id", ""),
-            "airport_name": current_arrival.get("name", ""),
-            "duration_minutes": layover_duration,
-        })
-    return layovers
+        this_arr = legs[i].get("arrival_airport", "")
+        next_dep = legs[i + 1].get("departure_airport", "")
+        if this_arr and next_dep and this_arr == next_dep:
+            fallback.append({
+                "airport": this_arr if isinstance(this_arr, str) else this_arr.get("id", ""),
+                "airport_name": this_arr.get("name", "") if isinstance(this_arr, dict) else "",
+            })
+    return fallback
 
 
 def _parse_flight_item(
-    item: dict[str, Any], bucket: str
+    item: dict[str, Any],
+    bucket: str,
+    currency: str,
 ) -> dict[str, Any]:
-    """Parse a single flight result item from SerpAPI."""
-    legs_raw = item.get("flights", [])
+    """Parse a single flight item from a SerpAPI google_flights response."""
+    legs_raw: list[dict[str, Any]] = item.get("flights", [])
     legs = [_parse_leg(leg) for leg in legs_raw]
-    layovers = _parse_layovers(legs_raw)
+    layovers = _parse_layovers(legs, item)
 
     parsed: dict[str, Any] = {
+        "source": bucket,
         "price": item.get("price", 0),
-        "currency": item.get("currency", ""),
+        "currency": currency,
         "total_duration_minutes": item.get("total_duration", 0),
         "stops": len(legs) - 1 if legs else 0,
         "legs": legs,
         "layovers": layovers,
-        "bucket": bucket,
     }
 
-    # Round-trip phase 1: expose departure_token for follow-up
-    if "departure_token" in item:
-        parsed["departure_token"] = item["departure_token"]
+    dt = item.get("departure_token")
+    if dt:
+        parsed["departure_token"] = dt
 
-    # Round-trip phase 2 or one-way: expose booking_token when present
-    if "booking_token" in item:
-        parsed["booking_token"] = item["booking_token"]
+    bt = item.get("booking_token")
+    if bt:
+        parsed["booking_token"] = bt
 
     return parsed
 
 
 def _parse_flights_response(
     data: dict[str, Any],
+    requested_currency: str = "",
 ) -> dict[str, Any]:
-    """Combine best_flights + other_flights into one list."""
-    best = data.get("best_flights", [])
-    other = data.get("other_flights", [])
-    results: list[dict[str, Any]] = []
+    """Parse a SerpAPI google_flights response into a structured result."""
+    currency = data.get("search_parameters", {}).get("currency", requested_currency)
 
+    best: list[dict[str, Any]] = data.get("best_flights", [])
+    other: list[dict[str, Any]] = data.get("other_flights", [])
+
+    flights: list[dict[str, Any]] = []
     for item in best:
-        results.append(_parse_flight_item(item, "best_flights"))
+        flights.append(_parse_flight_item(item, "best_flights", currency))
     for item in other:
-        results.append(_parse_flight_item(item, "other_flights"))
+        flights.append(_parse_flight_item(item, "other_flights", currency))
 
     return {
-        "flights": results,
-        "total_count": len(results),
-        "best_flights_count": len(best),
-        "other_flights_count": len(other),
+        "flights": flights,
+        "total_best": len(best),
+        "total_other": len(other),
+        "search_parameters": data.get("search_parameters", {}),
     }
 
 
 # ---------------------------------------------------------------------------
-# SerpAPI client
-# ---------------------------------------------------------------------------
-
-
-async def _call_serpapi(params: dict[str, Any]) -> dict[str, Any]:
-    """Call SerpAPI and return the JSON body. Raises on HTTP or API errors."""
-    api_key = _get_api_key()
-    params = {**params, "api_key": api_key, "engine": "google_flights"}
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(SERPAPI_BASE, params=params)
-        resp.raise_for_status()
-        data: dict[str, Any] = resp.json()
-
-    # SerpAPI returns {"error": "..."} on failures — propagate verbatim.
-    if "error" in data:
-        raise RuntimeError(data["error"])
-
-    return data
-
-
-# ---------------------------------------------------------------------------
-# Tool implementations
+# Tools
 # ---------------------------------------------------------------------------
 
 
@@ -175,12 +221,12 @@ async def search_flights(
     origin: str,
     destination: str,
     outbound_date: str,
-    return_date: str | None = None,
+    return_date: str = "",
     adults: int = 1,
     children: int = 0,
     cabin_class: str = "economy",
     max_stops: str | None = None,
-    departure_token: str | None = None,
+    departure_token: str = "",
     currency: str = "BRL",
     country: str | None = None,
     language: str | None = None,
@@ -204,69 +250,63 @@ async def search_flights(
     max_stops : str, optional
         One of: any, nonstop, one_or_fewer, two_or_fewer.
     departure_token : str, optional
-        Round-trip phase 2: token from a phase-1 outbound result to fetch return flights.
+        Round-trip phase 2 token from a previous phase-1 result.
     currency : str, default "BRL"
     country : str, optional
-        Two-letter country code for results localization (SerpAPI `gl`).
+        Two-letter country code for geo-localization (SerpAPI ``gl``).
     language : str, optional
-        Two-letter language code for results localization (SerpAPI `hl`).
+        Two-letter language code for localization (SerpAPI ``hl``).
     """
-    # Determine flight type
-    if departure_token:
-        flight_type = 1  # round-trip phase 2
-    elif return_date:
-        flight_type = 1  # round-trip phase 1
-    else:
-        flight_type = 2  # one-way
+    # Validate: departure_token requires return_date for a round-trip phase 2.
+    if departure_token and not return_date:
+        raise ValueError(
+            "departure_token requires return_date — re-send the same params "
+            "as the original round-trip search (including return_date) plus the token."
+        )
 
-    params: dict[str, Any] = {
-        "departure_id": origin,
-        "arrival_id": destination,
-        "outbound_date": outbound_date,
-        "type": flight_type,
-        "travel_class": _map_cabin_class(cabin_class),
-        "adults": adults,
-        "children": children,
-        "currency": currency,
-    }
+    params = _build_base_params(
+        adults=adults,
+        children=children,
+        cabin_class=cabin_class,
+        currency=currency,
+        country=country,
+        language=language,
+        max_stops=max_stops,
+    )
+    params["departure_id"] = origin
+    params["arrival_id"] = destination
+    params["outbound_date"] = outbound_date
 
-    if return_date:
+    if departure_token and return_date:
+        # Round-trip phase 2
+        params["type"] = 1
         params["return_date"] = return_date
-
-    if departure_token:
         params["departure_token"] = departure_token
-
-    stops_val = _map_stops(max_stops)
-    if stops_val is not None:
-        params["stops"] = stops_val
-
-    if country:
-        params["gl"] = country
-    if language:
-        params["hl"] = language
+    elif return_date:
+        # Round-trip phase 1
+        params["type"] = 1
+        params["return_date"] = return_date
+    else:
+        # One-way
+        params["type"] = 2
 
     data = await _call_serpapi(params)
-    result = _parse_flights_response(data)
+    result = _parse_flights_response(data, requested_currency=currency)
 
-    # Annotate phase info for round trips
-    if flight_type == 1 and not departure_token:
-        result["phase"] = "outbound"
-        result["note"] = (
-            "These are outbound options with round-trip total prices. "
-            "Pass departure_token from any item to fetch return flights."
-        )
-    elif departure_token:
-        result["phase"] = "return"
-        result["note"] = (
-            "These are return-flight options for the selected outbound. "
-            "Prices shown are the round-trip total (same as phase 1)."
+    # Annotate phase for round-trip
+    if departure_token:
+        result["phase"] = "return options — these are the return-flight options for the selected outbound."
+    elif return_date:
+        result["phase"] = (
+            "outbound options — prices are round-trip totals; "
+            "pass departure_token to fetch return flights for one of them."
         )
 
     return result
 
 
 async def search_multi_city(
-    legs: list[dict[str, str]],
+    legs: list[dict[str, Any]],
     adults: int = 1,
     children: int = 0,
     cabin_class: str = "economy",
@@ -274,15 +314,13 @@ async def search_multi_city(
     country: str | None = None,
     language: str | None = None,
 ) -> dict[str, Any]:
-    """Search multi-city flights via SerpAPI google_flights engine.
+    """Search multi-city flights via SerpAPI google_flights engine (type=3).
 
     Parameters
     ----------
-    legs : list of {origin, destination, date}
-        Flight legs in order (2-6 legs). Each dict must have:
-        - origin (str): IATA departure code
-        - destination (str): IATA arrival code
-        - date (str): YYYY-MM-DD
+    legs : list[dict]
+        List of leg objects, each with ``origin``, ``destination``, ``date`` keys
+        (and optionally ``times``). Must be 2-6 legs.
     adults : int, default 1
     children : int, default 0
     cabin_class : str, default "economy"
@@ -291,35 +329,35 @@ async def search_multi_city(
     language : str, optional
     """
     if len(legs) < 2:
-        raise ValueError("Multi-city search requires at least 2 legs.")
+        raise ValueError(f"Multi-city requires at least 2 legs, got {len(legs)}.")
     if len(legs) > 6:
-        raise ValueError("Multi-city search supports at most 6 legs.")
+        raise ValueError(f"Multi-city supports at most 6 legs, got {len(legs)}.")
 
-    multi_city_json = []
+    multi_city_json: list[dict[str, Any]] = []
     for leg in legs:
-        entry: dict[str, str] = {
+        entry: dict[str, Any] = {
             "departure_id": leg["origin"],
             "arrival_id": leg["destination"],
             "date": leg["date"],
         }
+        if "times" in leg:
+            entry["times"] = leg["times"]
         multi_city_json.append(entry)
 
-    params: dict[str, Any] = {
-        "type": 3,
-        "multi_city_json": multi_city_json,
-        "travel_class": _map_cabin_class(cabin_class),
-        "adults": adults,
-        "children": children,
-        "currency": currency,
-    }
-
-    if country:
-        params["gl"] = country
-    if language:
-        params["hl"] = language
+    params = _build_base_params(
+        adults=adults,
+        children=children,
+        cabin_class=cabin_class,
+        currency=currency,
+        country=country,
+        language=language,
+        max_stops=None,
+    )
+    params["type"] = 3
+    params["multi_city_json"] = json.dumps(multi_city_json)
 
     data = await _call_serpapi(params)
-    return _parse_flights_response(data)
+    return _parse_flights_response(data, requested_currency=currency)
 
 
 # ---------------------------------------------------------------------------
