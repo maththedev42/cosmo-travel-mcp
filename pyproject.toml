@@ -12,6 +12,9 @@ dependencies = [
     "httpx>=0.28.0",
 ]
 
+[project.scripts]
+cosmo-travel-mcp = "cosmo_travel_mcp.server:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",

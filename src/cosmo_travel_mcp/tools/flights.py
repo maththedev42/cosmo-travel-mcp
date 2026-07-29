@@ -65,10 +65,10 @@ def _map_stops(max_stops: str | None) -> int | None:
     return mapped
 
 
-async def _call_serpapi(params: dict[str, Any]) -> dict[str, Any]:
+async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights") -> dict[str, Any]:
     """Call SerpAPI and return the JSON response, propagating errors."""
     api_key = _get_api_key()
-    params = {**params, "engine": "google_flights", "api_key": api_key}
+    params = {**params, "engine": engine, "api_key": api_key}
     async with httpx.AsyncClient() as client:
         resp = await client.get(SERPAPI_BASE, params=params)
         resp.raise_for_status()

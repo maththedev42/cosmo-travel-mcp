@@ -127,6 +127,7 @@ async def test_search_accommodations_vacation_rentals_param():
             vacation_rentals=True,
         )
         req = mock.calls.last.request
+        assert req.url.params["engine"] == "google_hotels"
         assert "vacation_rentals=true" in str(req.url)
 
 

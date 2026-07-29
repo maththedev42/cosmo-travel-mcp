@@ -177,6 +177,7 @@ async def test_search_cheapest_dates_exact_fit_window():
         )
 
         assert len(mock.calls) == 1
+        assert mock.calls.last.request.url.params["engine"] == "google_flights"
         assert len(result["results"]) == 1
         assert result["results"][0]["outbound_date"] == "2025-12-01"
         assert result["results"][0]["return_date"] == "2025-12-08"
