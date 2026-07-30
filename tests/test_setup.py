@@ -208,3 +208,26 @@ async def test_check_setup_serpapi_http_error():
     assert "500" in flights["reason"]
     assert "could not complete" in flights["reason"]
     assert "not set" not in flights["reason"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Server instructions (prompt 06)
+# ---------------------------------------------------------------------------
+
+def test_server_instructions_non_empty():
+    """Server instructions mention expected anchors."""
+    from cosmo_travel_mcp.server import _INSTRUCTIONS
+    assert len(_INSTRUCTIONS) > 0
+    assert "check_setup" in _INSTRUCTIONS
+    assert "SERPAPI_API_KEY" in _INSTRUCTIONS
+    assert "GOOGLE_MAPS_API_KEY" in _INSTRUCTIONS
+
+def test_server_version_matches_package():
+    """Server version reads from installed package metadata."""
+    from cosmo_travel_mcp.server import __version__
+    assert __version__ == "0.1.0"
+
+def test_server_version_fallback():
+    """Version is set (either from package metadata or fallback)."""
+    from cosmo_travel_mcp.server import __version__
+    assert __version__ in ("0.1.0", "unknown")
