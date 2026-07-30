@@ -60,7 +60,15 @@ This one key unlocks four of the six tools: `search_flights`,
    monthly credit (~$200). The `check_setup` tool makes one real API call to validate
    the key, which costs a fraction of a cent.
 
-### 3. Export the keys
+### 3. Give the keys to the server
+
+> **`export` is not enough for MCP use.** An MCP client starts this server with
+> the environment recorded at registration time — it does not inherit your
+> shell. Pass the keys as `-e` flags on `claude mcp add` (see
+> [Claude Code registration](#claude-code-registration)), or let
+> `cosmo-travel-mcp setup --register` do it.
+
+Exporting only matters when you run the binary yourself, for local development:
 
 ```bash
 export SERPAPI_API_KEY="your-serpapi-key"
