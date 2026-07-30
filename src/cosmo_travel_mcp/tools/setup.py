@@ -154,14 +154,38 @@ async def check_setup() -> dict[str, Any]:
         except Exception as exc:
             driving_status["reason"] = f"Maps API check could not complete: {exc}. The key may be fine — Google servers may be temporarily unreachable."
 
+    result_tools = [
+        flights_status,
+        multi_city_status,
+        accommodations_status,
+        cheapest_dates_status,
+        driving_status,
+    ]
+
+    # Build a human-readable summary, one line per tool.
+    summary_lines: list[str] = []
+    for t in result_tools:
+        if t["ready"]:
+            if t["tool"] == "compare_drive_or_fly":
+                summary_lines.append(f"{t['tool']}: ready (Maps key valid)")
+            elif t["tool"] == "search_cheapest_dates":
+                left = t.get("plan_searches_left", "?")
+                summary_lines.append(
+                    f"{t['tool']}: ready ({left} searches left; "
+                    "each call costs up to 6 searches)"
+                )
+            else:
+                left = t.get("plan_searches_left", "?")
+                summary_lines.append(
+                    f"{t['tool']}: ready ({left} searches left this month)"
+                )
+        else:
+            reason = t.get("reason", "unknown")
+            summary_lines.append(f"{t['tool']}: NOT ready — {reason}")
+
     return {
-        "tools": [
-            flights_status,
-            multi_city_status,
-            accommodations_status,
-            cheapest_dates_status,
-            driving_status,
-        ]
+        "tools": result_tools,
+        "summary": "\n".join(summary_lines),
     }
 
 
