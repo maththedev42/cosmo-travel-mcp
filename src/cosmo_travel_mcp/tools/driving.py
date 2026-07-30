@@ -44,9 +44,18 @@ def _get_maps_api_key() -> str:
 
 
 def _parse_duration(duration_str: str) -> int:
-    """Parse a duration string like ``"12345s"`` into minutes."""
+    """Parse a protobuf Duration string like ``"12345s"`` into whole minutes.
+
+    The Routes API returns protobuf ``Duration`` values in JSON form, whose
+    spec allows a fractional part (``"123.5s"``, ``"3.000000001s"``) as well as
+    plain integer seconds. Parse as float so a fractional response cannot crash
+    the tool, then floor to whole minutes.
+    """
     if duration_str.endswith("s"):
-        return int(duration_str[:-1]) // 60
+        try:
+            return int(float(duration_str[:-1]) // 60)
+        except ValueError:
+            raise ValueError(f"Unexpected duration format: {duration_str!r}") from None
     raise ValueError(f"Unexpected duration format: {duration_str!r}")
 
 

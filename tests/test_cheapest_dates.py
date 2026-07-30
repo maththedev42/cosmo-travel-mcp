@@ -110,6 +110,25 @@ def test_extract_cheapest_price_empty():
     assert _extract_cheapest_price(result) is None
 
 
+def test_extract_cheapest_price_ignores_priceless_items():
+    """A missing price is unknown, not free — it must never win the comparison."""
+    result = {
+        "flights": [
+            {"price": None, "currency": "BRL", "stops": 0},
+            {"price": 700, "currency": "BRL", "stops": 1},
+        ]
+    }
+    cheapest = _extract_cheapest_price(result)
+    assert cheapest is not None
+    assert cheapest["price"] == 700
+
+
+def test_extract_cheapest_price_all_priceless():
+    """If nothing carries a price, report nothing rather than inventing zero."""
+    result = {"flights": [{"price": None, "currency": "BRL", "stops": 0}]}
+    assert _extract_cheapest_price(result) is None
+
+
 # ---------------------------------------------------------------------------
 # search_cheapest_dates tests (mocked HTTP)
 # ---------------------------------------------------------------------------
@@ -151,6 +170,51 @@ async def test_search_cheapest_dates_sampling():
     assert prices == sorted(prices)
     assert "note" in result
     assert "not an exhaustive scan" in result["note"]
+    # Nothing failed, so no `unavailable` key should appear at all.
+    assert "unavailable" not in result
+
+
+@pytest.mark.asyncio
+async def test_search_cheapest_dates_surfaces_failed_dates():
+    """A date whose search fails on transport must be reported, not dropped.
+
+    SerpAPI-level errors (``{"error": ...}``) intentionally propagate — see
+    ``_call_serpapi``. This covers the other case: a per-date network failure,
+    which used to vanish from the output and read as "no flights on that date".
+    """
+    call_count = 0
+
+    def _response(request: httpx.Request):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 2:
+            raise httpx.ConnectError("connection reset")
+        return httpx.Response(
+            200,
+            json={
+                "search_parameters": {"currency": "BRL"},
+                "best_flights": [_flight_item_fixture(price=600)],
+                "other_flights": [],
+            },
+        )
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=_response)
+
+        result = await search_cheapest_dates(
+            origin="GRU", destination="JFK",
+            earliest_departure="2025-12-01",
+            latest_return="2025-12-20",
+            trip_duration_days=7,
+            max_calls=3,
+        )
+
+    assert len(result["results"]) == 2
+    assert "unavailable" in result
+    assert len(result["unavailable"]) == 1
+    assert "ConnectError" in result["unavailable"][0]["error"]
+    # The note must admit the gap rather than implying full coverage.
+    assert "no usable price" in result["note"]
 
 
 @pytest.mark.asyncio

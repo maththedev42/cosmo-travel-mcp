@@ -65,11 +65,15 @@ def _extract_cheapest_price(
 ) -> dict[str, Any] | None:
     """Extract the cheapest flight from a parsed SerpAPI response."""
     flights: list[dict[str, Any]] = result.get("flights", [])
-    if not flights:
+    # Only itineraries with a real price can be compared. An item whose price
+    # SerpAPI omitted is unknown, not free — including it would let it win the
+    # comparison and report a bogus cheapest date.
+    priced = [f for f in flights if f.get("price") is not None]
+    if not priced:
         return None
-    cheapest = min(flights, key=lambda f: f.get("price", float("inf")))
+    cheapest = min(priced, key=lambda f: f["price"])
     return {
-        "price": cheapest.get("price", 0),
+        "price": cheapest["price"],
         "currency": cheapest.get("currency", ""),
         "stops": cheapest.get("stops", 0),
     }
@@ -168,11 +172,21 @@ async def search_cheapest_dates(
             result = _parse_flights_response(data, requested_currency=currency)
         except ValueError:
             raise  # Configuration errors (missing API key) must propagate.
-        except Exception:
-            return None
+        except Exception as exc:
+            # Do not drop this date silently — a quota or network failure that
+            # vanishes from the output reads as "no flights on that date".
+            return {
+                "outbound_date": outbound.isoformat(),
+                "return_date": return_date.isoformat(),
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         cheapest = _extract_cheapest_price(result)
         if cheapest is None:
-            return None
+            return {
+                "outbound_date": outbound.isoformat(),
+                "return_date": return_date.isoformat(),
+                "error": "no priced itineraries returned for this date",
+            }
         return {
             "outbound_date": outbound.isoformat(),
             "return_date": return_date.isoformat(),
@@ -183,17 +197,24 @@ async def search_cheapest_dates(
 
     results = await asyncio.gather(*(_search_one(d) for d in candidates))
 
-    # Filter out failed / empty results.
-    valid: list[dict[str, Any]] = [r for r in results if r is not None]
-    valid.sort(key=lambda r: r["cheapest_price"])
+    priced: list[dict[str, Any]] = [r for r in results if "error" not in r]
+    failed: list[dict[str, Any]] = [r for r in results if "error" in r]
+    priced.sort(key=lambda r: r["cheapest_price"])
 
-    return {
-        "note": (
-            f"Sampled {len(candidates)} outbound dates (max_calls={max_calls}) "
-            f"across the requested window — not an exhaustive scan of every date."
-        ),
-        "results": valid,
-    }
+    note = (
+        f"Sampled {len(candidates)} outbound dates (max_calls={max_calls}) "
+        f"across the requested window — not an exhaustive scan of every date."
+    )
+    if failed:
+        note += (
+            f" {len(failed)} of those dates returned no usable price; "
+            "see `unavailable` for why."
+        )
+
+    out: dict[str, Any] = {"note": note, "results": priced}
+    if failed:
+        out["unavailable"] = failed
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -46,6 +46,18 @@ def test_parse_duration_no_suffix():
         _parse_duration("12345")
 
 
+def test_parse_duration_fractional_seconds():
+    """Protobuf Duration JSON allows a fractional part — it must not crash."""
+    assert _parse_duration("123.5s") == 2  # 123.5s -> 2.058 min -> floor 2
+    assert _parse_duration("3.000000001s") == 0
+    assert _parse_duration("12345.678s") == 205
+
+
+def test_parse_duration_garbage_suffix_still_raises():
+    with pytest.raises(ValueError, match="Unexpected duration format"):
+        _parse_duration("abcs")
+
+
 # ---------------------------------------------------------------------------
 # Successful route
 # ---------------------------------------------------------------------------

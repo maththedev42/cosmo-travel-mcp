@@ -169,7 +169,11 @@ def _parse_flight_item(
 
     parsed: dict[str, Any] = {
         "source": bucket,
-        "price": item.get("price", 0),
+        # No default: SerpAPI omits `price` on some items, and defaulting to 0
+        # makes a priceless itinerary look free — it would then win any
+        # cheapest-price comparison. None means "unknown", which callers can
+        # detect; 0 silently lies.
+        "price": item.get("price"),
         "currency": currency,
         "total_duration_minutes": item.get("total_duration", 0),
         "stops": len(legs) - 1 if legs else 0,
