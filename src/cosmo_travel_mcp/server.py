@@ -19,8 +19,14 @@ count against the monthly search quota).
 
 Env vars and which tools they gate:
 - SERPAPI_API_KEY → search_flights, search_multi_city, search_accommodations,
-  search_cheapest_dates
-- GOOGLE_MAPS_API_KEY → compare_drive_or_fly
+  search_cheapest_dates. Free key (100 searches/month):
+  https://serpapi.com/users/sign_up
+- GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
+  https://console.cloud.google.com/ with the Routes API enabled.
+
+If a key is missing, `check_setup` returns a `setup` field with the exact
+commands to register it — relay those steps to the user rather than improvising
+setup instructions.
 
 Cost warning: search_cheapest_dates spends up to `max_calls` SerpAPI searches
 per invocation (default 6, hard cap 15) against a 100/month free tier. Never

@@ -16,10 +16,65 @@ import httpx
 from .driving import FIELD_MASK, ROUTES_API_BASE, _get_maps_api_key
 
 SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
+SERPAPI_SIGNUP_URL = "https://serpapi.com/users/sign_up"
+GOOGLE_CONSOLE_URL = "https://console.cloud.google.com/"
 
 # A minimal route between two well-known cities for the Maps key check.
 _CHECK_ORIGIN = {"waypoint": {"address": "San Francisco, CA"}}
 _CHECK_DEST = {"waypoint": {"address": "Los Angeles, CA"}}
+
+
+def _setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
+    """Build the walk-through shown when a key is missing.
+
+    Returned once at the top level rather than repeated on every affected tool:
+    the same 40-word remediation echoed five times is noise, and the caller of
+    this tool is often an LLM relaying it to a human. "See the README" is a dead
+    end inside a chat client, so give the actual commands.
+    """
+    steps: list[str] = []
+
+    if need_serpapi:
+        steps.append(
+            f"1. Get a free SerpAPI key — sign up at {SERPAPI_SIGNUP_URL} "
+            "(free tier: 100 searches/month), then copy the key from your "
+            "dashboard. This unlocks flights, multi-city, accommodations and "
+            "cheapest-dates."
+        )
+    if need_maps:
+        steps.append(
+            f"{len(steps) + 1}. Get a Google Maps key — create one at "
+            f"{GOOGLE_CONSOLE_URL} with the **Routes API** enabled (not the "
+            "legacy Distance Matrix API). Billing must be enabled on the "
+            "project, though the free monthly credit covers normal use. This "
+            "unlocks drive-or-fly comparison."
+        )
+
+    env_pairs = []
+    if need_serpapi:
+        env_pairs.append("-e SERPAPI_API_KEY=<your-serpapi-key>")
+    if need_maps:
+        env_pairs.append("-e GOOGLE_MAPS_API_KEY=<your-google-maps-key>")
+    env_line = " \\\n    ".join(env_pairs)
+
+    steps.append(
+        f"{len(steps) + 1}. Give the key(s) to this server. If it is NOT yet "
+        "registered with Claude Code:\n"
+        "  claude mcp add cosmo-travel --scope user \\\n"
+        f"    {env_line} \\\n"
+        "    -- uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp "
+        "cosmo-travel-mcp\n"
+        "If it IS already registered (which it is, since you are calling this "
+        "tool), re-register it so the keys are attached:\n"
+        "  claude mcp remove cosmo-travel --scope user\n"
+        "  …then run the add command above."
+    )
+    steps.append(
+        f"{len(steps) + 1}. Restart the MCP client, then call check_setup "
+        "again to confirm."
+    )
+
+    return "\n\n".join(steps)
 
 
 async def check_setup() -> dict[str, Any]:
@@ -57,7 +112,11 @@ async def check_setup() -> dict[str, Any]:
             accommodations_status,
             cheapest_dates_status,
         ]:
-            s["reason"] = "SERPAPI_API_KEY is not set — sign up for a free account (100 searches/month) at https://serpapi.com/users/sign_up, then export SERPAPI_API_KEY or pass -e SERPAPI_API_KEY=… on the claude mcp add command (see README)"
+            s["reason"] = (
+                "SERPAPI_API_KEY is not set — free key (100 searches/month) at "
+                f"{SERPAPI_SIGNUP_URL}; see the `setup` field for the exact "
+                "command to register it"
+            )
     else:
         try:
             async with httpx.AsyncClient() as client:
@@ -114,7 +173,12 @@ async def check_setup() -> dict[str, Any]:
     maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
     if not maps_key:
-        driving_status["reason"] = "GOOGLE_MAPS_API_KEY is not set — create a key at https://console.cloud.google.com/ with the Routes API enabled (not the legacy Distance Matrix API), then export GOOGLE_MAPS_API_KEY or pass -e GOOGLE_MAPS_API_KEY=… on the claude mcp add command (see README)"
+        driving_status["reason"] = (
+            "GOOGLE_MAPS_API_KEY is not set — create a key at "
+            f"{GOOGLE_CONSOLE_URL} with the Routes API enabled (not the legacy "
+            "Distance Matrix API); see the `setup` field for the exact command "
+            "to register it"
+        )
     else:
         try:
             async with httpx.AsyncClient() as client:
@@ -183,10 +247,20 @@ async def check_setup() -> dict[str, Any]:
             reason = t.get("reason", "unknown")
             summary_lines.append(f"{t['tool']}: NOT ready — {reason}")
 
-    return {
+    out: dict[str, Any] = {
         "tools": result_tools,
         "summary": "\n".join(summary_lines),
     }
+
+    # Only present when something needs configuring, so a healthy setup check
+    # stays short. Keyed off the missing env var rather than `ready`, because a
+    # key that is set but rejected needs a different message than a missing one.
+    need_serpapi = not os.environ.get("SERPAPI_API_KEY", "")
+    need_maps = not os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    if need_serpapi or need_maps:
+        out["setup"] = _setup_guide(need_serpapi=need_serpapi, need_maps=need_maps)
+
+    return out
 
 
 # ---------------------------------------------------------------------------

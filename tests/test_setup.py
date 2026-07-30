@@ -11,6 +11,7 @@ import respx
 from cosmo_travel_mcp.tools.setup import (
     ROUTES_API_BASE,
     SERPAPI_ACCOUNT_URL,
+    SERPAPI_SIGNUP_URL,
     check_setup,
 )
 
@@ -296,3 +297,67 @@ def test_tools_list_keys_unchanged():
     # existing test_check_setup_both_keys_valid already exercises all keys;
     # this test is a gate against a future refactor dropping them.
     assert True  # shape assertion verified in test_check_setup_both_keys_valid
+
+
+# ---------------------------------------------------------------------------
+# Onboarding: the `setup` walk-through
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_setup_guide_present_when_serpapi_key_missing(monkeypatch):
+    """A missing SerpAPI key must produce actionable setup steps, not just a reason."""
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    assert "setup" in result
+    guide = result["setup"]
+    # Where to get the key.
+    assert SERPAPI_SIGNUP_URL in guide
+    assert "100 searches/month" in guide
+    # How to actually attach it — both the fresh and already-registered paths,
+    # since a caller of this tool has by definition already registered.
+    assert "claude mcp add cosmo-travel" in guide
+    assert "claude mcp remove cosmo-travel" in guide
+    assert "-e SERPAPI_API_KEY=" in guide
+
+
+@pytest.mark.asyncio
+async def test_setup_guide_omits_maps_steps_when_only_serpapi_missing(monkeypatch):
+    """Do not tell the user to configure a key they already have."""
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    guide = result["setup"]
+    assert "-e GOOGLE_MAPS_API_KEY=" not in guide
+    assert "Routes API" not in guide
+
+
+@pytest.mark.asyncio
+async def test_no_setup_guide_when_everything_configured():
+    """A healthy check stays short — no onboarding noise."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    assert "setup" not in result
+
+
+@pytest.mark.asyncio
+async def test_per_tool_reasons_point_at_the_guide(monkeypatch):
+    """Reasons stay short and defer to `setup` instead of repeating it five times."""
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    flights = [t for t in result["tools"] if t["tool"] == "search_flights"][0]
+    assert SERPAPI_SIGNUP_URL in flights["reason"]
+    assert "`setup`" in flights["reason"]
+    # The full command block belongs in `setup`, not duplicated per tool.
+    assert "claude mcp add" not in flights["reason"]

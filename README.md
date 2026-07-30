@@ -12,10 +12,25 @@ driving).
 
 ## Getting started
 
+> **Already registered the server without keys?** You do not need this page — call
+> `check_setup` and it returns a `setup` field with the exact commands for your
+> situation. The steps below are the same thing, for reading ahead of time.
+
 ### 1. SerpAPI key (flights + accommodations)
 
-Create a free account at [serpapi.com](https://serpapi.com/users/sign_up). The free
-tier includes **100 searches/month**.
+1. Create a free account at [serpapi.com](https://serpapi.com/users/sign_up) —
+   the free tier includes **100 searches/month**.
+2. Copy the private API key from your dashboard.
+3. Pass it to the server as `SERPAPI_API_KEY` (see step 3 and the registration
+   command below). If the server is already registered without it, remove and
+   re-add it — env vars are fixed at registration time:
+   ```bash
+   claude mcp remove cosmo-travel --scope user
+   # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
+   ```
+
+This one key unlocks four of the six tools: `search_flights`,
+`search_multi_city`, `search_accommodations`, and `search_cheapest_dates`.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
