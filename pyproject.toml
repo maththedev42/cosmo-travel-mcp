@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cosmo-travel-mcp = "cosmo_travel_mcp.server:main"
+cosmo-travel-mcp = "cosmo_travel_mcp.cli:main"
 
 [dependency-groups]
 dev = [

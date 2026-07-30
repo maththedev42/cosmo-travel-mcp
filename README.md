@@ -12,9 +12,23 @@ driving).
 
 ## Getting started
 
-> **Already registered the server without keys?** You do not need this page — call
-> `check_setup` and it returns a `setup` field with the exact commands for your
-> situation. The steps below are the same thing, for reading ahead of time.
+The fastest path — this prompts for the keys, validates them against the real
+APIs, and registers the server with Claude Code:
+
+```bash
+uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp setup --register
+```
+
+Drop `--register` to just print the walk-through without changing anything.
+
+> **Don't have the keys yet?** See **[docs/GETTING_KEYS.md](./docs/GETTING_KEYS.md)**
+> for the full click-path on both providers, what counts against the free quota,
+> and troubleshooting.
+>
+> **Already registered the server without keys?** Call `check_setup` — it returns
+> a `setup` field with the exact commands for your situation.
+
+The rest of this section is the same thing, for reading ahead of time.
 
 ### 1. SerpAPI key (flights + accommodations)
 
@@ -91,6 +105,26 @@ claude mcp add cosmo-travel --scope user \
   -e GOOGLE_MAPS_API_KEY=<your-google-maps-key> \
   -- uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp
 ```
+
+Env vars are fixed at registration time, so adding a key later means replacing
+the registration:
+
+```bash
+claude mcp remove cosmo-travel --scope user
+# …then run the add command above
+```
+
+`cosmo-travel-mcp setup --register` does all of this for you, including the
+remove-first step.
+
+## Command line
+
+| Command | Effect |
+|---|---|
+| `cosmo-travel-mcp` | Run the MCP server over stdio. This is what the client invokes; you rarely run it by hand. |
+| `cosmo-travel-mcp setup` | Print the key-acquisition guide and the registration command. No side effects. |
+| `cosmo-travel-mcp setup --register` | Prompt for keys (hidden input), validate them live, then register the server. Accepts `--scope`, `--name`, `-y`. |
+| `cosmo-travel-mcp --version` | Print the version. |
 
 ## Tools
 
