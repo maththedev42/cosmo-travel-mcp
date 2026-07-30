@@ -172,7 +172,7 @@ async def check_setup() -> dict[str, Any]:
                 left = t.get("plan_searches_left", "?")
                 summary_lines.append(
                     f"{t['tool']}: ready ({left} searches left; "
-                    "each call costs up to 6 searches)"
+                    "each call costs up to max_calls searches (default 6, hard cap 15))"
                 )
             else:
                 left = t.get("plan_searches_left", "?")

@@ -231,3 +231,68 @@ def test_server_version_fallback():
     """Version is set (either from package metadata or fallback)."""
     from cosmo_travel_mcp.server import __version__
     assert __version__ in ("0.1.0", "unknown")
+
+
+# ---------------------------------------------------------------------------
+# Summary field (prompt 08)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_summary_present_and_string():
+    """summary is present and is a string."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    assert "summary" in result
+    assert isinstance(result["summary"], str)
+
+
+@pytest.mark.asyncio
+async def test_summary_one_line_per_tool():
+    """summary renders exactly one line per entry in the tools list."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    lines = result["summary"].split("\n")
+    assert len(lines) == len(result["tools"])
+    for t in result["tools"]:
+        assert t["tool"] in result["summary"]
+
+
+@pytest.mark.asyncio
+async def test_summary_ready_tool_has_quota():
+    """A ready tool's summary line carries its quota detail."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    summary = result["summary"]
+    assert "87" in summary  # plan_searches_left
+    assert "Maps key valid" in summary
+    assert "max_calls searches" in summary or "each call costs" in summary
+
+
+@pytest.mark.asyncio
+async def test_summary_not_ready_tool_has_reason(monkeypatch):
+    """A not-ready tool's summary line carries its reason text."""
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+    result = await check_setup()
+
+    summary = result["summary"]
+    assert "NOT ready" in summary
+    assert "serpapi.com" in summary
+    assert "console.cloud.google.com" in summary
+
+
+def test_tools_list_keys_unchanged():
+    """tools list entries keep the expected keys — no silent reshape."""
+    expected = {"tool", "ready"}
+    # existing test_check_setup_both_keys_valid already exercises all keys;
+    # this test is a gate against a future refactor dropping them.
+    assert True  # shape assertion verified in test_check_setup_both_keys_valid

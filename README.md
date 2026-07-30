@@ -55,14 +55,18 @@ uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp
 
 ### 5. Verify setup
 
-Call `check_setup` first — it confirms both keys work before you spend quota:
+Call `check_setup` first — it confirms both keys work before you spend quota.
+Example output when both keys are valid:
 
 ```
-flights: ready (SerpAPI key valid, 87 searches left this month)
-accommodations: ready (same key)
-driving comparison: ready (Maps key valid)
-cheapest-dates search: ready (same key as flights; each call costs up to 6 searches)
+search_flights: ready (87 searches left this month)
+search_multi_city: ready (87 searches left this month)
+search_accommodations: ready (87 searches left this month)
+search_cheapest_dates: ready (87 searches left; each call costs up to max_calls searches (default 6, hard cap 15))
+compare_drive_or_fly: ready (Maps key valid)
 ```
+
+When a key is missing, the relevant tools show `NOT ready` with a remediation hint.
 
 ## Claude Code registration
 
