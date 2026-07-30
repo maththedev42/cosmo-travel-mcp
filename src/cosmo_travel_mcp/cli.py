@@ -62,6 +62,22 @@ def mask(secret: str) -> str:
     return f"{secret[:4]}…{secret[-4:]}"
 
 
+def own_binary() -> str:
+    """Absolute path to this console script, for use in the registration.
+
+    Registering the bare name would depend on the MCP client inheriting a PATH
+    that includes uv's tool bin directory, which it often does not. Symlinks
+    are resolved because ``~/.local/bin`` entries point into the tool venv.
+    """
+    found = shutil.which(PACKAGE_NAME)
+    if found:
+        return os.path.realpath(found)
+    argv0 = sys.argv[0] or ""
+    if os.path.sep in argv0:
+        return os.path.realpath(argv0)
+    return PACKAGE_NAME
+
+
 def _is_interactive() -> bool:
     """Whether we can prompt for secrets.
 
@@ -124,7 +140,13 @@ def print_guide(*, scope: str = "user", name: str = SERVER_NAME) -> None:
     print("  Interactive — prompts for the keys, checks them, registers:")
     print(f"    {PACKAGE_NAME} setup --register\n")
     print("  Or by hand:")
-    print(f"    {register_command(scope=scope, name=name, indent='      ')}\n")
+    print(
+        "    "
+        + register_command(
+            scope=scope, name=name, binary=own_binary(), indent="      "
+        )
+        + "\n"
+    )
     print(
         "  Env vars are fixed at registration time, so an already-registered\n"
         f"  server has to be replaced:\n"
@@ -208,7 +230,7 @@ def register_flow(*, scope: str, name: str, assume_yes: bool) -> int:
         print(
             "setup --register needs an interactive terminal (it prompts for "
             "secrets).\nRun it in a shell, or register by hand:\n\n"
-            f"{register_command(scope=scope, name=name)}",
+            f"{register_command(scope=scope, name=name, binary=own_binary())}",
             file=sys.stderr,
         )
         return 2
@@ -217,7 +239,7 @@ def register_flow(*, scope: str, name: str, assume_yes: bool) -> int:
         print(
             "The `claude` CLI is not on PATH, so this command cannot register "
             "the server for you.\nInstall Claude Code, or run:\n\n"
-            f"{register_command(scope=scope, name=name)}",
+            f"{register_command(scope=scope, name=name, binary=own_binary())}",
             file=sys.stderr,
         )
         return 2
@@ -267,6 +289,7 @@ def register_flow(*, scope: str, name: str, assume_yes: bool) -> int:
             maps=bool(maps_key),
             serpapi_value=mask(serpapi_key or ""),
             maps_value=mask(maps_key or ""),
+            binary=own_binary(),
             indent="      ",
         )
     )
@@ -290,6 +313,7 @@ def register_flow(*, scope: str, name: str, assume_yes: bool) -> int:
             maps_key=maps_key,
             scope=scope,
             name=name,
+            binary=own_binary(),
         ),
         what="claude mcp add",
     ):

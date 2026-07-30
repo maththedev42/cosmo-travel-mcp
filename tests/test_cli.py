@@ -16,6 +16,7 @@ import respx
 from cosmo_travel_mcp import cli
 from cosmo_travel_mcp.onboarding import (
     MAPS_ENV,
+    PACKAGE_NAME,
     REPO_URL,
     SERPAPI_ENV,
     SERPAPI_SIGNUP_URL,
@@ -24,8 +25,9 @@ from cosmo_travel_mcp.onboarding import (
     register_argv,
     register_command,
     remove_command,
+    install_command,
+    launch_argv,
     setup_guide,
-    uvx_argv,
 )
 from cosmo_travel_mcp.tools.setup import (
     ROUTES_API_BASE,
@@ -131,7 +133,7 @@ def test_register_argv_is_execvp_ready():
     assert f"{SERPAPI_ENV}=sk-abc" in argv
     assert f"{MAPS_ENV}=AIza-xyz" in argv
     # Everything after the bare `--` is the launch command, not flags for claude.
-    assert argv[argv.index("--") + 1 :] == uvx_argv()
+    assert argv[argv.index("--") + 1 :] == launch_argv()
 
 
 def test_register_argv_omits_keys_that_were_skipped():
@@ -150,7 +152,39 @@ def test_register_command_uses_placeholders_not_secrets():
     cmd = register_command()
     assert f"-e {SERPAPI_ENV}=<your-serpapi-key>" in cmd
     assert f"-e {MAPS_ENV}=<your-google-maps-key>" in cmd
-    assert f"git+{REPO_URL}" in cmd
+
+
+def test_registration_launches_an_installed_binary_not_uvx():
+    """`uvx --from git+…` re-resolves on every launch and blows the client's
+    30s stdio startup timeout — measured at >120s cold. Registration must
+    point at something already installed."""
+    argv = register_argv(serpapi_key="k")
+    cmd = register_command()
+    for surface in (" ".join(argv), cmd):
+        assert "uvx" not in surface
+        assert f"git+{REPO_URL}" not in surface
+    assert argv[-1] == PACKAGE_NAME
+
+
+def test_install_command_installs_from_the_repo():
+    assert install_command() == f"uv tool install git+{REPO_URL}"
+
+
+def test_register_argv_accepts_an_absolute_binary_path():
+    argv = register_argv(serpapi_key="k", binary="/opt/bin/cosmo-travel-mcp")
+    assert argv[-1] == "/opt/bin/cosmo-travel-mcp"
+
+
+def test_own_binary_resolves_to_an_absolute_path(monkeypatch, tmp_path):
+    """A client spawning the server may not inherit the shell PATH."""
+    real = tmp_path / "real" / PACKAGE_NAME
+    real.parent.mkdir()
+    real.write_text("#!/bin/sh\n")
+    link = tmp_path / PACKAGE_NAME
+    link.symlink_to(real)
+
+    monkeypatch.setattr(cli.shutil, "which", lambda _: str(link))
+    assert cli.own_binary() == str(real)  # symlink resolved
 
 
 # ---------------------------------------------------------------------------
@@ -349,14 +383,14 @@ def test_tool_guide_and_cli_share_one_command():
     guide = setup_guide(need_serpapi=True, need_maps=True)
     assert f"claude mcp add {SERVER_NAME} --scope user" in guide
     assert remove_command() in guide
-    assert " ".join(uvx_argv()) in guide
+    assert install_command() in guide
 
 
 def test_readme_documents_the_same_registration_command():
     readme = (REPO_ROOT / "README.md").read_text()
     assert f"claude mcp add {SERVER_NAME} --scope user" in readme
     assert f"-e {SERPAPI_ENV}=" in readme
-    assert " ".join(uvx_argv()) in readme
+    assert install_command() in readme
 
 
 def test_getting_keys_doc_exists_and_covers_both_providers():

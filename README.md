@@ -16,7 +16,8 @@ The fastest path — this prompts for the keys, validates them against the real
 APIs, and registers the server with Claude Code:
 
 ```bash
-uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp setup --register
+uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+cosmo-travel-mcp setup --register
 ```
 
 Drop `--register` to just print the walk-through without changing anything.
@@ -75,20 +76,20 @@ export SERPAPI_API_KEY="your-serpapi-key"
 export GOOGLE_MAPS_API_KEY="your-google-maps-key"
 ```
 
-### 4. Install and run
-
-**From this repo (local):**
+### 4. Install
 
 ```bash
-uv tool install .
-cosmo-travel-mcp
+uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp          # from GitHub
+uv tool install .                 # or from a local clone
 ```
 
-**From GitHub (no clone needed):**
+That puts a `cosmo-travel-mcp` binary on your PATH. Add `--force` to upgrade.
 
-```bash
-uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp
-```
+> **Do not register `uvx --from git+…` as the launch command.** uvx re-resolves
+> the git dependency every time the server starts — measured at over two
+> minutes on a cold cache, against the 30-second startup budget an MCP client
+> allows a stdio server. It will be reported as *Failed to connect*. Install
+> the tool once and register the resulting binary.
 
 ### 5. Verify setup
 
@@ -108,11 +109,16 @@ When a key is missing, the relevant tools show `NOT ready` with a remediation hi
 ## Claude Code registration
 
 ```bash
+uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+
 claude mcp add cosmo-travel --scope user \
   -e SERPAPI_API_KEY=<your-serpapi-key> \
   -e GOOGLE_MAPS_API_KEY=<your-google-maps-key> \
-  -- uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp
+  -- "$(which cosmo-travel-mcp)"
 ```
+
+Use the absolute path — a client spawns the server without necessarily
+inheriting the PATH that makes the bare name resolvable.
 
 Env vars are fixed at registration time, so adding a key later means replacing
 the registration:

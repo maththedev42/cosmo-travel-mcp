@@ -13,7 +13,8 @@ independently.
 register the server:
 
 ```bash
-uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp setup --register
+uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+cosmo-travel-mcp setup --register
 ```
 
 ---
@@ -108,8 +109,13 @@ registers the server.
 claude mcp add cosmo-travel --scope user \
   -e SERPAPI_API_KEY=<your-serpapi-key> \
   -e GOOGLE_MAPS_API_KEY=<your-google-maps-key> \
-  -- uvx --from git+https://github.com/maththedev42/cosmo-travel-mcp cosmo-travel-mcp
+  -- "$(which cosmo-travel-mcp)"
 ```
+
+Register the **installed binary**, by absolute path. Registering
+`uvx --from git+…` makes the server re-resolve its git dependency on every
+launch, which takes far longer than the 30 seconds a client waits for a stdio
+server to come up — the client reports *Failed to connect*.
 
 If the server is already registered, replace it:
 
@@ -123,6 +129,19 @@ Then restart your MCP client and ask it to call `check_setup`.
 ---
 
 ## Troubleshooting
+
+**The client shows `✘ Failed to connect` / "connection timed out after 30000ms".**
+Almost always the launch command is `uvx --from git+…`. uvx re-resolves the git
+dependency on every start — over two minutes on a cold cache — and the client
+gives a stdio server 30 seconds. Install the tool once and register the binary:
+
+```bash
+uv tool install --force git+https://github.com/maththedev42/cosmo-travel-mcp
+claude mcp remove cosmo-travel --scope user
+claude mcp add cosmo-travel --scope user -- "$(which cosmo-travel-mcp)"
+```
+
+Startup is then ~3 seconds. Verify with `claude mcp get cosmo-travel`.
 
 **`check_setup` says a key is "not set" after I registered it.**
 The key was not attached to the registration. Env vars come from the `-e` flags

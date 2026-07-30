@@ -38,9 +38,24 @@ SERPAPI_TOOLS = (
 MAPS_TOOLS = ("compare_drive_or_fly",)
 
 
-def uvx_argv() -> list[str]:
-    """The command an MCP client runs to launch this server."""
-    return ["uvx", "--from", f"git+{REPO_URL}", PACKAGE_NAME]
+def install_command() -> str:
+    """Install this server as a standalone tool.
+
+    Registration must point at an installed binary, not at
+    ``uvx --from git+…``. uvx re-resolves the git dependency on every launch,
+    which measured well over two minutes on a cold cache — an MCP client gives
+    a stdio server 30 seconds to come up and then reports it as failed.
+    """
+    return f"uv tool install git+{REPO_URL}"
+
+
+def launch_argv(binary: str = PACKAGE_NAME) -> list[str]:
+    """The command an MCP client runs to launch this server.
+
+    ``binary`` should be an absolute path: a client spawns the server without
+    necessarily inheriting the shell PATH that makes the bare name resolvable.
+    """
+    return [binary]
 
 
 def register_argv(
@@ -49,6 +64,7 @@ def register_argv(
     maps_key: str | None = None,
     scope: str = "user",
     name: str = SERVER_NAME,
+    binary: str = PACKAGE_NAME,
 ) -> list[str]:
     """Build the ``claude mcp add`` argv, ready for ``subprocess.run``.
 
@@ -61,7 +77,7 @@ def register_argv(
         argv += ["-e", f"{SERPAPI_ENV}={serpapi_key}"]
     if maps_key:
         argv += ["-e", f"{MAPS_ENV}={maps_key}"]
-    argv += ["--", *uvx_argv()]
+    argv += ["--", *launch_argv(binary)]
     return argv
 
 
@@ -73,6 +89,7 @@ def register_command(
     name: str = SERVER_NAME,
     serpapi_value: str = SERPAPI_PLACEHOLDER,
     maps_value: str = MAPS_PLACEHOLDER,
+    binary: str = PACKAGE_NAME,
     indent: str = "  ",
 ) -> str:
     """Render the ``claude mcp add`` command as copy-pasteable shell text."""
@@ -81,7 +98,7 @@ def register_command(
         lines.append(f"-e {SERPAPI_ENV}={serpapi_value}")
     if maps:
         lines.append(f"-e {MAPS_ENV}={maps_value}")
-    lines.append(f"-- {' '.join(uvx_argv())}")
+    lines.append(f"-- {' '.join(launch_argv(binary))}")
     return (" \\\n" + indent).join(lines)
 
 
@@ -187,11 +204,13 @@ def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
     )
     steps.append(
         f"{len(steps) + 1}. Give the key(s) to this server. The fastest way is "
-        "to run this in a terminal, which prompts for the keys, checks them "
-        "against the real APIs, and registers the server for you:\n"
-        f"  uvx --from git+{REPO_URL} {PACKAGE_NAME} setup --register\n"
+        "to run these two commands in a terminal — the second prompts for the "
+        "keys, checks them against the real APIs, and registers the server:\n"
+        f"  {install_command()}\n"
+        f"  {PACKAGE_NAME} setup --register\n"
         "To do it by hand instead — if it is NOT yet registered with Claude "
-        "Code:\n"
+        "Code (use the absolute path from `which cosmo-travel-mcp`, since the "
+        "client may not inherit your PATH):\n"
         f"  {add_cmd}\n"
         "If it IS already registered (which it is, since you are calling this "
         "tool), re-register it so the keys are attached:\n"
