@@ -41,12 +41,13 @@ mcp = FastMCP(
 def main() -> None:
     """Run the MCP server over stdio."""
     # Import and register tool modules.
-    from .tools import cheapest_dates, driving, flights, hotels, setup
+    from .tools import cheapest_dates, driving, flights, hotels, prompts, setup
 
     flights.register(mcp)
     cheapest_dates.register(mcp)
     driving.register(mcp)
     hotels.register(mcp)
     setup.register(mcp)
+    prompts.register(mcp)
 
     mcp.run()
