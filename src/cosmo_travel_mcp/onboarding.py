@@ -124,6 +124,38 @@ def maps_instructions() -> list[str]:
     ]
 
 
+_KEY_HINTS = {
+    SERPAPI_ENV: (
+        f"get a free key at {SERPAPI_SIGNUP_URL} "
+        f"({FREE_TIER_SEARCHES} searches/month)"
+    ),
+    MAPS_ENV: (
+        f"create one at {GOOGLE_CONSOLE_URL} with the Routes API enabled"
+    ),
+}
+
+
+def missing_key_message(env_name: str) -> str:
+    """Error text for a tool invoked without its API key.
+
+    A model that calls a tool cold — without calling ``check_setup`` first —
+    sees only this string, so it has to carry the whole remediation. It states
+    the one thing a caller cannot work out on its own: that ``export`` in a
+    shell does nothing, because an MCP server receives its environment when it
+    is *registered*. The previous wording told users to export the variable,
+    which sends them off to fix a problem that stays broken.
+    """
+    hint = _KEY_HINTS.get(env_name, "obtain the key")
+    return (
+        f"{env_name} is not set, so this tool cannot run. To fix it: {hint}, "
+        f"then run `{PACKAGE_NAME} setup --register` in a terminal. Call "
+        "`check_setup` for the full walk-through including the manual "
+        "commands. Note: exporting the variable in a shell has no effect — an "
+        "MCP server receives its environment at registration time, so a key "
+        "added later requires re-registering the server."
+    )
+
+
 def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
     """Build the walk-through shown when a key is missing.
 

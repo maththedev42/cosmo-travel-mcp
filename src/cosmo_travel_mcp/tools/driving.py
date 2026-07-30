@@ -20,6 +20,8 @@ from typing import Any
 
 import httpx
 
+from ..onboarding import MAPS_ENV, missing_key_message
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -35,11 +37,9 @@ FIELD_MASK = "originIndex,destinationIndex,status,condition,distanceMeters,durat
 
 def _get_maps_api_key() -> str:
     """Read GOOGLE_MAPS_API_KEY from the environment."""
-    key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    key = os.environ.get(MAPS_ENV, "")
     if not key:
-        raise ValueError(
-            "GOOGLE_MAPS_API_KEY is not set — see the README for how to get one."
-        )
+        raise ValueError(missing_key_message(MAPS_ENV))
     return key
 
 

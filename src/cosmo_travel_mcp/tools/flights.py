@@ -8,6 +8,8 @@ from typing import Any
 
 import httpx
 
+from ..onboarding import SERPAPI_ENV, missing_key_message
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -34,12 +36,9 @@ STOPS_MAP: dict[str, int] = {
 
 
 def _get_api_key() -> str:
-    key = os.environ.get("SERPAPI_API_KEY", "")
+    key = os.environ.get(SERPAPI_ENV, "")
     if not key:
-        raise ValueError(
-            "SERPAPI_API_KEY is not set — sign up for a free account at "
-            "serpapi.com and export the variable."
-        )
+        raise ValueError(missing_key_message(SERPAPI_ENV))
     return key
 
 

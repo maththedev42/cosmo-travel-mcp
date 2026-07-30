@@ -20,6 +20,7 @@ from cosmo_travel_mcp.onboarding import (
     SERPAPI_ENV,
     SERPAPI_SIGNUP_URL,
     SERVER_NAME,
+    missing_key_message,
     register_argv,
     register_command,
     remove_command,
@@ -287,6 +288,55 @@ async def test_probe_maps_rejects_a_denied_key():
     assert result["ok"] is False
     assert "403" in result["reason"]
     assert "Routes API may not be enabled" in result["reason"]
+
+
+# ---------------------------------------------------------------------------
+# Missing-key errors
+#
+# A model that calls a tool without calling check_setup first sees only the
+# exception text, so that text has to be self-sufficient.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("env", [SERPAPI_ENV, MAPS_ENV])
+def test_missing_key_message_is_self_sufficient(env):
+    msg = missing_key_message(env)
+
+    assert env in msg
+    assert "is not set" in msg  # anchor other tests already match on
+    assert "check_setup" in msg
+    assert "setup --register" in msg
+    # The trap worth naming explicitly: shell export does nothing for an MCP
+    # server, so advice to export sends the user to fix the wrong thing.
+    assert "exporting the variable in a shell has no effect" in msg
+    # "see the README" is unreachable from inside a chat client.
+    assert "README" not in msg
+
+
+def test_missing_key_message_points_at_the_right_provider():
+    assert SERPAPI_SIGNUP_URL in missing_key_message(SERPAPI_ENV)
+    assert "console.cloud.google.com" in missing_key_message(MAPS_ENV)
+    assert "Routes API" in missing_key_message(MAPS_ENV)
+    # No cross-contamination: a missing flights key must not send the user to
+    # Google Cloud.
+    assert "console.cloud.google.com" not in missing_key_message(SERPAPI_ENV)
+
+
+def test_key_getters_raise_the_shared_message(monkeypatch):
+    """Both gated code paths use the same text — no per-module wording."""
+    from cosmo_travel_mcp.tools.driving import _get_maps_api_key
+    from cosmo_travel_mcp.tools.flights import _get_api_key
+
+    monkeypatch.delenv(SERPAPI_ENV, raising=False)
+    monkeypatch.delenv(MAPS_ENV, raising=False)
+
+    with pytest.raises(ValueError) as serpapi_exc:
+        _get_api_key()
+    assert str(serpapi_exc.value) == missing_key_message(SERPAPI_ENV)
+
+    with pytest.raises(ValueError) as maps_exc:
+        _get_maps_api_key()
+    assert str(maps_exc.value) == missing_key_message(MAPS_ENV)
 
 
 # ---------------------------------------------------------------------------
