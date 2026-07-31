@@ -254,7 +254,10 @@ def test_parse_price_insights_no_level():
     assert result is not None
     assert "price_level" not in result
     assert "lowest_price" in result
-    assert "advice" in result
+    assert (
+        result["advice"]
+        == "The lowest recent price was 5000 USD, and the typical range is 4800–6200 USD."
+    )
 
 
 def test_parse_price_insights_bare_minimum():
@@ -266,7 +269,43 @@ def test_parse_price_insights_bare_minimum():
     assert "price_level" not in result
     assert "price_history" not in result
     # Advice: single clause, ends with period.
-    assert result["advice"] == "the lowest recent price was 500 EUR."
+    assert result["advice"] == "The lowest recent price was 500 EUR."
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ({"price_level": "high"}, "Prices are currently high for this route."),
+        ({"lowest_price": 500}, "The lowest recent price was 500 BRL."),
+        ({"typical_price_range": [4800, 6200]}, "The typical range is 4800–6200 BRL."),
+        (
+            {"lowest_price": 5000, "typical_price_range": [4800, 6200]},
+            "The lowest recent price was 5000 BRL, and the typical range is 4800–6200 BRL.",
+        ),
+        (
+            {"price_level": "low", "lowest_price": 5416, "typical_price_range": [5800, 7500]},
+            "Prices are currently low for this route: the lowest recent price was 5416 BRL, "
+            "and the typical range is 5800–7500 BRL.",
+        ),
+    ],
+)
+def test_advice_is_grammatical_for_every_field_combination(raw, expected):
+    """Every subset of price-insight fields must compose a well-formed sentence.
+
+    Asserts the whole string: substring checks passed while the composer was
+    emitting fragments like 'Prices are currently high for this route: .'
+    """
+    result = _parse_price_insights(raw, "BRL")
+    assert result is not None
+    assert result["advice"] == expected
+
+
+def test_parse_price_insights_history_only_is_preserved():
+    """A payload carrying only price_history must keep it, not drop the whole object."""
+    result = _parse_price_insights({"price_history": [[1750034400, 500]]}, "BRL")
+    assert result is not None
+    assert result["price_history"] == [{"date": "2025-06-16", "price": 500}]
+    assert "advice" not in result
 
 
 def test_parse_price_insights_no_meaningful_fields():

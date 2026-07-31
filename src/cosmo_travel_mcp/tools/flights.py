@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -311,22 +312,28 @@ def _compose_advice(
     currency_label = currency or ""
 
     if level:
-        clauses.append(f"Prices are currently {level} for this route")
+        clauses.append(f"prices are currently {level} for this route")
 
     if lowest is not None:
         clauses.append(f"the lowest recent price was {lowest} {currency_label}".rstrip())
 
     if trange and isinstance(trange, list) and len(trange) == 2:
-        clauses.append(f"and the typical range is {trange[0]}–{trange[1]} {currency_label}".rstrip())
+        clauses.append(f"the typical range is {trange[0]}–{trange[1]} {currency_label}".rstrip())
 
     if not clauses:
         return None
 
-    # First clause ends with a period; extra clauses are comma-joined.
+    # Each clause is a standalone fragment, so the connectors depend on how many
+    # survived: the price-level clause (when present) heads the sentence and the
+    # figures that support it follow the colon.
     if len(clauses) == 1:
-        return clauses[0] + "."
+        sentence = clauses[0]
+    elif len(clauses) == 2:
+        sentence = f"{clauses[0]}, and {clauses[1]}"
+    else:
+        sentence = f"{clauses[0]}: {clauses[1]}, and {clauses[2]}"
 
-    return "; ".join(clauses) + "."
+    return sentence[0].upper() + sentence[1:] + "."
 
 
 def _parse_price_insights(
@@ -335,7 +342,7 @@ def _parse_price_insights(
 ) -> dict[str, Any] | None:
     """Normalize SerpAPI ``price_insights`` into a structured object.
 
-    Converts ``price_history`` unix-second timestamps into ISO-8601 UTZ dates
+    Converts ``price_history`` unix-second timestamps into ISO-8601 UTC dates
     and composes a human-readable ``advice`` string from the available data.
 
     Returns ``None`` when the input is missing or the dict carries no usable
@@ -349,10 +356,6 @@ def _parse_price_insights(
     level = price_insights.get("price_level")
     trange = price_insights.get("typical_price_range")
 
-    # If every meaningful field is missing, treat as absent.
-    if lowest is None and level is None and (not trange or trange == []):
-        return None
-
     result: dict[str, Any] = {}
 
     if lowest is not None:
@@ -362,11 +365,9 @@ def _parse_price_insights(
     if trange and isinstance(trange, list) and len(trange) == 2:
         result["typical_price_range"] = trange
 
-    # Price history: unix seconds → ISO-8601 UTZ date string.
+    # Price history: unix seconds → ISO-8601 UTC date string.
     raw_history = price_insights.get("price_history")
     if raw_history and isinstance(raw_history, list):
-        from datetime import datetime, timezone
-
         history: list[dict[str, Any]] = []
         for point in raw_history:
             if not isinstance(point, list) or len(point) < 2:
