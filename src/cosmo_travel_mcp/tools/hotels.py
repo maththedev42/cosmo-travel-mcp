@@ -13,6 +13,72 @@ from typing import Any
 
 from .flights import SERPAPI_BASE, _call_serpapi, _get_api_key
 
+# ---------------------------------------------------------------------------
+# Validation helpers
+# ---------------------------------------------------------------------------
+
+# SerpAPI google_hotels sort_by codes (verified 2026-07-31):
+#   3  = lowest price
+#   8  = highest rating
+#   13 = most reviewed
+_SORT_MAP: dict[str, int] = {
+    "lowest_price": 3,
+    "highest_rating": 8,
+    "most_reviewed": 13,
+}
+
+# SerpAPI google_hotels rating codes:
+#   7 = 3.5+
+#   8 = 4.0+
+#   9 = 4.5+
+_RATING_MAP: dict[float, int] = {3.5: 7, 4.0: 8, 4.5: 9}
+
+_VALID_RATINGS_S = ", ".join(str(r) for r in sorted(_RATING_MAP))
+
+
+def _validate_sort_by(value: str) -> int:
+    """Map a human-friendly sort name to the engine code, or raise ValueError."""
+    code = _SORT_MAP.get(value)
+    if code is None:
+        raise ValueError(
+            f"sort_by must be one of {sorted(_SORT_MAP)!r}, got {value!r}"
+        )
+    return code
+
+
+def _validate_min_rating(value: float) -> int:
+    """Map a rating threshold (3.5/4.0/4.5) to the engine code, or raise ValueError."""
+    code = _RATING_MAP.get(value)
+    if code is None:
+        raise ValueError(
+            f"min_rating must be one of {_VALID_RATINGS_S}, got {value}"
+        )
+    return code
+
+
+def _validate_hotel_class(value: str, *, vacation_rentals: bool) -> list[int]:
+    """Parse hotel_class string and raise if used with vacation_rentals=True."""
+    if vacation_rentals:
+        raise ValueError(
+            "hotel_class cannot be used with vacation_rentals=True — "
+            "the engine does not apply class filters to vacation rentals."
+        )
+    classes: list[int] = []
+    for part in value.split(","):
+        part = part.strip()
+        try:
+            cls_ = int(part)
+        except ValueError:
+            raise ValueError(
+                f"hotel_class values must be integers 2–5, got {part!r}"
+            ) from None
+        if cls_ < 2 or cls_ > 5:
+            raise ValueError(
+                f"hotel_class values must be 2–5, got {cls_}"
+            )
+        classes.append(cls_)
+    return classes
+
 
 def _parse_property(item: dict[str, Any]) -> dict[str, Any]:
     """Parse a single property from a SerpAPI google_hotels response."""
@@ -69,6 +135,10 @@ async def search_accommodations(
     language: str | None = None,
     min_price: int | None = None,
     max_price: int | None = None,
+    sort_by: str | None = None,
+    min_rating: float | None = None,
+    hotel_class: str | None = None,
+    free_cancellation: bool = False,
 ) -> dict[str, Any]:
     """Search for accommodations via SerpAPI's Google Hotels engine.
 
@@ -89,7 +159,17 @@ async def search_accommodations(
         language: Language code (hl parameter).
         min_price: Minimum nightly rate.
         max_price: Maximum nightly rate.
+        sort_by: One of "lowest_price", "highest_rating", "most_reviewed".
+        min_rating: Minimum guest rating — one of 3.5, 4.0, 4.5.
+        hotel_class: Comma-separated hotel star ratings 2–5 (e.g. "3,4,5").
+            Cannot be used with ``vacation_rentals=True``.
+        free_cancellation: Filter to properties with free cancellation.
     """
+    # Validate hotel_class early (raises on conflict with vacation_rentals).
+    _hotel_classes: list[int] | None = None
+    if hotel_class is not None:
+        _hotel_classes = _validate_hotel_class(hotel_class, vacation_rentals=vacation_rentals)
+
     params: dict[str, Any] = {
         "q": location,
         "check_in_date": check_in_date,
@@ -110,6 +190,14 @@ async def search_accommodations(
         params["min_price"] = min_price
     if max_price is not None:
         params["max_price"] = max_price
+    if sort_by is not None:
+        params["sort_by"] = _validate_sort_by(sort_by)
+    if min_rating is not None:
+        params["rating"] = _validate_min_rating(min_rating)
+    if _hotel_classes is not None:
+        params["hotel_class"] = ",".join(str(c) for c in _hotel_classes)
+    if free_cancellation:
+        params["free_cancellation"] = "true"
 
     data = await _call_serpapi(params, engine="google_hotels")
 
