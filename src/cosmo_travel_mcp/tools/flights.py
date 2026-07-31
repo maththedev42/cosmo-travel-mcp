@@ -337,7 +337,7 @@ def _compose_advice(
 
 
 def _parse_price_insights(
-    price_insights: dict[str, Any],
+    price_insights: dict[str, Any] | None,
     currency: str,
 ) -> dict[str, Any] | None:
     """Normalize SerpAPI ``price_insights`` into a structured object.
