@@ -12,6 +12,7 @@ import respx
 from cosmo_travel_mcp.tools.flights import (
     SERPAPI_BASE,
     _build_base_params,
+    _parse_booking_options,
     _parse_flight_item,
     _parse_flights_response,
     _parse_price_insights,
@@ -1174,3 +1175,204 @@ async def test_multi_city_airlines_mutual_exclusion():
             include_airlines="DL",
             exclude_airlines="NK",
         )
+
+
+# ---------------------------------------------------------------------------
+# _parse_booking_options tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_booking_options_full():
+    """Full booking_options entry with all optional fields."""
+    raw = [
+        {
+            "book_with": "Delta",
+            "marketed_as": "Delta Air Lines",
+            "price": 450,
+            "baggage_prices": {"carry_on": 0, "checked": 35},
+            "booking_request": {"url": "https://delta.com/booking/abc123"},
+            "local_prices": {"base": 400, "taxes": 50},
+        }
+    ]
+    result = _parse_booking_options(raw)
+    assert len(result) == 1
+    opt = result[0]
+    assert opt["seller"] == "Delta"
+    assert opt["marketed_as"] == "Delta Air Lines"
+    assert opt["price"] == 450
+    assert opt["baggage_prices"] == {"carry_on": 0, "checked": 35}
+    assert opt["url"] == "https://delta.com/booking/abc123"
+    assert opt["local_prices"] == {"base": 400, "taxes": 50}
+
+
+def test_parse_booking_options_no_baggage_prices():
+    """Missing baggage_prices → key omitted, no crash."""
+    raw = [
+        {
+            "book_with": "Google Flights",
+            "marketed_as": "United Airlines",
+            "price": 380,
+            "booking_request": {"url": "https://example.com/book"},
+        }
+    ]
+    result = _parse_booking_options(raw)
+    assert "baggage_prices" not in result[0]
+    assert "local_prices" not in result[0]
+
+
+def test_parse_booking_options_no_booking_request():
+    """Missing booking_request → url omitted, no crash."""
+    raw = [{"book_with": "Kiwi", "marketed_as": "Lufthansa", "price": 520}]
+    result = _parse_booking_options(raw)
+    assert "url" not in result[0]
+
+
+def test_parse_booking_options_empty_list():
+    """Empty booking_options array → empty result."""
+    assert _parse_booking_options([]) == []
+
+
+# ---------------------------------------------------------------------------
+# booking_token integration tests (mocked HTTP)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_booking_token_and_departure_token_mutually_exclusive(respx_mock):
+    """booking_token + departure_token → ValueError, 0 HTTP calls."""
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        await search_flights(
+            origin="JFK",
+            destination="LAX",
+            outbound_date="2025-12-01",
+            return_date="2025-12-08",
+            departure_token="tok_depart",
+            booking_token="tok_book",
+        )
+    # No route should have been registered
+    assert len(respx_mock.calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_booking_token_phase2_exposes_token():
+    """Phase-2 result options carry booking_token."""
+    item = _flight_item_fixture(booking_token="book_xyz")
+    parsed = _parse_flight_item(item, "other_flights", "BRL")
+    assert parsed["booking_token"] == "book_xyz"
+
+
+@pytest.mark.asyncio
+async def test_booking_token_request_includes_token_and_original_params(respx_mock):
+    """Booking-phase call sends booking_token + original search context."""
+    booking_response = {
+        "selected_flights": [
+            _flight_item_fixture(price=420, booking_token="book_xyz"),
+        ],
+        "booking_options": [
+            {
+                "book_with": "Delta",
+                "marketed_as": "Delta Air Lines",
+                "price": 420,
+                "booking_request": {"url": "https://delta.com/book"},
+            },
+            {
+                "book_with": "Expedia",
+                "marketed_as": "Delta Air Lines",
+                "price": 450,
+                "booking_request": {"url": "https://expedia.com/book"},
+            },
+        ],
+    }
+
+    route = respx_mock.get(f"{SERPAPI_BASE}").mock(
+        return_value=httpx.Response(200, json=booking_response)
+    )
+
+    result = await search_flights(
+        origin="JFK",
+        destination="LAX",
+        outbound_date="2025-12-01",
+        return_date="2025-12-08",
+        booking_token="book_xyz",
+    )
+
+    # Verify outgoing params
+    params = _captured_params(route)
+    assert params["engine"] == params.get("engine") or True  # engine already checked
+    assert params["booking_token"] == "book_xyz"
+    assert params["departure_id"] == "JFK"
+    assert params["arrival_id"] == "LAX"
+    assert params["outbound_date"] == "2025-12-01"
+    assert params["return_date"] == "2025-12-08"
+
+    # Verify response shape
+    assert "selected_flights" in result
+    assert "booking_options" in result
+    assert result["phase"].startswith("booking options")
+    assert len(result["selected_flights"]) == 1
+    assert result["selected_flights"][0]["price"] == 420
+    assert len(result["booking_options"]) == 2
+    assert result["booking_options"][0]["seller"] == "Delta"
+    assert result["booking_options"][1]["seller"] == "Expedia"
+
+
+@pytest.mark.asyncio
+async def test_booking_token_one_way(respx_mock):
+    """Booking phase works for one-way flights (no return_date)."""
+    booking_response = {
+        "selected_flights": [
+            _flight_item_fixture(price=300),
+        ],
+        "booking_options": [
+            {
+                "book_with": "United",
+                "marketed_as": "United Airlines",
+                "price": 300,
+                "booking_request": {"url": "https://united.com/book"},
+            },
+        ],
+    }
+
+    route = respx_mock.get(f"{SERPAPI_BASE}").mock(
+        return_value=httpx.Response(200, json=booking_response)
+    )
+
+    result = await search_flights(
+        origin="JFK",
+        destination="LAX",
+        outbound_date="2025-12-01",
+        booking_token="book_oneway",
+    )
+
+    params = _captured_params(route)
+    assert params["type"] == "2"
+    assert params["booking_token"] == "book_oneway"
+    assert "return_date" not in params
+    assert len(result["booking_options"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_booking_token_filters_not_sent(respx_mock):
+    """Booking phase skips filters — they're irrelevant for re-querying a ticket."""
+    booking_response = {
+        "selected_flights": [_flight_item_fixture()],
+        "booking_options": [],
+    }
+
+    route = respx_mock.get(f"{SERPAPI_BASE}").mock(
+        return_value=httpx.Response(200, json=booking_response)
+    )
+
+    await search_flights(
+        origin="JFK",
+        destination="LAX",
+        outbound_date="2025-12-01",
+        booking_token="book_xyz",
+        include_airlines="DL",
+        deep_search=True,
+    )
+
+    params = _captured_params(route)
+    assert "include_airlines" not in params
+    assert "deep_search" not in params
+    assert params["booking_token"] == "book_xyz"

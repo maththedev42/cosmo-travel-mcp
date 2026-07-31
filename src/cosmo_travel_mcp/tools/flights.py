@@ -109,7 +109,7 @@ def _validate_times(
 
 
 def _parse_times_arg(value: str, *, label: str) -> list[int]:
-    """Parse a times argument string (e.g. ``\"18,23\"``) into a list of ints.
+    """Parse a times argument string (e.g. ``"18,23"``) into a list of ints.
 
     Raises ValueError with a message that names *label* if the value is
     malformed.
@@ -421,6 +421,36 @@ def _parse_flights_response(
     return parsed
 
 
+def _parse_booking_options(
+    raw_options: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Parse SerpAPI ``booking_options`` array into normalized seller entries.
+
+    The engine returns ``booking_options`` when a ``booking_token`` is sent.
+    Each option carries a seller, price, baggage info, and a booking URL.
+    """
+    result: list[dict[str, Any]] = []
+    for opt in raw_options:
+        entry: dict[str, Any] = {
+            "seller": opt.get("book_with", ""),
+            "marketed_as": opt.get("marketed_as", ""),
+            "price": opt.get("price"),
+        }
+        booking_request = opt.get("booking_request", {})
+        if isinstance(booking_request, dict) and booking_request.get("url"):
+            entry["url"] = booking_request["url"]
+        # baggage_prices is optional — omit the key entirely when absent
+        bp = opt.get("baggage_prices")
+        if bp is not None:
+            entry["baggage_prices"] = bp
+        # local_prices (price breakdown) — optional
+        lp = opt.get("local_prices")
+        if lp is not None:
+            entry["local_prices"] = lp
+        result.append(entry)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -436,6 +466,7 @@ async def search_flights(
     cabin_class: str = "economy",
     max_stops: str | None = None,
     departure_token: str = "",
+    booking_token: str = "",
     currency: str = "BRL",
     country: str | None = None,
     language: str | None = None,
@@ -467,6 +498,12 @@ async def search_flights(
         One of: any, nonstop, one_or_fewer, two_or_fewer.
     departure_token : str, optional
         Round-trip phase 2 token from a previous phase-1 result.
+    booking_token : str, optional
+        Booking-phase token from a phase-2 result option. Pass the same
+        origin/destination/dates as the search that produced the token
+        (the engine requires the original context). Costs 1 search — this is
+        where "which seller is cheapest" comes from. Mutually exclusive with
+        ``departure_token``.
     currency : str, default "BRL"
     country : str, optional
         Two-letter country code for geo-localization (SerpAPI ``gl``).
@@ -500,6 +537,14 @@ async def search_flights(
             "as the original round-trip search (including return_date) plus the token."
         )
 
+    # booking_token and departure_token are mutually exclusive — the engine
+    # serves different response shapes for each and cannot combine them.
+    if booking_token and departure_token:
+        raise ValueError(
+            "booking_token and departure_token are mutually exclusive — "
+            "pass one token at a time."
+        )
+
     _validate_airlines(include_airlines, exclude_airlines)
     _validate_times(outbound_times, return_times, has_return_date=bool(return_date))
     if bags is not None and bags < 0:
@@ -520,7 +565,17 @@ async def search_flights(
     params["arrival_id"] = destination
     params["outbound_date"] = outbound_date
 
-    if departure_token and return_date:
+    if booking_token:
+        # Booking phase — which sellers have this exact ticket and at what price.
+        # The engine requires the original search context (origin, destination,
+        # dates) plus the booking_token from a phase-2 option.
+        if return_date:
+            params["type"] = 1
+            params["return_date"] = return_date
+        else:
+            params["type"] = 2
+        params["booking_token"] = booking_token
+    elif departure_token and return_date:
         # Round-trip phase 2
         params["type"] = 1
         params["return_date"] = return_date
@@ -534,22 +589,44 @@ async def search_flights(
         params["type"] = 2
 
     # ── Filters (omitted when absent / falsy — SerpAPI treats empty strings as values) ──
-    if include_airlines:
-        params["include_airlines"] = include_airlines
-    if exclude_airlines:
-        params["exclude_airlines"] = exclude_airlines
-    if bags is not None:
-        params["bags"] = bags
-    if max_duration is not None:
-        params["max_duration"] = max_duration
-    if outbound_times:
-        params["outbound_times"] = outbound_times
-    if return_times:
-        params["return_times"] = return_times
-    if deep_search:
-        params["deep_search"] = "true"
+    # Booking phase re-queries the same ticket; filters are irrelevant.
+    if not booking_token:
+        if include_airlines:
+            params["include_airlines"] = include_airlines
+        if exclude_airlines:
+            params["exclude_airlines"] = exclude_airlines
+        if bags is not None:
+            params["bags"] = bags
+        if max_duration is not None:
+            params["max_duration"] = max_duration
+        if outbound_times:
+            params["outbound_times"] = outbound_times
+        if return_times:
+            params["return_times"] = return_times
+        if deep_search:
+            params["deep_search"] = "true"
 
     data = await _call_serpapi(params)
+
+    if booking_token:
+        # Booking-phase response: selected_flights + booking_options.
+        selected_raw = data.get("selected_flights", [])
+        selected = [
+            _parse_flight_item(f, "selected_flights", currency)
+            for f in selected_raw
+        ]
+        booking_raw = data.get("booking_options", [])
+        booking_options = _parse_booking_options(booking_raw)
+        return {
+            "selected_flights": selected,
+            "booking_options": booking_options,
+            "phase": (
+                "booking options — each entry is a seller that has "
+                "this exact ticket, with its price, baggage fees, and a "
+                "booking link."
+            ),
+        }
+
     result = _parse_flights_response(data, requested_currency=currency)
 
     # Annotate phase for round-trip

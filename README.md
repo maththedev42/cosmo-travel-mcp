@@ -159,7 +159,7 @@ remove-first step.
 
 | Tool | Parameters | Description |
 |---|---|---|
-| `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `currency?`, `country?`, `language?`, `include_airlines?`, `exclude_airlines?`, `bags?`, `max_duration?`, `outbound_times?`, `return_times?`, `deep_search?` | One-way or round-trip flight search via SerpAPI. Returns price insights (lowest price, typical range, buy advice) and per-flight carbon emissions in kg when available. Filter by airline, bags, duration, departure times, or use deep search. |
+| `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `booking_token?`, `currency?`, `country?`, `language?`, `include_airlines?`, `exclude_airlines?`, `bags?`, `max_duration?`, `outbound_times?`, `return_times?`, `deep_search?` | One-way or round-trip flight search via SerpAPI. Phase 1: find cheapest itineraries. Phase 2 (`departure_token`): return-leg options. Phase 3 (`booking_token`): every seller + price for a specific ticket. Returns price insights (lowest price, typical range, buy advice) and per-flight carbon emissions in kg when available. Filter by airline, bags, duration, departure times, or use deep search. |
 | `search_multi_city` | `legs` ([{origin, destination, date, times?}…]), `adults?`, `children?`, `cabin_class?`, `currency?`, `country?`, `language?`, `include_airlines?`, `exclude_airlines?`, `bags?`, `max_duration?`, `deep_search?` | Multi-city itinerary with 2-6 legs; airline, bag, duration, and deep-search filters supported |
 | `get_accommodation_details` | `property_token`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `currency?`, `country?`, `language?` | Full property details: amenities, rating breakdown, images, per-source prices. Takes a `property_token` from `search_accommodations`. |
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?`, `sort_by?`, `min_rating?`, `hotel_class?`, `free_cancellation?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. Filters: `sort_by` (lowest_price/highest_rating/most_reviewed), `min_rating` (3.5/4.0/4.5), `hotel_class` (2–5), `free_cancellation`. |
@@ -177,7 +177,7 @@ week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
 
 | Tool | SerpAPI searches per call | Maps calls per call | Notes |
 |---|---|---|---|
-| `search_flights` | 1 | 0 | Phase-2 (return legs) calls cost 1 additional search. |
+| `search_flights` | 1 | 0 | Phase-2 (return legs) and phase-3 (booking options) calls cost 1 additional search each. |
 | `search_multi_city` | 1 | 0 | |
 | `search_accommodations` | 1 | 0 | |
 | `get_accommodation_details` | 1 | 0 | Drill into a single property from `search_accommodations`. |
