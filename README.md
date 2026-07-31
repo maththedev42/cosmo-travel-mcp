@@ -146,6 +146,24 @@ claude mcp remove cosmo-travel --scope user
 `cosmo-travel-mcp setup --register` does all of this for you, including the
 remove-first step.
 
+### Other MCP clients
+
+Claude Desktop, Cursor, Windsurf, Cline, and VS Code configure MCP servers the
+same conceptual way (JSON block with command + env), differing only in where the
+file lives. For these clients, print a ready-to-paste config snippet:
+
+```bash
+cosmo-travel-mcp setup --client cursor
+```
+
+Pass one of `claude-desktop`, `cursor`, `windsurf`, `cline`, or `vscode`. Each
+prints a JSON block with absolute binary path and placeholder env entries; fill
+in your real keys and paste into your client's MCP config file. The snippet
+includes the file path for your platform.
+
+`--register` stays Claude-Code-only — for other clients we print config, we do
+not attempt to edit their config files.
+
 ## Command line
 
 | Command | Effect |
@@ -153,6 +171,7 @@ remove-first step.
 | `cosmo-travel-mcp` | Run the MCP server over stdio. This is what the client invokes; you rarely run it by hand. |
 | `cosmo-travel-mcp setup` | Print the key-acquisition guide and the registration command. No side effects. |
 | `cosmo-travel-mcp setup --register` | Prompt for keys (hidden input), validate them live, then register the server. Accepts `--scope`, `--name`, `-y`. |
+| `cosmo-travel-mcp setup --client <name>` | Print a ready-to-paste JSON config block for a non-Claude-Code MCP client (claude-desktop, cursor, windsurf, cline, vscode). |
 | `cosmo-travel-mcp --version` | Print the version. |
 
 ## Tools

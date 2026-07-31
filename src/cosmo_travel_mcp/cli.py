@@ -20,6 +20,7 @@ import subprocess
 import sys
 
 from .onboarding import (
+    CLIENT_CONFIGS,
     MAPS_ENV,
     PACKAGE_NAME,
     SERPAPI_ENV,
@@ -28,6 +29,7 @@ from .onboarding import (
     register_argv,
     register_command,
     remove_command,
+    render_client_config,
     serpapi_instructions,
 )
 
@@ -158,6 +160,11 @@ def print_guide(*, scope: str = "user", name: str = SERVER_NAME) -> None:
     print(
         "  Restart the MCP client and ask it to call `check_setup`. It reports\n"
         "  which tools are ready and how much SerpAPI quota is left."
+    )
+    print(
+        f"\n  Using a different MCP client? Run "
+        f"`{PACKAGE_NAME} setup --client <name>` for a ready-to-paste config snippet.\n"
+        "  Supported clients: " + ", ".join(sorted(CLIENT_CONFIGS)) + "."
     )
 
 
@@ -356,12 +363,40 @@ def cmd_setup(args: list[str]) -> int:
         action="store_true",
         help="skip confirmation prompts (still prompts for the keys)",
     )
+    parser.add_argument(
+        "--client",
+        default=None,
+        choices=list(CLIENT_CONFIGS),
+        help=(
+            "print a ready-to-paste config snippet for the named MCP client "
+            "(default claude-code shows the claude mcp add command; "
+            "all other clients show a JSON block)"
+        ),
+    )
     opts = parser.parse_args(args)
 
     if opts.register:
         return register_flow(
             scope=opts.scope, name=opts.name, assume_yes=opts.yes
         )
+
+    if opts.client:
+        # Detect whether keys exist in the environment so we can
+        # decide placeholder vs masked for the snippet.
+        serpapi_key = os.environ.get(SERPAPI_ENV)
+        maps_key = os.environ.get(MAPS_ENV)
+        snippet = render_client_config(
+            client=opts.client,
+            binary=own_binary(),
+            serpapi_key=serpapi_key,
+            maps_key=maps_key,
+            name=opts.name,
+        )
+        if opts.client == "claude-code":
+            print(snippet)
+        else:
+            print(snippet)
+        return 0
 
     print_guide(scope=opts.scope, name=opts.name)
     return 0
@@ -388,7 +423,10 @@ def main(argv: list[str] | None = None) -> int:
 
     head = argv[0]
     if head in ("setup", "--setup"):
-        return cmd_setup(argv[1:])
+        try:
+            return cmd_setup(argv[1:])
+        except SystemExit as exc:
+            return exc.code if isinstance(exc.code, int) else 1
     if head in ("-h", "--help", "help"):
         print(_USAGE)
         return 0

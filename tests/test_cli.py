@@ -420,3 +420,98 @@ def test_onboarding_and_readme_drift_new_search_events():
     # setup_guide uses human labels (e.g. "events") not tool function names.
     guide = setup_guide(need_serpapi=True, need_maps=False)
     assert "events" in guide
+
+
+# ---------------------------------------------------------------------------
+# Multi-client setup --client flag
+# ---------------------------------------------------------------------------
+
+
+def test_setup_client_claude_code_shows_register_command(capsys):
+    """claude-code is the default and shows the claude mcp add command."""
+    assert cli.main(["setup", "--client", "claude-code"]) == 0
+    out = capsys.readouterr().out
+    assert "claude mcp add" in out
+    assert SERVER_NAME in out
+
+
+@pytest.mark.parametrize(
+    "client_name,expected_key",
+    [
+        ("claude-desktop", "mcpServers"),
+        ("cursor", "mcpServers"),
+        ("windsurf", "mcpServers"),
+        ("cline", "mcpServers"),
+        ("vscode", "servers"),
+    ],
+)
+def test_setup_client_shows_json_snippet_with_right_key(
+    client_name, expected_key, capsys
+):
+    """Each non-claude-code client shows a JSON block with its top-level key."""
+    assert cli.main(["setup", "--client", client_name]) == 0
+    out = capsys.readouterr().out
+    assert f'"{expected_key}"' in out
+    assert SERVER_NAME in out
+
+
+def test_setup_client_snippet_contains_absolute_binary_path(capsys, monkeypatch):
+    """The command in the snippet should be an absolute path, not a bare name."""
+    monkeypatch.setattr(cli, "own_binary", lambda: "/usr/local/bin/cosmo-travel-mcp")
+    assert cli.main(["setup", "--client", "cursor"]) == 0
+    out = capsys.readouterr().out
+    assert '"/usr/local/bin/cosmo-travel-mcp"' in out
+
+
+@pytest.mark.parametrize("client_name", ["cursor", "claude-desktop", "windsurf", "cline", "vscode"])
+def test_setup_client_uses_placeholders_not_real_keys(
+    client_name, monkeypatch, capsys
+):
+    """When keys are set in the environment, the printed snippet must still
+    show placeholders — never real key values in plain output."""
+    monkeypatch.setenv(SERPAPI_ENV, "sk-real-serpapi-key-12345")
+    monkeypatch.setenv(MAPS_ENV, "AIza-real-maps-key-67890")
+    assert cli.main(["setup", "--client", client_name]) == 0
+    out = capsys.readouterr().out
+    assert "sk-real-serpapi-key-12345" not in out
+    assert "AIza-real-maps-key-67890" not in out
+    assert "<your-serpapi-key>" in out
+    assert "<your-google-maps-key>" in out
+
+
+def test_setup_guide_now_mentions_other_clients(capsys):
+    """Running `setup` (no flags) should nudge towards --client for
+    non-Claude-Code users."""
+    assert cli.main(["setup"]) == 0
+    out = capsys.readouterr().out
+    assert "different MCP client" in out
+    assert "setup --client" in out
+
+
+def test_setup_guide_for_check_setup_mentions_other_clients():
+    """The `setup` field returned by check_setup (via setup_guide) should
+    also mention other clients."""
+    guide = setup_guide(need_serpapi=True, need_maps=False)
+    assert "non-Claude-Code clients" in guide.lower() or "other than claude code" in guide.lower()
+    assert "setup --client" in guide
+
+
+def test_unknown_client_reports_error(capsys):
+    """An unknown --client value should error with valid names."""
+    # argparse prints the error to stderr and exits, but our main catches
+    # SystemExit from argparse and returns 2.
+    rc = cli.main(["setup", "--client", "no-such-client"])
+    assert rc != 0
+    err = capsys.readouterr().err
+    assert "invalid choice" in err.lower() or "no-such-client" in err
+
+
+def test_client_list_includes_all_six(capsys):
+    """Smoke test: all six clients produce output without errors."""
+    from cosmo_travel_mcp.onboarding import CLIENT_CONFIGS
+
+    for name in CLIENT_CONFIGS:
+        rc = cli.main(["setup", "--client", name])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert len(out) > 50  # something substantial printed
