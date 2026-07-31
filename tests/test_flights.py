@@ -819,3 +819,320 @@ async def test_retry_http_400_no_retry(monkeypatch):
             )
 
     assert call_count == 1
+
+
+# ============================================================================
+# B-03 — Flight search filters: request-side parameter tests
+# ============================================================================
+
+
+def _serpapi_search_response() -> dict:
+    """Minimal successful SerpAPI google_flights JSON response."""
+    return {
+        "search_parameters": {"currency": "USD"},
+        "best_flights": [
+            {
+                "price": 350,
+                "total_duration": 210,
+                "flights": [
+                    {
+                        "airline": "Delta",
+                        "airline_logo": "https://example.com/dl.png",
+                        "flight_number": "DL123",
+                        "departure_airport": {
+                            "id": "JFK",
+                            "name": "JFK Airport",
+                            "time": "2025-12-01T08:00:00",
+                        },
+                        "arrival_airport": {
+                            "id": "LAX",
+                            "name": "LAX Airport",
+                            "time": "2025-12-01T11:30:00",
+                        },
+                        "duration": 210,
+                    }
+                ],
+            }
+        ],
+        "other_flights": [],
+    }
+
+
+def _captured_params(mock_route) -> dict:
+    """Extract the query params that were sent to the SerpAPI mock."""
+    calls = mock_route.calls
+    assert len(calls) == 1
+    return dict(calls[0].request.url.params)
+
+
+# ── search_flights: individual filter params ──
+
+
+@pytest.mark.asyncio
+async def test_filter_include_airlines_present():
+    """include_airlines -> request contains the include_airlines key."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            include_airlines="DL,AA,STAR_ALLIANCE",
+        )
+    params = _captured_params(route)
+    assert params["include_airlines"] == "DL,AA,STAR_ALLIANCE"
+
+
+@pytest.mark.asyncio
+async def test_filter_exclude_airlines_present():
+    """exclude_airlines -> request contains the exclude_airlines key."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            exclude_airlines="NK,F9",
+        )
+    params = _captured_params(route)
+    assert params["exclude_airlines"] == "NK,F9"
+
+
+@pytest.mark.asyncio
+async def test_filter_include_and_exclude_together_raises():
+    """include_airlines + exclude_airlines -> ValueError, 0 HTTP calls."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await search_flights(
+                origin="GRU", destination="JFK", outbound_date="2025-12-01",
+                include_airlines="DL", exclude_airlines="NK",
+            )
+    # No HTTP call was made
+    assert route.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_filter_bags_present():
+    """bags -> request contains bags=int."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01", bags=1,
+        )
+    params = _captured_params(route)
+    assert params["bags"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_filter_bags_zero_present():
+    """bags=0 is still a value and should be sent."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01", bags=0,
+        )
+    params = _captured_params(route)
+    assert params["bags"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_filter_bags_negative_raises():
+    """bags < 0 -> ValueError."""
+    with pytest.raises(ValueError, match="bags must be ≥ 0"):
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01", bags=-1,
+        )
+
+
+@pytest.mark.asyncio
+async def test_filter_max_duration_present():
+    """max_duration -> request contains max_duration=int."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            max_duration=720,
+        )
+    params = _captured_params(route)
+    assert params["max_duration"] == "720"
+
+
+@pytest.mark.asyncio
+async def test_filter_max_duration_zero_raises():
+    """max_duration <= 0 -> ValueError."""
+    with pytest.raises(ValueError, match="max_duration must be > 0"):
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            max_duration=0,
+        )
+
+
+@pytest.mark.asyncio
+async def test_filter_outbound_times_present():
+    """outbound_times -> request contains outbound_times."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            outbound_times="18,23",
+        )
+    params = _captured_params(route)
+    assert params["outbound_times"] == "18,23"
+
+
+@pytest.mark.asyncio
+async def test_filter_outbound_times_four_values():
+    """outbound_times with 4 values accepted."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            outbound_times="18,23,6,12",
+        )
+    params = _captured_params(route)
+    assert params["outbound_times"] == "18,23,6,12"
+
+
+@pytest.mark.asyncio
+async def test_filter_outbound_times_malformed_raises():
+    """outbound_times with bad values -> ValueError."""
+    malformed_cases = [
+        ("25,3", "values must be 0–23"),
+        ("1", "must be 2 or 4"),
+        ("a,b", "must contain only integers"),
+    ]
+    for bad_val, expected_msg in malformed_cases:
+        with pytest.raises(ValueError, match=expected_msg):
+            await search_flights(
+                origin="GRU", destination="JFK", outbound_date="2025-12-01",
+                outbound_times=bad_val,
+            )
+
+
+@pytest.mark.asyncio
+async def test_filter_return_times_without_return_date_raises():
+    """return_times without return_date -> ValueError."""
+    with pytest.raises(ValueError, match="return_times requires a return_date"):
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            return_times="18,23",
+        )
+
+
+@pytest.mark.asyncio
+async def test_filter_return_times_with_return_date():
+    """return_times with return_date -> passes through."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK",
+            outbound_date="2025-12-01", return_date="2025-12-15",
+            return_times="6,12",
+        )
+    params = _captured_params(route)
+    assert params["return_times"] == "6,12"
+
+
+@pytest.mark.asyncio
+async def test_filter_deep_search_present():
+    """deep_search=True -> request includes deep_search=true."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            deep_search=True,
+        )
+    params = _captured_params(route)
+    assert params["deep_search"] == "true"
+
+
+@pytest.mark.asyncio
+async def test_filter_deep_search_false_absent():
+    """deep_search=False (default) -> key absent from request."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+        )
+    params = _captured_params(route)
+    assert "deep_search" not in params
+
+
+# ── Absent params produce no keys ──
+
+
+@pytest.mark.asyncio
+async def test_filters_absent_by_default():
+    """When no filter params are passed, none appear in the request."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+        )
+    params = _captured_params(route)
+    for key in ("include_airlines", "exclude_airlines", "bags",
+                "max_duration", "outbound_times", "return_times",
+                "deep_search"):
+        assert key not in params, f"{key} should be absent"
+
+
+# ── search_multi_city filter tests ──
+
+
+@pytest.mark.asyncio
+async def test_multi_city_filters_present():
+    """Multi-city passes through its supported filters."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_multi_city(
+            legs=[
+                {"origin": "JFK", "destination": "LAX", "date": "2025-12-01"},
+                {"origin": "LAX", "destination": "JFK", "date": "2025-12-15"},
+            ],
+            include_airlines="DL,AA",
+            bags=1,
+            max_duration=600,
+            deep_search=True,
+        )
+    params = _captured_params(route)
+    assert params["include_airlines"] == "DL,AA"
+    assert params["bags"] == "1"
+    assert params["max_duration"] == "600"
+    assert params["deep_search"] == "true"
+
+
+@pytest.mark.asyncio
+async def test_multi_city_airlines_mutual_exclusion():
+    """Multi-city also rejects include_airlines + exclude_airlines."""
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        await search_multi_city(
+            legs=[
+                {"origin": "JFK", "destination": "LAX", "date": "2025-12-01"},
+                {"origin": "LAX", "destination": "JFK", "date": "2025-12-15"},
+            ],
+            include_airlines="DL",
+            exclude_airlines="NK",
+        )

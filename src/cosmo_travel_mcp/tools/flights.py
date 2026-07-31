@@ -70,6 +70,72 @@ def _map_stops(max_stops: str | None) -> int | None:
     return mapped
 
 
+def _validate_airlines(
+    include_airlines: str | None,
+    exclude_airlines: str | None,
+) -> None:
+    """Raise ValueError if both include_airlines and exclude_airlines are given.
+
+    The SerpAPI google_flights engine does not support supplying both at once.
+    """
+    if include_airlines and exclude_airlines:
+        raise ValueError(
+            "include_airlines and exclude_airlines are mutually exclusive — "
+            "provide at most one."
+        )
+
+
+def _validate_times(
+    outbound_times: str | None,
+    return_times: str | None,
+    *,
+    has_return_date: bool,
+) -> None:
+    """Validate outbound_times / return_times strings.
+
+    Format: comma-separated 2 or 4 integers, each 0–23 (hours).
+    ``return_times`` requires a ``return_date`` to be meaningful.
+    """
+    if outbound_times is not None:
+        _parse_times_arg(outbound_times, label="outbound_times")
+    if return_times is not None:
+        if not has_return_date:
+            raise ValueError(
+                "return_times requires a return_date — the engine applies "
+                "return-time filters to the return leg only."
+            )
+        _parse_times_arg(return_times, label="return_times")
+
+
+def _parse_times_arg(value: str, *, label: str) -> list[int]:
+    """Parse a times argument string (e.g. ``\"18,23\"``) into a list of ints.
+
+    Raises ValueError with a message that names *label* if the value is
+    malformed.
+    """
+    parts = value.split(",")
+    if len(parts) not in (2, 4):
+        raise ValueError(
+            f"{label} must be 2 or 4 comma-separated integers (hours 0–23), "
+            f"got {len(parts)} part(s): {value!r}"
+        )
+    result: list[int] = []
+    for p in parts:
+        try:
+            hour = int(p.strip())
+        except ValueError:
+            raise ValueError(
+                f"{label} must contain only integers (hours 0–23), "
+                f"got {value!r}"
+            ) from None
+        if hour < 0 or hour > 23:
+            raise ValueError(
+                f"{label} values must be 0–23 (hours), got {hour} in {value!r}"
+            )
+        result.append(hour)
+    return result
+
+
 async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights") -> dict[str, Any]:
     """Call SerpAPI and return the JSON response, propagating errors.
 
@@ -343,6 +409,13 @@ async def search_flights(
     currency: str = "BRL",
     country: str | None = None,
     language: str | None = None,
+    include_airlines: str | None = None,
+    exclude_airlines: str | None = None,
+    bags: int | None = None,
+    max_duration: int | None = None,
+    outbound_times: str | None = None,
+    return_times: str | None = None,
+    deep_search: bool = False,
 ) -> dict[str, Any]:
     """Search flights via SerpAPI google_flights engine.
 
@@ -369,6 +442,26 @@ async def search_flights(
         Two-letter country code for geo-localization (SerpAPI ``gl``).
     language : str, optional
         Two-letter language code for localization (SerpAPI ``hl``).
+    include_airlines : str, optional
+        Comma-separated IATA airline codes or alliance names
+        (``STAR_ALLIANCE``, ``SKYTEAM``, ``ONEWORLD``).
+        Mutually exclusive with ``exclude_airlines``.
+    exclude_airlines : str, optional
+        Comma-separated IATA airline codes to exclude.
+        Mutually exclusive with ``include_airlines``.
+    bags : int, optional
+        Number of carry-on bags the fare must include (≥ 0).
+    max_duration : int, optional
+        Maximum total itinerary duration in minutes.
+    outbound_times : str, optional
+        Departure/arrival hour window, e.g. ``"18,23"`` (2 values) or
+        ``"18,23,6,12"`` (4 values) where hours are 0–23.
+    return_times : str, optional
+        Same format as ``outbound_times``, applied to the return leg.
+        Requires ``return_date``.
+    deep_search : bool, default False
+        Slower but more accurate search mode. Adds latency proportional
+        to route complexity.
     """
     # Validate: departure_token requires return_date for a round-trip phase 2.
     if departure_token and not return_date:
@@ -376,6 +469,13 @@ async def search_flights(
             "departure_token requires return_date — re-send the same params "
             "as the original round-trip search (including return_date) plus the token."
         )
+
+    _validate_airlines(include_airlines, exclude_airlines)
+    _validate_times(outbound_times, return_times, has_return_date=bool(return_date))
+    if bags is not None and bags < 0:
+        raise ValueError(f"bags must be ≥ 0, got {bags}")
+    if max_duration is not None and max_duration <= 0:
+        raise ValueError(f"max_duration must be > 0, got {max_duration}")
 
     params = _build_base_params(
         adults=adults,
@@ -403,6 +503,22 @@ async def search_flights(
         # One-way
         params["type"] = 2
 
+    # ── Filters (omitted when absent / falsy — SerpAPI treats empty strings as values) ──
+    if include_airlines:
+        params["include_airlines"] = include_airlines
+    if exclude_airlines:
+        params["exclude_airlines"] = exclude_airlines
+    if bags is not None:
+        params["bags"] = bags
+    if max_duration is not None:
+        params["max_duration"] = max_duration
+    if outbound_times:
+        params["outbound_times"] = outbound_times
+    if return_times:
+        params["return_times"] = return_times
+    if deep_search:
+        params["deep_search"] = "true"
+
     data = await _call_serpapi(params)
     result = _parse_flights_response(data, requested_currency=currency)
 
@@ -426,6 +542,11 @@ async def search_multi_city(
     currency: str = "BRL",
     country: str | None = None,
     language: str | None = None,
+    include_airlines: str | None = None,
+    exclude_airlines: str | None = None,
+    bags: int | None = None,
+    max_duration: int | None = None,
+    deep_search: bool = False,
 ) -> dict[str, Any]:
     """Search multi-city flights via SerpAPI google_flights engine (type=3).
 
@@ -440,11 +561,29 @@ async def search_multi_city(
     currency : str, default "BRL"
     country : str, optional
     language : str, optional
+    include_airlines : str, optional
+        Comma-separated IATA airline codes or alliance names.
+        Mutually exclusive with ``exclude_airlines``.
+    exclude_airlines : str, optional
+        Comma-separated IATA airline codes to exclude.
+        Mutually exclusive with ``include_airlines``.
+    bags : int, optional
+        Number of carry-on bags the fare must include (≥ 0).
+    max_duration : int, optional
+        Maximum total itinerary duration in minutes.
+    deep_search : bool, default False
+        Slower but more accurate search mode.
     """
     if len(legs) < 2:
         raise ValueError(f"Multi-city requires at least 2 legs, got {len(legs)}.")
     if len(legs) > 6:
         raise ValueError(f"Multi-city supports at most 6 legs, got {len(legs)}.")
+
+    _validate_airlines(include_airlines, exclude_airlines)
+    if bags is not None and bags < 0:
+        raise ValueError(f"bags must be ≥ 0, got {bags}")
+    if max_duration is not None and max_duration <= 0:
+        raise ValueError(f"max_duration must be > 0, got {max_duration}")
 
     multi_city_json: list[dict[str, Any]] = []
     for leg in legs:
@@ -468,6 +607,17 @@ async def search_multi_city(
     )
     params["type"] = 3
     params["multi_city_json"] = json.dumps(multi_city_json)
+
+    if include_airlines:
+        params["include_airlines"] = include_airlines
+    if exclude_airlines:
+        params["exclude_airlines"] = exclude_airlines
+    if bags is not None:
+        params["bags"] = bags
+    if max_duration is not None:
+        params["max_duration"] = max_duration
+    if deep_search:
+        params["deep_search"] = "true"
 
     data = await _call_serpapi(params)
     return _parse_flights_response(data, requested_currency=currency)
