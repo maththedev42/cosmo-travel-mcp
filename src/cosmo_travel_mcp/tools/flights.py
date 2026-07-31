@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any
@@ -15,6 +16,11 @@ from ..onboarding import SERPAPI_ENV, missing_key_message
 # ---------------------------------------------------------------------------
 
 SERPAPI_BASE = "https://serpapi.com/search.json"
+
+# Exposed as module-level so tests can zero it (avoid real waits in CI).
+_RETRY_BACKOFF_SECONDS: float = 1.0
+
+_RETRYABLE_STATUSES: frozenset[int] = frozenset({502, 503, 504})
 
 CABIN_CLASS_MAP: dict[str, int] = {
     "economy": 1,
@@ -65,16 +71,33 @@ def _map_stops(max_stops: str | None) -> int | None:
 
 
 async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights") -> dict[str, Any]:
-    """Call SerpAPI and return the JSON response, propagating errors."""
+    """Call SerpAPI and return the JSON response, propagating errors.
+
+    Retries exactly once (with a short backoff) on transient failures:
+    httpx transport errors (connect/read timeouts, connection errors) and
+    HTTP 502/503/504 responses.  SerpAPI ``{"error": ...}`` JSON bodies and
+    any other 4xx/5xx status are *never* retried — they propagate immediately.
+    """
     api_key = _get_api_key()
     params = {**params, "engine": engine, "api_key": api_key}
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(SERPAPI_BASE, params=params)
-        resp.raise_for_status()
-        data: dict[str, Any] = resp.json()
-    if "error" in data:
-        raise ValueError(data["error"])
-    return data
+
+    for attempt in (1, 2):
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(SERPAPI_BASE, params=params)
+            if resp.status_code in _RETRYABLE_STATUSES and attempt == 1:
+                await asyncio.sleep(_RETRY_BACKOFF_SECONDS)
+                continue
+            resp.raise_for_status()
+            data: dict[str, Any] = resp.json()
+            if "error" in data:
+                raise ValueError(data["error"])
+            return data
+        except httpx.TransportError:
+            if attempt == 1:
+                await asyncio.sleep(_RETRY_BACKOFF_SECONDS)
+                continue
+            raise
 
 
 def _build_base_params(

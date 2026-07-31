@@ -187,7 +187,8 @@ async def test_search_cheapest_dates_surfaces_failed_dates():
     def _response(request: httpx.Request):
         nonlocal call_count
         call_count += 1
-        if call_count == 2:
+        # Fail on calls 2 and 3: the original request AND its one retry.
+        if call_count in (2, 3):
             raise httpx.ConnectError("connection reset")
         return httpx.Response(
             200,
@@ -206,10 +207,10 @@ async def test_search_cheapest_dates_surfaces_failed_dates():
             earliest_departure="2025-12-01",
             latest_return="2025-12-20",
             trip_duration_days=7,
-            max_calls=3,
+            max_calls=2,
         )
 
-    assert len(result["results"]) == 2
+    assert len(result["results"]) == 1
     assert "unavailable" in result
     assert len(result["unavailable"]) == 1
     assert "ConnectError" in result["unavailable"][0]["error"]

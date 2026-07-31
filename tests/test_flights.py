@@ -464,3 +464,131 @@ async def test_search_multi_city_missing_api_key():
             os.environ["SERPAPI_API_KEY"] = old
         else:
             os.environ.pop("SERPAPI_API_KEY", None)
+
+# ---------------------------------------------------------------------------
+# Retry-on-transient-failure tests (prompt A-01)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_retry_timeout_then_success(monkeypatch):
+    """First call raises a timeout, second succeeds -> caller returns parsed result; 2 calls."""
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights._RETRY_BACKOFF_SECONDS", 0)
+
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise httpx.TimeoutException("read timeout")
+        return httpx.Response(
+            200,
+            json={"search_parameters": {}, "best_flights": [], "other_flights": []},
+        )
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=handler)
+
+        result = await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+        )
+
+    assert call_count == 2
+    assert "flights" in result
+
+
+@pytest.mark.asyncio
+async def test_retry_both_timeouts_raise(monkeypatch):
+    """Both calls raise timeouts -> the error propagates; exactly 2 calls."""
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights._RETRY_BACKOFF_SECONDS", 0)
+
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        raise httpx.TimeoutException("read timeout")
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=handler)
+
+        with pytest.raises(httpx.TimeoutException):
+            await search_flights(
+                origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            )
+
+    assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_retry_503_then_200(monkeypatch):
+    """503 then 200 -> success; 2 calls."""
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights._RETRY_BACKOFF_SECONDS", 0)
+
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return httpx.Response(503)
+        return httpx.Response(
+            200,
+            json={"search_parameters": {}, "best_flights": [], "other_flights": []},
+        )
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=handler)
+
+        result = await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+        )
+
+    assert call_count == 2
+    assert "flights" in result
+
+
+@pytest.mark.asyncio
+async def test_retry_serpapi_error_json_no_retry(monkeypatch):
+    """SerpAPI error JSON (HTTP 200) -> ValueError; exactly 1 call, no retry."""
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights._RETRY_BACKOFF_SECONDS", 0)
+
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(200, json={"error": "rate limit exceeded"})
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=handler)
+
+        with pytest.raises(ValueError, match="rate limit exceeded"):
+            await search_flights(
+                origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            )
+
+    assert call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_retry_http_400_no_retry(monkeypatch):
+    """HTTP 400 -> error; exactly 1 call, no retry."""
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights._RETRY_BACKOFF_SECONDS", 0)
+
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(400)
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(side_effect=handler)
+
+        with pytest.raises(httpx.HTTPStatusError):
+            await search_flights(
+                origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            )
+
+    assert call_count == 1
