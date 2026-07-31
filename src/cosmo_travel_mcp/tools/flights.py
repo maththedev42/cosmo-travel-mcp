@@ -280,13 +280,53 @@ def _parse_flight_item(
     # ── carbon emissions (SerpAPI reports grams; we convert to kg) ──
     ce = item.get("carbon_emissions")
     if ce and isinstance(ce, dict):
-        parsed["carbon_emissions"] = {
-            "this_flight_kg": max(0, round(ce.get("this_flight", 0) / 1000)),
-            "typical_for_route_kg": max(0, round(ce.get("typical_for_this_route", 0) / 1000)),
-            "difference_percent": ce.get("difference_percent", 0),
-        }
+        emissions: dict[str, Any] = {}
+        tf = ce.get("this_flight")
+        if isinstance(tf, (int, float)):
+            emissions["this_flight_kg"] = max(0, round(tf / 1000))
+        tr = ce.get("typical_for_this_route")
+        if isinstance(tr, (int, float)):
+            emissions["typical_for_route_kg"] = max(0, round(tr / 1000))
+        dp = ce.get("difference_percent")
+        if isinstance(dp, (int, float)):
+            emissions["difference_percent"] = dp
+        if emissions:
+            parsed["carbon_emissions"] = emissions
 
     return parsed
+
+
+def _compose_advice(
+    level: str | None,
+    lowest: int | float | None,
+    trange: list[Any] | None,
+    currency: str,
+) -> str | None:
+    """Compose a human-readable buy-advice sentence from price-insight fields.
+
+    Each clause is independently optional — only present fields contribute.
+    Returns ``None`` when no fields are available to form a sentence.
+    """
+    clauses: list[str] = []
+    currency_label = currency or ""
+
+    if level:
+        clauses.append(f"Prices are currently {level} for this route")
+
+    if lowest is not None:
+        clauses.append(f"the lowest recent price was {lowest} {currency_label}".rstrip())
+
+    if trange and isinstance(trange, list) and len(trange) == 2:
+        clauses.append(f"and the typical range is {trange[0]}–{trange[1]} {currency_label}".rstrip())
+
+    if not clauses:
+        return None
+
+    # First clause ends with a period; extra clauses are comma-joined.
+    if len(clauses) == 1:
+        return clauses[0] + "."
+
+    return "; ".join(clauses) + "."
 
 
 def _parse_price_insights(
@@ -310,7 +350,7 @@ def _parse_price_insights(
     trange = price_insights.get("typical_price_range")
 
     # If every meaningful field is missing, treat as absent.
-    if lowest is None and level is None and not trange:
+    if lowest is None and level is None and (not trange or trange == []):
         return None
 
     result: dict[str, Any] = {}
@@ -319,7 +359,7 @@ def _parse_price_insights(
         result["lowest_price"] = lowest
     if level is not None:
         result["price_level"] = level
-    if trange is not None:
+    if trange and isinstance(trange, list) and len(trange) == 2:
         result["typical_price_range"] = trange
 
     # Price history: unix seconds → ISO-8601 UTZ date string.
@@ -333,7 +373,7 @@ def _parse_price_insights(
                 continue
             try:
                 ts = int(point[0])
-                price = float(point[1]) if point[1] is not None else 0
+                price = float(point[1])
             except (ValueError, TypeError):
                 continue
             date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -341,22 +381,11 @@ def _parse_price_insights(
         if history:
             result["price_history"] = history
 
-    # Compose a one-sentence advice string from the data we have.
-    parts: list[str] = []
-
-    if level:
-        parts.append(f"Prices are currently {level} for this route")
-
-    currency_label = currency or ""
-
-    if lowest is not None:
-        parts.append(f"the lowest recent price was {lowest} {currency_label}".rstrip())
-
-    if trange and isinstance(trange, list) and len(trange) == 2:
-        parts.append(f"and the typical range is {trange[0]}–{trange[1]} {currency_label}".rstrip())
-
-    if parts:
-        result["advice"] = ": ".join([parts[0], ", ".join(parts[1:])]) + "."
+    # Compose a human-readable advice sentence from available fields.
+    # Each clause is optional — only present fields contribute to the output.
+    advice = _compose_advice(level, lowest, trange, currency)
+    if advice:
+        result["advice"] = advice
 
     return result if result else None
 

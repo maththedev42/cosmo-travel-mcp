@@ -265,8 +265,8 @@ def test_parse_price_insights_bare_minimum():
     assert result["lowest_price"] == 500
     assert "price_level" not in result
     assert "price_history" not in result
-    # Advice still mentions the price.
-    assert "500" in result["advice"]
+    # Advice: single clause, ends with period.
+    assert result["advice"] == "the lowest recent price was 500 EUR."
 
 
 def test_parse_price_insights_no_meaningful_fields():
@@ -282,16 +282,15 @@ def test_parse_price_insights_history_bad_points():
         "price_history": [
             [1750000000, 100],
             "not_a_list",
-            [1750086400, None],  # None price → 0
+            [1750086400, None],  # None price → dropped (no lying 0)
             [],
         ],
     }
     result = _parse_price_insights(raw, "USD")
     assert result is not None
-    # Only two valid points survive (the None-price one becomes price=0).
-    assert len(result["price_history"]) == 2
+    # Only the one valid point survives; None-price and malformed are dropped.
+    assert len(result["price_history"]) == 1
     assert result["price_history"][0]["price"] == 100
-    assert result["price_history"][1]["price"] == 0
 
 
 # ---------------------------------------------------------------------------
