@@ -175,6 +175,11 @@ Every tool call that hits SerpAPI or Google Maps spends quota. The free tiers
 but a cheap-seeming prompt like "find the cheapest Saturday in March" can burn a
 week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
 
+When the estimated remaining searches drops to **10 or below**, every
+SerpAPI-backed tool response gains a `quota_warning` field with the current
+estimate.  Call `check_setup` for the exact number — the warning is a
+locally-decremented best effort and does not account for concurrent clients.
+
 | Tool | SerpAPI searches per call | Maps calls per call | Notes |
 |---|---|---|---|
 | `search_flights` | 1 | 0 | Phase-2 (return legs) and phase-3 (booking options) calls cost 1 additional search each. |

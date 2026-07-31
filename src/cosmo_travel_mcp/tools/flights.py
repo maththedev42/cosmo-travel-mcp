@@ -38,6 +38,70 @@ STOPS_MAP: dict[str, int] = {
 }
 
 # ---------------------------------------------------------------------------
+# Quota warning (best-effort, one account fetch per session)
+# ---------------------------------------------------------------------------
+
+# Threshold below which every SerpAPI-backed response gets a quota_warning.
+_LOW_QUOTA_THRESHOLD: int = 10
+
+# Cached estimate of searches remaining.  ``None`` means "not yet fetched"
+# or "feature disabled because the account fetch failed."  Decremented on
+# every successful SerpAPI search once the counter is live.
+_QUOTA_SEARCHES_LEFT: int | None = None
+
+
+def _reset_quota_counter() -> None:
+    """Reset the module-level quota counter (for tests)."""
+    global _QUOTA_SEARCHES_LEFT
+    _QUOTA_SEARCHES_LEFT = None
+
+
+def _refresh_quota_from_account(account: dict[str, Any]) -> None:
+    """Re-anchor the cached counter from a live account response.
+
+    Called by ``check_setup`` after each probe so the local estimate
+    syncs to the real number without wasting a search.
+    """
+    global _QUOTA_SEARCHES_LEFT
+    raw = account.get("plan_searches_left")
+    _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else None
+
+
+async def _maybe_fetch_quota() -> None:
+    """Fetch the account status once per session to seed the local counter.
+
+    Only called on the first successful SerpAPI search.  If the fetch
+    fails, the feature is silently disabled for the session — warnings
+    are best-effort and must never break searches.
+    """
+    global _QUOTA_SEARCHES_LEFT
+    if _QUOTA_SEARCHES_LEFT is not None:
+        return  # Already seeded (or disabled).
+
+    key = _get_api_key()
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://serpapi.com/account.json",
+                params={"api_key": key},
+            )
+            resp.raise_for_status()
+            account: dict[str, Any] = resp.json()
+            raw = account.get("plan_searches_left")
+            _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else None
+    except Exception:
+        _QUOTA_SEARCHES_LEFT = None  # Disable warnings for the session.
+
+
+def _inject_quota_warning(result: dict[str, Any]) -> None:
+    """Add a ``quota_warning`` top-level key when searches are running low."""
+    if _QUOTA_SEARCHES_LEFT is not None and _QUOTA_SEARCHES_LEFT <= _LOW_QUOTA_THRESHOLD:
+        result["quota_warning"] = (
+            f"About {_QUOTA_SEARCHES_LEFT} SerpAPI searches left this month "
+            "on your plan — check_setup shows the exact number."
+        )
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -164,6 +228,11 @@ async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights
             data: dict[str, Any] = resp.json()
             if "error" in data:
                 raise ValueError(data["error"])
+            # Best-effort quota tracking (never breaks searches).
+            await _maybe_fetch_quota()
+            global _QUOTA_SEARCHES_LEFT
+            if _QUOTA_SEARCHES_LEFT is not None:
+                _QUOTA_SEARCHES_LEFT -= 1
             return data
         except httpx.TransportError:
             if attempt == 1:
@@ -624,7 +693,7 @@ async def search_flights(
         ]
         booking_raw = data.get("booking_options", [])
         booking_options = _parse_booking_options(booking_raw)
-        return {
+        booking_result: dict[str, Any] = {
             "selected_flights": selected,
             "booking_options": booking_options,
             "phase": (
@@ -633,6 +702,8 @@ async def search_flights(
                 "booking link."
             ),
         }
+        _inject_quota_warning(booking_result)
+        return booking_result
 
     result = _parse_flights_response(data, requested_currency=currency)
 
@@ -645,6 +716,7 @@ async def search_flights(
             "pass departure_token to fetch return flights for one of them."
         )
 
+    _inject_quota_warning(result)
     return result
 
 
@@ -734,7 +806,9 @@ async def search_multi_city(
         params["deep_search"] = "true"
 
     data = await _call_serpapi(params)
-    return _parse_flights_response(data, requested_currency=currency)
+    result = _parse_flights_response(data, requested_currency=currency)
+    _inject_quota_warning(result)
+    return result
 
 
 # ---------------------------------------------------------------------------

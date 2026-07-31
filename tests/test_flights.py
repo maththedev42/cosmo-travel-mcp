@@ -11,11 +11,15 @@ import respx
 
 from cosmo_travel_mcp.tools.flights import (
     SERPAPI_BASE,
+    _LOW_QUOTA_THRESHOLD,
+    _QUOTA_SEARCHES_LEFT,
     _build_base_params,
     _parse_booking_options,
     _parse_flight_item,
     _parse_flights_response,
     _parse_price_insights,
+    _refresh_quota_from_account,
+    _reset_quota_counter,
     search_flights,
     search_multi_city,
 )
@@ -28,6 +32,12 @@ from cosmo_travel_mcp.tools.flights import (
 def _set_fake_api_key(monkeypatch):
     """Set a fake SERPAPI_API_KEY so tests never hit the real guard."""
     monkeypatch.setenv("SERPAPI_API_KEY", "fake-test-key")
+
+
+@pytest.fixture(autouse=True)
+def _reset_quota():
+    """Reset the module-level quota counter so tests are order-independent."""
+    _reset_quota_counter()
 
 
 
@@ -1408,3 +1418,216 @@ async def test_booking_token_filters_not_sent(respx_mock):
     assert "include_airlines" not in params
     assert "deep_search" not in params
     assert params["booking_token"] == "book_xyz"
+
+
+# ---------------------------------------------------------------------------
+# Quota-warning tests (B-07)
+# ---------------------------------------------------------------------------
+
+
+SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_not_injected_when_plenty_of_searches_left():
+    """Account says 50 left → no quota_warning on the tool response."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 50, "this_month_usage": 0}
+    )
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("AA")],
+        }
+    )
+
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    assert "quota_warning" not in result
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_injected_when_running_low():
+    """Account says 8 left → quota_warning present with the right estimate."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 8, "this_month_usage": 92}
+    )
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("UA")],
+        }
+    )
+
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    assert result["quota_warning"] == (
+        "About 7 SerpAPI searches left this month "
+        "on your plan — check_setup shows the exact number."
+    )
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_decrements_on_subsequent_searches():
+    """After two more searches the estimate in the message drops accordingly."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 8}
+    )
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("DL")],
+        }
+    )
+
+    # First search: 8 → 7
+    await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    # Second search: 7 → 6
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-02",
+    )
+    assert "About 6" in result["quota_warning"]
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_account_fetch_fails_gracefully():
+    """Account fetch fails → no warning, searches still succeed."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(500)
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("AA")],
+        }
+    )
+
+    # First call: fetch fails → feature disabled
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    assert "quota_warning" not in result
+
+    # Second call: still disabled (no retry)
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-02",
+    )
+    assert "quota_warning" not in result
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_reanchor_after_check_setup():
+    """check_setup's probe refreshes the counter — next warning uses it."""
+    from cosmo_travel_mcp.tools.setup import check_setup
+
+    # Seed with a low estimate
+    _refresh_quota_from_account({"plan_searches_left": 3})
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("UA")],
+        }
+    )
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    assert "About 2" in result["quota_warning"]
+
+    # check_setup sees 50 searches left
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 50, "this_month_usage": 0}
+    )
+    await check_setup()
+
+    # Next search has no warning (re-anchored to 50, decremented to 49)
+    _reset_quota_counter()  # reset so _maybe_fetch_quota will re-seed
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 50}
+    )
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-02",
+    )
+    assert "quota_warning" not in result
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_injected_on_booking_token():
+    """quota_warning also appears on booking-phase responses."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 5}
+    )
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "selected_flights": [_flight_item_fixture("AA")],
+            "booking_options": [
+                {
+                    "book_with": "Expedia",
+                    "price": {"amount": 199.99, "currency": "USD"},
+                    "booking_request": {"url": "https://example.com/book"},
+                }
+            ],
+        }
+    )
+
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        booking_token="book_xyz",
+    )
+    assert "quota_warning" in result
+    assert "About 4" in result["quota_warning"]  # 5→4 after decrement
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_warning_on_multi_city():
+    """quota_warning also appears on multi-city responses."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 9}
+    )
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("DL")],
+        }
+    )
+
+    result = await search_multi_city(
+        legs=[
+            {"origin": "JFK", "destination": "LAX", "date": "2025-12-01"},
+            {"origin": "LAX", "destination": "JFK", "date": "2025-12-10"},
+        ],
+    )
+    assert "quota_warning" in result
+    assert "About 8" in result["quota_warning"]  # 9→8 after decrement
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_retried_search_decrements_once():
+    """A search that is retried (first attempt times out) decrements once."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(
+        json={"plan_searches_left": 7}
+    )
+    route = respx.get(SERPAPI_BASE)
+    route.side_effect = [
+        httpx.TimeoutException("read timed out"),
+        httpx.Response(200, json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("UA")],
+        }),
+    ]
+
+    result = await search_flights(
+        origin="JFK", destination="LAX", outbound_date="2025-12-01",
+    )
+    assert route.call_count == 2  # first timed out, second succeeded
+    assert "About 6" in result["quota_warning"]  # 7→6 after decrement

@@ -23,6 +23,7 @@ from ..onboarding import (
     setup_guide,
 )
 from .driving import FIELD_MASK, ROUTES_API_BASE
+from .flights import _refresh_quota_from_account
 
 SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
 
@@ -217,6 +218,10 @@ async def check_setup() -> dict[str, Any]:
                 s["plan_searches_left"] = account.get("plan_searches_left", "?")
                 s["this_month_usage"] = account.get("this_month_usage", "?")
                 s["total_searches_left"] = account.get("total_searches_left", "?")
+
+            # Re-anchor the local quota estimate so tool warnings
+            # use the latest real number.
+            _refresh_quota_from_account(account)
 
     # --- Google Maps check (one real API call) ---
     maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")

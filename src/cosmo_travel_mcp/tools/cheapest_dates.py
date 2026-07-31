@@ -14,6 +14,7 @@ from .flights import (
     _build_base_params,
     _call_serpapi,
     _get_api_key,
+    _inject_quota_warning,
     _map_cabin_class,
     _map_stops,
     _parse_flights_response,
@@ -214,6 +215,7 @@ async def search_cheapest_dates(
     out: dict[str, Any] = {"note": note, "results": priced}
     if failed:
         out["unavailable"] = failed
+    _inject_quota_warning(out)
     return out
 
 
