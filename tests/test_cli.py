@@ -166,8 +166,8 @@ def test_registration_launches_an_installed_binary_not_uvx():
     assert argv[-1] == PACKAGE_NAME
 
 
-def test_install_command_installs_from_the_repo():
-    assert install_command() == f"uv tool install git+{REPO_URL}"
+def test_install_command_installs_from_pypi():
+    assert install_command() == f"uv tool install {PACKAGE_NAME}"
 
 
 def test_register_argv_accepts_an_absolute_binary_path():

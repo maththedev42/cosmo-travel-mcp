@@ -10,7 +10,8 @@ use: SerpAPI gives 100 searches/month and Google Maps Routes API includes a mont
 credit.
 
 ```bash
-uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+uv tool install cosmo-travel-mcp
+# (until the first PyPI release, use: uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp)
 cosmo-travel-mcp setup --register
 ```
 
@@ -26,7 +27,8 @@ The fastest path — this prompts for the keys, validates them against the real
 APIs, and registers the server with Claude Code:
 
 ```bash
-uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+uv tool install cosmo-travel-mcp
+# (until the first PyPI release, use: uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp)
 cosmo-travel-mcp setup --register
 ```
 
@@ -89,8 +91,9 @@ export GOOGLE_MAPS_API_KEY="your-google-maps-key"
 ### 4. Install
 
 ```bash
-uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp          # from GitHub
-uv tool install .                 # or from a local clone
+uv tool install cosmo-travel-mcp           # from PyPI (post-v1.0)
+# (until the first PyPI release, use: uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp)
+uv tool install .                 # or from a local clone (for development)
 ```
 
 That puts a `cosmo-travel-mcp` binary on your PATH. Add `--force` to upgrade.
@@ -119,7 +122,8 @@ When a key is missing, the relevant tools show `NOT ready` with a remediation hi
 ## Claude Code registration
 
 ```bash
-uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+uv tool install cosmo-travel-mcp
+# (until the first PyPI release, use: uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp)
 
 claude mcp add cosmo-travel --scope user \
   -e SERPAPI_API_KEY=<your-serpapi-key> \

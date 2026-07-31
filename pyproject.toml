@@ -6,6 +6,33 @@ build-backend = "setuptools.build_meta"
 name = "cosmo-travel-mcp"
 version = "0.1.0"
 description = "MCP server bundling travel-planning tools: flights, accommodations, driving, and setup checks"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Matheus Weber"},
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "travel",
+    "flights",
+    "accommodations",
+    "serpapi",
+    "google-maps",
+    "driving",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 requires-python = ">=3.11"
 dependencies = [
     "fastmcp>=1.0.0",
@@ -14,6 +41,11 @@ dependencies = [
 
 [project.scripts]
 cosmo-travel-mcp = "cosmo_travel_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/maththedev42/cosmo-travel-mcp"
+Repository = "https://github.com/maththedev42/cosmo-travel-mcp"
+Issues = "https://github.com/maththedev42/cosmo-travel-mcp/issues"
 
 [dependency-groups]
 dev = [

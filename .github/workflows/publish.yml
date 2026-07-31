@@ -1,0 +1,54 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - run: uv sync
+
+      - name: tests (no keys)
+        env:
+          SERPAPI_API_KEY: ""
+          GOOGLE_MAPS_API_KEY: ""
+        run: uv run pytest
+
+      - name: tests (keys set)
+        env:
+          SERPAPI_API_KEY: fake-ci-key
+          GOOGLE_MAPS_API_KEY: fake-ci-key
+        run: uv run pytest
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.11
+
+      - run: uv sync
+
+      - run: uv build
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

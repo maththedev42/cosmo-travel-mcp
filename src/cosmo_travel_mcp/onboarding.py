@@ -39,13 +39,12 @@ MAPS_TOOLS = ("compare_drive_or_fly",)
 
 
 def install_command() -> str:
-    """Install this server as a standalone tool.
+    """Install this server as a standalone tool (PyPI, post-v1.0)."""
+    return f"uv tool install {PACKAGE_NAME}"
 
-    Registration must point at an installed binary, not at
-    ``uvx --from git+…``. uvx re-resolves the git dependency on every launch,
-    which measured well over two minutes on a cold cache — an MCP client gives
-    a stdio server 30 seconds to come up and then reports it as failed.
-    """
+
+def install_from_source_command() -> str:
+    """Install from GitHub (until first PyPI release, or for development)."""
     return f"uv tool install git+{REPO_URL}"
 
 
@@ -207,6 +206,8 @@ def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
         "to run these two commands in a terminal — the second prompts for the "
         "keys, checks them against the real APIs, and registers the server:\n"
         f"  {install_command()}\n"
+        "  # (until the first PyPI release, use: "
+        f"{install_from_source_command()})\n"
         f"  {PACKAGE_NAME} setup --register\n"
         "To do it by hand instead — if it is NOT yet registered with Claude "
         "Code (use the absolute path from `which cosmo-travel-mcp`, since the "
