@@ -20,6 +20,7 @@ from cosmo_travel_mcp.onboarding import (
     REPO_URL,
     SERPAPI_ENV,
     SERPAPI_SIGNUP_URL,
+    SERPAPI_TOOLS,
     SERVER_NAME,
     missing_key_message,
     register_argv,
@@ -398,6 +399,18 @@ def test_getting_keys_doc_exists_and_covers_both_providers():
     assert SERPAPI_SIGNUP_URL in doc
     assert "console.cloud.google.com" in doc
     assert "Routes API" in doc
+
+
+def test_onboarding_and_readme_drift_new_get_accommodation_details():
+    """README and SERPAPI_TOOLS must both include get_accommodation_details."""
+    readme = (REPO_ROOT / "README.md").read_text()
+
+    assert "get_accommodation_details" in readme, (
+        "README.md must mention get_accommodation_details"
+    )
+    assert "get_accommodation_details" in SERPAPI_TOOLS, (
+        "SERPAPI_TOOLS must include get_accommodation_details"
+    )
 
 
 def test_onboarding_and_readme_drift_new_search_events():

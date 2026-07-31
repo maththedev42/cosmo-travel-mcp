@@ -211,11 +211,109 @@ async def search_accommodations(
     }
 
 
+async def get_accommodation_details(
+    property_token: str,
+    check_in_date: str,
+    check_out_date: str,
+    adults: int = 2,
+    children: int = 0,
+    children_ages: list[int] | None = None,
+    currency: str = "BRL",
+    country: str | None = None,
+    language: str | None = None,
+) -> dict[str, Any]:
+    """Get full details for a single property via SerpAPI's Google Hotels engine.
+
+    Costs **1 SerpAPI search**. Use ``property_token`` from a
+    ``search_accommodations`` result to drill into a property.
+
+    Args:
+        property_token: Token from a ``search_accommodations`` result item.
+        check_in_date: YYYY-MM-DD (required by the engine).
+        check_out_date: YYYY-MM-DD (required by the engine).
+        adults: Number of adults (default 2).
+        children: Number of children (default 0).
+        children_ages: Ages of children.
+        currency: Currency code (default BRL).
+        country: Country code (gl parameter).
+        language: Language code (hl parameter).
+    """
+    params: dict[str, Any] = {
+        "property_token": property_token,
+        "check_in_date": check_in_date,
+        "check_out_date": check_out_date,
+        "adults": adults,
+        "children": children,
+        "currency": currency,
+    }
+
+    if children_ages:
+        params["children_ages"] = ",".join(str(a) for a in children_ages)
+    if country:
+        params["gl"] = country
+    if language:
+        params["hl"] = language
+
+    data = await _call_serpapi(params, engine="google_hotels")
+
+    prop = data.get("property", {})
+    if not isinstance(prop, dict):
+        prop = {}
+
+    result: dict[str, Any] = {}
+
+    if "name" in prop:
+        result["name"] = prop["name"]
+    if "description" in prop:
+        result["description"] = prop["description"]
+    if "overall_rating" in prop:
+        result["overall_rating"] = prop["overall_rating"]
+    if "reviews" in prop:
+        result["reviews"] = prop["reviews"]
+
+    # Rating breakdown: per-category scores.
+    breakdown: list[dict[str, Any]] = prop.get("rating_breakdown", [])
+    if breakdown:
+        result["rating_breakdown"] = [
+            {"category": b.get("name", ""), "score": b.get("score")}
+            for b in breakdown
+        ]
+
+    # Amenities: list of strings.
+    amenities: list[str] = prop.get("amenities", [])
+    if amenities:
+        result["amenities"] = amenities
+
+    if "check_in_time" in prop:
+        result["check_in_time"] = prop["check_in_time"]
+    if "check_out_time" in prop:
+        result["check_out_time"] = prop["check_out_time"]
+
+    # Images: up to ~10 thumbnail links.
+    images: list[dict[str, Any]] = prop.get("images", [])
+    if images:
+        result["images"] = [img.get("thumbnail", "") for img in images[:10]]
+
+    # Per-source prices.
+    raw_prices: list[dict[str, Any]] = prop.get("prices", [])
+    if raw_prices:
+        result["prices"] = [
+            {"source": p.get("source", ""), "rate_per_night": p.get("rate_per_night")}
+            for p in raw_prices
+        ]
+
+    if "link" in prop:
+        result["link"] = prop["link"]
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
 
 
 def register(mcp: Any) -> None:
-    """Register accommodations tool on a FastMCP instance."""
+    """Register accommodations tools on a FastMCP instance."""
     mcp.tool()(search_accommodations)
+    mcp.tool()(get_accommodation_details)

@@ -10,7 +10,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles seven travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles eight travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events, Google Maps Routes API for driving).
 
 Call `check_setup` first when a travel request needs a tool and setup hasn't
@@ -19,7 +19,8 @@ count against the monthly search quota).
 
 Env vars and which tools they gate:
 - SERPAPI_API_KEY → search_flights, search_multi_city, search_accommodations,
-  search_cheapest_dates, search_events. Free key (100 searches/month):
+  get_accommodation_details, search_cheapest_dates, search_events.
+  Free key (100 searches/month):
   https://serpapi.com/users/sign_up
 - GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
   https://console.cloud.google.com/ with the Routes API enabled.

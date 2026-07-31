@@ -129,7 +129,7 @@ def print_guide(*, scope: str = "user", name: str = SERVER_NAME) -> None:
     print(f"{PACKAGE_NAME} needs up to two API keys. Both have a free tier.")
 
     print(_rule(f"1. SerpAPI key  →  ${SERPAPI_ENV}"))
-    print("  Unlocks: flights, multi-city, accommodations, events, cheapest-dates.")
+    print("  Unlocks: flights, multi-city, accommodations, accommodation details, events, cheapest-dates.")
     print(_numbered(serpapi_instructions()))
 
     print(_rule(f"2. Google Maps key  →  ${MAPS_ENV}"))
@@ -249,7 +249,7 @@ def register_flow(*, scope: str, name: str, assume_yes: bool) -> int:
 
     serpapi_key = _prompt_key(
         SERPAPI_ENV,
-        "SerpAPI key — flights, hotels, cheapest-dates.",
+        "SerpAPI key — flights, hotels, hotel details, cheapest-dates.",
         "https://serpapi.com/users/sign_up  (free: 100 searches/month)",
     )
     maps_key = _prompt_key(

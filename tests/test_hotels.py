@@ -8,7 +8,7 @@ import pytest
 import respx
 
 from cosmo_travel_mcp.tools.flights import SERPAPI_BASE
-from cosmo_travel_mcp.tools.hotels import search_accommodations
+from cosmo_travel_mcp.tools.hotels import get_accommodation_details, search_accommodations
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -500,3 +500,144 @@ async def test_default_absent_all_filters():
             assert key not in req.url.params, (
                 f"{key} should be absent when not requested"
             )
+
+# ---------------------------------------------------------------------------
+# Sample response for get_accommodation_details
+# ---------------------------------------------------------------------------
+
+_FULL_DETAIL_RESPONSE = {
+    "search_metadata": {"status": "Success"},
+    "property": {
+        "name": "Grand Beach Hotel",
+        "description": "A luxury oceanfront hotel in Miami Beach.",
+        "overall_rating": 4.5,
+        "reviews": 230,
+        "rating_breakdown": [
+            {"name": "Location", "score": 4.8},
+            {"name": "Cleanliness", "score": 4.6},
+        ],
+        "amenities": ["Pool", "Spa", "Gym"],
+        "check_in_time": "3:00 PM",
+        "check_out_time": "11:00 AM",
+        "images": [
+            {"thumbnail": "https://example.com/img1.jpg"},
+            {"thumbnail": "https://example.com/img2.jpg"},
+        ],
+        "prices": [
+            {"source": "Booking.com", "rate_per_night": "$150"},
+            {"source": "Expedia", "rate_per_night": "$145"},
+        ],
+        "link": "https://www.google.com/hotels/grandbeach",
+    },
+}
+
+_SPARSE_DETAIL_RESPONSE = {
+    "search_metadata": {"status": "Success"},
+    "property": {
+        "name": "Budget Inn",
+        "overall_rating": 3.0,
+        "reviews": 12,
+        "link": "https://www.google.com/hotels/budgetinn",
+    },
+}
+
+_NO_PROPERTY_RESPONSE = {
+    "search_metadata": {"status": "Success"},
+}
+
+# ---------------------------------------------------------------------------
+# get_accommodation_details tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_accommodation_details_full_response():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_FULL_DETAIL_RESPONSE)
+        result = await get_accommodation_details(
+            property_token="abc123",
+            check_in_date="2026-08-01",
+            check_out_date="2026-08-05",
+        )
+
+    assert result["name"] == "Grand Beach Hotel"
+    assert result["description"] == "A luxury oceanfront hotel in Miami Beach."
+    assert result["overall_rating"] == 4.5
+    assert result["reviews"] == 230
+    assert result["rating_breakdown"] == [
+        {"category": "Location", "score": 4.8},
+        {"category": "Cleanliness", "score": 4.6},
+    ]
+    assert result["amenities"] == ["Pool", "Spa", "Gym"]
+    assert result["check_in_time"] == "3:00 PM"
+    assert result["check_out_time"] == "11:00 AM"
+    assert result["images"] == [
+        "https://example.com/img1.jpg",
+        "https://example.com/img2.jpg",
+    ]
+    assert result["prices"] == [
+        {"source": "Booking.com", "rate_per_night": "$150"},
+        {"source": "Expedia", "rate_per_night": "$145"},
+    ]
+    assert result["link"] == "https://www.google.com/hotels/grandbeach"
+
+
+@pytest.mark.asyncio
+async def test_get_accommodation_details_sparse_response():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
+        result = await get_accommodation_details(
+            property_token="xyz",
+            check_in_date="2026-08-01",
+            check_out_date="2026-08-05",
+        )
+
+    assert result["name"] == "Budget Inn"
+    assert "description" not in result
+    assert "rating_breakdown" not in result
+    assert "amenities" not in result
+    assert result["link"] == "https://www.google.com/hotels/budgetinn"
+
+
+@pytest.mark.asyncio
+async def test_get_accommodation_details_passes_property_token():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
+        await get_accommodation_details(
+            property_token="abc123",
+            check_in_date="2026-08-01",
+            check_out_date="2026-08-05",
+        )
+        req = mock.calls.last.request
+        assert req.url.params["property_token"] == "abc123"
+        assert req.url.params["engine"] == "google_hotels"
+        assert req.url.params["check_in_date"] == "2026-08-01"
+        assert req.url.params["check_out_date"] == "2026-08-05"
+
+
+@pytest.mark.asyncio
+async def test_get_accommodation_details_no_property_field():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_NO_PROPERTY_RESPONSE)
+        result = await get_accommodation_details(
+            property_token="abc123",
+            check_in_date="2026-08-01",
+            check_out_date="2026-08-05",
+        )
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_get_accommodation_details_locale_params():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
+        await get_accommodation_details(
+            property_token="abc123",
+            check_in_date="2026-08-01",
+            check_out_date="2026-08-05",
+            country="US",
+            language="en",
+        )
+        req = mock.calls.last.request
+        assert req.url.params["gl"] == "US"
+        assert req.url.params["hl"] == "en"

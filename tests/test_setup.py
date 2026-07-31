@@ -79,6 +79,7 @@ async def test_check_setup_both_keys_valid():
     assert tools["search_accommodations"]["ready"] is True
     assert tools["search_cheapest_dates"]["ready"] is True
     assert tools["search_events"]["ready"] is True
+    assert tools["get_accommodation_details"]["ready"] is True
     assert tools["compare_drive_or_fly"]["ready"] is True
 
 
@@ -98,6 +99,7 @@ async def test_check_setup_serpapi_key_unset(monkeypatch):
         "search_flights",
         "search_multi_city",
         "search_accommodations",
+        "get_accommodation_details",
         "search_cheapest_dates",
         "search_events",
     ]:
@@ -122,6 +124,7 @@ async def test_check_setup_serpapi_key_invalid():
         "search_flights",
         "search_multi_city",
         "search_accommodations",
+        "get_accommodation_details",
         "search_cheapest_dates",
         "search_events",
     ]:
@@ -185,7 +188,7 @@ async def test_check_setup_neither_key_set(monkeypatch):
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
     result = await check_setup()
 
-    serpapi_tools = ["search_flights", "search_multi_city", "search_accommodations", "search_cheapest_dates", "search_events"]
+    serpapi_tools = ["search_flights", "search_multi_city", "search_accommodations", "get_accommodation_details", "search_cheapest_dates", "search_events"]
     for tool in result["tools"]:
         assert tool["ready"] is False
         assert "not set" in tool["reason"]

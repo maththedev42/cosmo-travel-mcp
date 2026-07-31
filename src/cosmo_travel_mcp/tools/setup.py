@@ -173,6 +173,10 @@ async def check_setup() -> dict[str, Any]:
         "tool": "search_cheapest_dates",
         "ready": False,
     }
+    accommodation_details_status: dict[str, Any] = {
+        "tool": "get_accommodation_details",
+        "ready": False,
+    }
     events_status: dict[str, Any] = {
         "tool": "search_events",
         "ready": False,
@@ -186,6 +190,7 @@ async def check_setup() -> dict[str, Any]:
         flights_status,
         multi_city_status,
         accommodations_status,
+        accommodation_details_status,
         cheapest_dates_status,
         events_status,
     ]
@@ -233,6 +238,7 @@ async def check_setup() -> dict[str, Any]:
         flights_status,
         multi_city_status,
         accommodations_status,
+        accommodation_details_status,
         cheapest_dates_status,
         events_status,
         driving_status,

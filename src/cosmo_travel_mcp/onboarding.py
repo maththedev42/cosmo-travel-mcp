@@ -33,6 +33,7 @@ SERPAPI_TOOLS = (
     "search_flights",
     "search_multi_city",
     "search_accommodations",
+    "get_accommodation_details",
     "search_cheapest_dates",
     "search_events",
 )
@@ -119,7 +120,7 @@ def serpapi_instructions() -> list[str]:
         "Confirm the email SerpAPI sends you.",
         f"Open {SERPAPI_DASHBOARD_URL} and copy your private API key.",
         f"The free plan gives you {FREE_TIER_SEARCHES} searches/month. "
-        "One flight search, one hotel search, one event search, or one date "
+        "One flight search, one hotel search, one hotel detail lookup, one event search, or one date "
         "sampled by search_cheapest_dates each cost one search.",
     ]
 

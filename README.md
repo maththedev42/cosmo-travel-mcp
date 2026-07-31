@@ -2,7 +2,7 @@
 
 # cosmo-travel-mcp
 
-One MCP server with six travel tools — flight search, multi-city itineraries,
+One MCP server with eight travel tools — flight search, multi-city itineraries,
 accommodations, cheapest-dates sampling, and drive-vs-fly comparisons — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
 API for driving). Both providers offer a free tier that is sufficient for personal
@@ -56,9 +56,9 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks five of the seven tools: `search_flights`,
-`search_multi_city`, `search_accommodations`, `search_cheapest_dates`, and
-`search_events`.
+This one key unlocks six of the eight tools: `search_flights`,
+`search_multi_city`, `search_accommodations`, `get_accommodation_details`,
+`search_cheapest_dates`, and `search_events`.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
@@ -161,6 +161,7 @@ remove-first step.
 |---|---|---|
 | `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `currency?`, `country?`, `language?`, `include_airlines?`, `exclude_airlines?`, `bags?`, `max_duration?`, `outbound_times?`, `return_times?`, `deep_search?` | One-way or round-trip flight search via SerpAPI. Returns price insights (lowest price, typical range, buy advice) and per-flight carbon emissions in kg when available. Filter by airline, bags, duration, departure times, or use deep search. |
 | `search_multi_city` | `legs` ([{origin, destination, date, times?}…]), `adults?`, `children?`, `cabin_class?`, `currency?`, `country?`, `language?`, `include_airlines?`, `exclude_airlines?`, `bags?`, `max_duration?`, `deep_search?` | Multi-city itinerary with 2-6 legs; airline, bag, duration, and deep-search filters supported |
+| `get_accommodation_details` | `property_token`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `currency?`, `country?`, `language?` | Full property details: amenities, rating breakdown, images, per-source prices. Takes a `property_token` from `search_accommodations`. |
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?`, `sort_by?`, `min_rating?`, `hotel_class?`, `free_cancellation?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. Filters: `sort_by` (lowest_price/highest_rating/most_reviewed), `min_rating` (3.5/4.0/4.5), `hotel_class` (2–5), `free_cancellation`. |
 | `search_events` | `query`, `when?`, `country?`, `language?` | Events (concerts, shows, sports, festivals) at a destination via SerpAPI. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration via Google Maps Routes API. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
@@ -179,6 +180,7 @@ week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
 | `search_flights` | 1 | 0 | Phase-2 (return legs) calls cost 1 additional search. |
 | `search_multi_city` | 1 | 0 | |
 | `search_accommodations` | 1 | 0 | |
+| `get_accommodation_details` | 1 | 0 | Drill into a single property from `search_accommodations`. |
 | `search_events` | 1 | 0 | |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
 | `compare_drive_or_fly` | 0 | 1 | |
