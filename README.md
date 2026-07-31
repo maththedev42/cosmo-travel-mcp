@@ -1,8 +1,16 @@
 # cosmo-travel-mcp
 
-Single MCP (Model Context Protocol) server bundling travel-planning tools behind one
-process, so you register one server with one set of API keys instead of juggling
-several disconnected community MCP servers.
+One MCP server with six travel tools — flight search, multi-city itineraries,
+accommodations, cheapest-dates sampling, and drive-vs-fly comparisons — all backed
+by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
+API for driving). Both providers offer a free tier that is sufficient for personal
+use: SerpAPI gives 100 searches/month and Google Maps Routes API includes a monthly
+credit.
+
+```bash
+uv tool install git+https://github.com/maththedev42/cosmo-travel-mcp
+cosmo-travel-mcp setup --register
+```
 
 Previously this project relied on a reverse-engineered Google Flights scraper that
 started returning HTTP 200 responses that were actually internal error envelopes — a
@@ -150,6 +158,36 @@ remove-first step.
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration via Google Maps Routes API. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
 | `search_cheapest_dates` | `origin`, `destination`, `earliest_departure`, `latest_return`, `trip_duration_days`, `max_calls?` (default 6, max 15), `adults?`, `children?`, `cabin_class?`, `currency?` | Samples candidate dates across a flexible window and returns cheapest round-trip per date. **Costs up to `max_calls` SerpAPI searches per call.** |
 | `check_setup` | _(none)_ | Validates both API keys and reports which tools are ready. The SerpAPI check is free; the Maps check makes one real API call. |
+
+## What each call costs
+
+Every tool call that hits SerpAPI or Google Maps spends quota. The free tiers
+(SerpAPI 100 searches/month, Maps ~$200/month credit) are enough for personal use,
+but a cheap-seeming prompt like "find the cheapest Saturday in March" can burn a
+week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
+
+| Tool | SerpAPI searches per call | Maps calls per call | Notes |
+|---|---|---|---|
+| `search_flights` | 1 | 0 | Phase-2 (return legs) calls cost 1 additional search. |
+| `search_multi_city` | 1 | 0 | |
+| `search_accommodations` | 1 | 0 | |
+| `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
+| `compare_drive_or_fly` | 0 | 1 | |
+| `check_setup` | 0 (free account check) | 1 | The Maps check is a minimal `computeRouteMatrix` call. |
+
+## Reading multi-city and round-trip prices
+
+**Prices are always full-itinerary totals, not per-leg.** This applies to both
+round-trip phase 1 (`search_flights` with `return_date`) and multi-city searches
+(`search_multi_city`). Each phase-1 / first-leg option's `price` is the total for
+the entire journey — verified live against Google Flights (2026-07-30): a 3-leg
+POA to NYC to MCO / MIA to POA search returned first-leg options priced
+R$5,884 to R$36,377, matching the itinerary totals on the Google Flights website.
+
+Use the `departure_token` from a phase-1 result to fetch the subsequent legs
+(for round-trips) or examine the per-leg breakdown already included in each
+multi-city result. An AI client that treats a first-leg price as a single-leg
+price will misreport costs to the user.
 
 ## License
 
