@@ -211,7 +211,88 @@ def _parse_flight_item(
     if bt:
         parsed["booking_token"] = bt
 
+    # ── carbon emissions (SerpAPI reports grams; we convert to kg) ──
+    ce = item.get("carbon_emissions")
+    if ce and isinstance(ce, dict):
+        parsed["carbon_emissions"] = {
+            "this_flight_kg": max(0, round(ce.get("this_flight", 0) / 1000)),
+            "typical_for_route_kg": max(0, round(ce.get("typical_for_this_route", 0) / 1000)),
+            "difference_percent": ce.get("difference_percent", 0),
+        }
+
     return parsed
+
+
+def _parse_price_insights(
+    price_insights: dict[str, Any],
+    currency: str,
+) -> dict[str, Any] | None:
+    """Normalize SerpAPI ``price_insights`` into a structured object.
+
+    Converts ``price_history`` unix-second timestamps into ISO-8601 UTZ dates
+    and composes a human-readable ``advice`` string from the available data.
+
+    Returns ``None`` when the input is missing or the dict carries no usable
+    fields (SerpAPI sometimes omits the key entirely, and sometimes returns an
+    empty ``{}`` — both are treated as absent).
+    """
+    if not price_insights or not isinstance(price_insights, dict):
+        return None
+
+    lowest = price_insights.get("lowest_price")
+    level = price_insights.get("price_level")
+    trange = price_insights.get("typical_price_range")
+
+    # If every meaningful field is missing, treat as absent.
+    if lowest is None and level is None and not trange:
+        return None
+
+    result: dict[str, Any] = {}
+
+    if lowest is not None:
+        result["lowest_price"] = lowest
+    if level is not None:
+        result["price_level"] = level
+    if trange is not None:
+        result["typical_price_range"] = trange
+
+    # Price history: unix seconds → ISO-8601 UTZ date string.
+    raw_history = price_insights.get("price_history")
+    if raw_history and isinstance(raw_history, list):
+        from datetime import datetime, timezone
+
+        history: list[dict[str, Any]] = []
+        for point in raw_history:
+            if not isinstance(point, list) or len(point) < 2:
+                continue
+            try:
+                ts = int(point[0])
+                price = float(point[1]) if point[1] is not None else 0
+            except (ValueError, TypeError):
+                continue
+            date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+            history.append({"date": date_str, "price": int(round(price))})
+        if history:
+            result["price_history"] = history
+
+    # Compose a one-sentence advice string from the data we have.
+    parts: list[str] = []
+
+    if level:
+        parts.append(f"Prices are currently {level} for this route")
+
+    currency_label = currency or ""
+
+    if lowest is not None:
+        parts.append(f"the lowest recent price was {lowest} {currency_label}".rstrip())
+
+    if trange and isinstance(trange, list) and len(trange) == 2:
+        parts.append(f"and the typical range is {trange[0]}–{trange[1]} {currency_label}".rstrip())
+
+    if parts:
+        result["advice"] = ": ".join([parts[0], ", ".join(parts[1:])]) + "."
+
+    return result if result else None
 
 
 def _parse_flights_response(
@@ -230,12 +311,18 @@ def _parse_flights_response(
     for item in other:
         flights.append(_parse_flight_item(item, "other_flights", currency))
 
-    return {
+    parsed: dict[str, Any] = {
         "flights": flights,
         "total_best": len(best),
         "total_other": len(other),
         "search_parameters": data.get("search_parameters", {}),
     }
+
+    pi = _parse_price_insights(data.get("price_insights", {}), currency)
+    if pi is not None:
+        parsed["price_insights"] = pi
+
+    return parsed
 
 
 # ---------------------------------------------------------------------------

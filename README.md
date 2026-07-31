@@ -158,7 +158,7 @@ remove-first step.
 
 | Tool | Parameters | Description |
 |---|---|---|
-| `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `currency?`, `country?`, `language?` | One-way or round-trip flight search via SerpAPI |
+| `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `currency?`, `country?`, `language?` | One-way or round-trip flight search via SerpAPI. Returns price insights (lowest price, typical range, buy advice) and per-flight carbon emissions in kg when available. |
 | `search_multi_city` | `legs` ([{origin, destination, date}…]), `adults?`, `children?`, `cabin_class?`, `currency?`, `country?`, `language?` | Multi-city itinerary with 2-6 legs |
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration via Google Maps Routes API. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |

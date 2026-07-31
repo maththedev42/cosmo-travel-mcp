@@ -14,6 +14,7 @@ from cosmo_travel_mcp.tools.flights import (
     _build_base_params,
     _parse_flight_item,
     _parse_flights_response,
+    _parse_price_insights,
     search_flights,
     search_multi_city,
 )
@@ -202,6 +203,199 @@ def test_parse_flights_response_currency_fallback():
     }
     result = _parse_flights_response(data, requested_currency="EUR")
     assert result["flights"][0]["currency"] == "EUR"
+
+
+# ---------------------------------------------------------------------------
+# _parse_price_insights tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_price_insights_full():
+    """Full price_insights with history -> normalized, advice composed."""
+    raw = {
+        "lowest_price": 5416,
+        "price_level": "low",
+        "typical_price_range": [5800, 7500],
+        "price_history": [
+            [1750000000, 5500],
+            [1750086400, 5400],
+            [1750172800, 5416],
+        ],
+    }
+    result = _parse_price_insights(raw, "BRL")
+    assert result is not None
+    assert result["lowest_price"] == 5416
+    assert result["price_level"] == "low"
+    assert result["typical_price_range"] == [5800, 7500]
+    assert len(result["price_history"]) == 3
+    # Dates are ISO-8601 UTZ.
+    assert result["price_history"][0]["date"] == "2025-06-15"
+    assert result["price_history"][0]["price"] == 5500
+    # Advice string mentions price level + typical range.
+    assert "low" in result["advice"]
+    assert "5416" in result["advice"]
+    assert "5800" in result["advice"]
+    assert "BRL" in result["advice"]
+
+
+def test_parse_price_insights_none():
+    """None / empty dict -> returns None (absent)."""
+    assert _parse_price_insights({}, "USD") is None
+    assert _parse_price_insights(None, "USD") is None
+
+
+def test_parse_price_insights_no_level():
+    """price_insights without price_level still produces advice from available fields."""
+    raw = {
+        "lowest_price": 5000,
+        "typical_price_range": [4800, 6200],
+    }
+    result = _parse_price_insights(raw, "USD")
+    assert result is not None
+    assert "price_level" not in result
+    assert "lowest_price" in result
+    assert "advice" in result
+
+
+def test_parse_price_insights_bare_minimum():
+    """Only a lowest_price — still produces usable output."""
+    raw = {"lowest_price": 500}
+    result = _parse_price_insights(raw, "EUR")
+    assert result is not None
+    assert result["lowest_price"] == 500
+    assert "price_level" not in result
+    assert "price_history" not in result
+    # Advice still mentions the price.
+    assert "500" in result["advice"]
+
+
+def test_parse_price_insights_no_meaningful_fields():
+    """price_insights dict with no useful keys -> None."""
+    raw = {"some_unknown_key": 123}
+    assert _parse_price_insights(raw, "USD") is None
+
+
+def test_parse_price_insights_history_bad_points():
+    """Malformed history points are skipped, good ones kept."""
+    raw = {
+        "lowest_price": 100,
+        "price_history": [
+            [1750000000, 100],
+            "not_a_list",
+            [1750086400, None],  # None price → 0
+            [],
+        ],
+    }
+    result = _parse_price_insights(raw, "USD")
+    assert result is not None
+    # Only two valid points survive (the None-price one becomes price=0).
+    assert len(result["price_history"]) == 2
+    assert result["price_history"][0]["price"] == 100
+    assert result["price_history"][1]["price"] == 0
+
+
+# ---------------------------------------------------------------------------
+# _parse_flights_response — price_insights passthrough
+# ---------------------------------------------------------------------------
+
+
+def test_parse_flights_response_with_price_insights():
+    """price_insights in SerpAPI data -> appears in parsed response."""
+    data = {
+        "search_parameters": {"currency": "USD"},
+        "best_flights": [_flight_item_fixture(price=300)],
+        "other_flights": [],
+        "price_insights": {
+            "lowest_price": 300,
+            "price_level": "low",
+            "typical_price_range": [280, 400],
+        },
+    }
+    result = _parse_flights_response(data)
+    assert "price_insights" in result
+    assert result["price_insights"]["lowest_price"] == 300
+    assert "advice" in result["price_insights"]
+
+
+def test_parse_flights_response_without_price_insights():
+    """No price_insights key -> field absent, no error."""
+    data = {
+        "search_parameters": {},
+        "best_flights": [_flight_item_fixture()],
+        "other_flights": [],
+    }
+    result = _parse_flights_response(data)
+    assert "price_insights" not in result
+
+
+def test_parse_flights_response_empty_price_insights():
+    """price_insights is empty dict -> field absent."""
+    data = {
+        "search_parameters": {},
+        "best_flights": [_flight_item_fixture()],
+        "other_flights": [],
+        "price_insights": {},
+    }
+    result = _parse_flights_response(data)
+    assert "price_insights" not in result
+
+
+# ---------------------------------------------------------------------------
+# _parse_flight_item — carbon_emissions passthrough
+# ---------------------------------------------------------------------------
+
+
+def test_parse_flight_item_with_carbon_emissions():
+    """Flight item with carbon_emissions -> kg conversion, all fields present."""
+    item = _flight_item_fixture(price=350)
+    item["carbon_emissions"] = {
+        "this_flight": 85000,
+        "typical_for_this_route": 78000,
+        "difference_percent": 9,
+    }
+    parsed = _parse_flight_item(item, "best_flights", "USD")
+    assert "carbon_emissions" in parsed
+    ce = parsed["carbon_emissions"]
+    assert ce["this_flight_kg"] == 85  # 85000 / 1000
+    assert ce["typical_for_route_kg"] == 78  # 78000 / 1000
+    assert ce["difference_percent"] == 9
+
+
+def test_parse_flight_item_without_carbon_emissions():
+    """Flight item without carbon_emissions -> field absent, no error."""
+    item = _flight_item_fixture()
+    parsed = _parse_flight_item(item, "best_flights", "USD")
+    assert "carbon_emissions" not in parsed
+
+
+def test_parse_flight_item_carbon_emissions_mixed():
+    """One item with emissions, one without — only the first gets the field."""
+    data = {
+        "search_parameters": {"currency": "USD"},
+        "best_flights": [],
+        "other_flights": [
+            {
+                "price": 450,
+                "total_duration": 180,
+                "flights": [_leg_fixture()],
+                "carbon_emissions": {
+                    "this_flight": 120000,
+                    "typical_for_this_route": 110000,
+                    "difference_percent": 9,
+                },
+            },
+            {
+                "price": 320,
+                "total_duration": 200,
+                "flights": [_leg_fixture("JFK", "MIA")],
+            },
+        ],
+    }
+    result = _parse_flights_response(data)
+    assert len(result["flights"]) == 2
+    assert "carbon_emissions" in result["flights"][0]
+    assert result["flights"][0]["carbon_emissions"]["this_flight_kg"] == 120
+    assert "carbon_emissions" not in result["flights"][1]
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +623,39 @@ async def test_search_multi_city_three_legs():
 
     assert len(result["flights"]) == 1
     assert result["flights"][0]["currency"] == "USD"
+
+
+@pytest.mark.asyncio
+async def test_search_multi_city_with_price_insights():
+    """Multi-city response with price_insights -> same passthrough works."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "search_parameters": {"currency": "USD"},
+                    "best_flights": [_flight_item_fixture(price=1200)],
+                    "other_flights": [],
+                    "price_insights": {
+                        "lowest_price": 1100,
+                        "price_level": "typical",
+                        "typical_price_range": [1050, 1300],
+                    },
+                },
+            )
+        )
+
+        result = await search_multi_city(
+            legs=[
+                {"origin": "SEA", "destination": "JFK", "date": "2025-12-01"},
+                {"origin": "JFK", "destination": "LHR", "date": "2025-12-10"},
+            ],
+            currency="USD",
+        )
+
+    assert "price_insights" in result
+    assert result["price_insights"]["lowest_price"] == 1100
+    assert "advice" in result["price_insights"]
 
 
 @pytest.mark.asyncio
