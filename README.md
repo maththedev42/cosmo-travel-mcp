@@ -189,6 +189,17 @@ Use the `departure_token` from a phase-1 result to fetch the subsequent legs
 multi-city result. An AI client that treats a first-leg price as a single-leg
 price will misreport costs to the user.
 
+## Examples
+
+See [docs/EXAMPLES.md](./docs/EXAMPLES.md) for worked agent flows: multi-city
+itinerary, round-trip with `departure_token` drill-down, hotels, and drive-vs-fly
+comparison.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup, test conventions, and
+the walk-through for adding a new tool.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE). Copyright (c) 2026 Matheus Weber.
