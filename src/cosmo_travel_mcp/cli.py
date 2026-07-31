@@ -129,7 +129,7 @@ def print_guide(*, scope: str = "user", name: str = SERVER_NAME) -> None:
     print(f"{PACKAGE_NAME} needs up to two API keys. Both have a free tier.")
 
     print(_rule(f"1. SerpAPI key  →  ${SERPAPI_ENV}"))
-    print("  Unlocks: flights, multi-city, accommodations, cheapest-dates.")
+    print("  Unlocks: flights, multi-city, accommodations, events, cheapest-dates.")
     print(_numbered(serpapi_instructions()))
 
     print(_rule(f"2. Google Maps key  →  ${MAPS_ENV}"))

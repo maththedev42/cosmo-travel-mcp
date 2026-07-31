@@ -56,8 +56,9 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks four of the six tools: `search_flights`,
-`search_multi_city`, `search_accommodations`, and `search_cheapest_dates`.
+This one key unlocks five of the seven tools: `search_flights`,
+`search_multi_city`, `search_accommodations`, `search_cheapest_dates`, and
+`search_events`.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
@@ -161,6 +162,7 @@ remove-first step.
 | `search_flights` | `origin`, `destination`, `outbound_date`, `return_date?`, `adults?`, `children?`, `cabin_class?`, `max_stops?`, `departure_token?`, `currency?`, `country?`, `language?` | One-way or round-trip flight search via SerpAPI. Returns price insights (lowest price, typical range, buy advice) and per-flight carbon emissions in kg when available. |
 | `search_multi_city` | `legs` ([{origin, destination, date}…]), `adults?`, `children?`, `cabin_class?`, `currency?`, `country?`, `language?` | Multi-city itinerary with 2-6 legs |
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. |
+| `search_events` | `query`, `when?`, `country?`, `language?` | Events (concerts, shows, sports, festivals) at a destination via SerpAPI. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration via Google Maps Routes API. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
 | `search_cheapest_dates` | `origin`, `destination`, `earliest_departure`, `latest_return`, `trip_duration_days`, `max_calls?` (default 6, max 15), `adults?`, `children?`, `cabin_class?`, `currency?` | Samples candidate dates across a flexible window and returns cheapest round-trip per date. **Costs up to `max_calls` SerpAPI searches per call.** |
 | `check_setup` | _(none)_ | Validates both API keys and reports which tools are ready. The SerpAPI check is free; the Maps check makes one real API call. |
@@ -177,6 +179,7 @@ week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
 | `search_flights` | 1 | 0 | Phase-2 (return legs) calls cost 1 additional search. |
 | `search_multi_city` | 1 | 0 | |
 | `search_accommodations` | 1 | 0 | |
+| `search_events` | 1 | 0 | |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
 | `compare_drive_or_fly` | 0 | 1 | |
 | `check_setup` | 0 (free account check) | 1 | The Maps check is a minimal `computeRouteMatrix` call. |

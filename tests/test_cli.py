@@ -398,3 +398,12 @@ def test_getting_keys_doc_exists_and_covers_both_providers():
     assert SERPAPI_SIGNUP_URL in doc
     assert "console.cloud.google.com" in doc
     assert "Routes API" in doc
+
+
+def test_onboarding_and_readme_drift_new_search_events():
+    """README tools table and onboarding must stay in sync for search_events."""
+    readme = (REPO_ROOT / "README.md").read_text()
+    assert "`search_events`" in readme
+    # setup_guide uses human labels (e.g. "events") not tool function names.
+    guide = setup_guide(need_serpapi=True, need_maps=False)
+    assert "events" in guide

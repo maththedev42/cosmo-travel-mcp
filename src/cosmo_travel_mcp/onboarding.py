@@ -34,6 +34,7 @@ SERPAPI_TOOLS = (
     "search_multi_city",
     "search_accommodations",
     "search_cheapest_dates",
+    "search_events",
 )
 MAPS_TOOLS = ("compare_drive_or_fly",)
 
@@ -118,8 +119,8 @@ def serpapi_instructions() -> list[str]:
         "Confirm the email SerpAPI sends you.",
         f"Open {SERPAPI_DASHBOARD_URL} and copy your private API key.",
         f"The free plan gives you {FREE_TIER_SEARCHES} searches/month. "
-        "One flight search, one hotel search, or one date sampled by "
-        "search_cheapest_dates each cost one search.",
+        "One flight search, one hotel search, one event search, or one date "
+        "sampled by search_cheapest_dates each cost one search.",
     ]
 
 
@@ -187,7 +188,7 @@ def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
             f"1. Get a free SerpAPI key — sign up at {SERPAPI_SIGNUP_URL} "
             f"(free tier: {FREE_TIER_SEARCHES} searches/month), then copy the "
             "key from your dashboard. This unlocks flights, multi-city, "
-            "accommodations and cheapest-dates."
+            "accommodations, events, and cheapest-dates."
         )
     if need_maps:
         steps.append(
