@@ -197,6 +197,14 @@ async def search_accommodations(
     if _hotel_classes is not None:
         params["hotel_class"] = ",".join(str(c) for c in _hotel_classes)
     if free_cancellation:
+        # Same engine restriction as hotel_class: the filter is silently
+        # ignored for vacation rentals, and vacation_rentals defaults to
+        # True — so refuse rather than ship a filter that does nothing.
+        if vacation_rentals:
+            raise ValueError(
+                "free_cancellation cannot be used with vacation_rentals=True — "
+                "the engine does not apply it to vacation rentals."
+            )
         params["free_cancellation"] = "true"
 
     data = await _call_serpapi(params, engine="google_hotels")
@@ -213,6 +221,7 @@ async def search_accommodations(
 
 async def get_accommodation_details(
     property_token: str,
+    location: str,
     check_in_date: str,
     check_out_date: str,
     adults: int = 2,
@@ -229,6 +238,10 @@ async def get_accommodation_details(
 
     Args:
         property_token: Token from a ``search_accommodations`` result item.
+        location: The same search text used for the ``search_accommodations``
+            call that produced the token. The engine requires ``q`` even when
+            a ``property_token`` is supplied — omitting it returns HTTP 400
+            (verified against the live API on 2026-07-31).
         check_in_date: YYYY-MM-DD (required by the engine).
         check_out_date: YYYY-MM-DD (required by the engine).
         adults: Number of adults (default 2).
@@ -239,6 +252,7 @@ async def get_accommodation_details(
         language: Language code (hl parameter).
     """
     params: dict[str, Any] = {
+        "q": location,
         "property_token": property_token,
         "check_in_date": check_in_date,
         "check_out_date": check_out_date,
@@ -256,54 +270,87 @@ async def get_accommodation_details(
 
     data = await _call_serpapi(params, engine="google_hotels")
 
-    prop = data.get("property", {})
-    if not isinstance(prop, dict):
-        prop = {}
+    # The property-details response carries its fields at the top level —
+    # there is no `property` wrapper (verified against the live API
+    # 2026-07-31; reading one returned an empty result for every call).
+    prop = data if isinstance(data, dict) else {}
 
     result: dict[str, Any] = {}
 
-    if "name" in prop:
-        result["name"] = prop["name"]
-    if "description" in prop:
-        result["description"] = prop["description"]
-    if "overall_rating" in prop:
-        result["overall_rating"] = prop["overall_rating"]
-    if "reviews" in prop:
-        result["reviews"] = prop["reviews"]
+    for field in ("name", "description", "overall_rating", "reviews", "link"):
+        if field in prop:
+            result[field] = prop[field]
 
-    # Rating breakdown: per-category scores.
-    breakdown: list[dict[str, Any]] = prop.get("rating_breakdown", [])
-    if breakdown:
-        result["rating_breakdown"] = [
-            {"category": b.get("name", ""), "score": b.get("score")}
-            for b in breakdown
+    # Star distribution: `ratings` is a list of {stars, count}.
+    ratings = prop.get("ratings")
+    if isinstance(ratings, list):
+        stars = [
+            {"stars": r["stars"], "count": r.get("count", 0)}
+            for r in ratings
+            if isinstance(r, dict) and r.get("stars") is not None
         ]
+        if stars:
+            result["rating_distribution"] = stars
 
-    # Amenities: list of strings.
-    amenities: list[str] = prop.get("amenities", [])
-    if amenities:
-        result["amenities"] = amenities
+    # Per-category sentiment: `reviews_breakdown` is a list of
+    # {name, total_mentioned, positive, negative, neutral}.
+    breakdown = prop.get("reviews_breakdown")
+    if isinstance(breakdown, list):
+        categories = []
+        for b in breakdown:
+            if not isinstance(b, dict) or not b.get("name"):
+                continue
+            entry: dict[str, Any] = {"category": b["name"]}
+            for k in ("total_mentioned", "positive", "negative", "neutral"):
+                if b.get(k) is not None:
+                    entry[k] = b[k]
+            categories.append(entry)
+        if categories:
+            result["reviews_breakdown"] = categories
 
-    if "check_in_time" in prop:
-        result["check_in_time"] = prop["check_in_time"]
-    if "check_out_time" in prop:
-        result["check_out_time"] = prop["check_out_time"]
+    amenities = prop.get("amenities")
+    if isinstance(amenities, list):
+        named = [a for a in amenities if isinstance(a, str) and a]
+        if named:
+            result["amenities"] = named
 
-    # Images: up to ~10 thumbnail links.
-    images: list[dict[str, Any]] = prop.get("images", [])
-    if images:
-        result["images"] = [img.get("thumbnail", "") for img in images[:10]]
+    for field in ("check_in_time", "check_out_time", "hotel_class"):
+        if field in prop:
+            result[field] = prop[field]
 
-    # Per-source prices.
-    raw_prices: list[dict[str, Any]] = prop.get("prices", [])
-    if raw_prices:
-        result["prices"] = [
-            {"source": p.get("source", ""), "rate_per_night": p.get("rate_per_night")}
-            for p in raw_prices
+    images = prop.get("images")
+    if isinstance(images, list):
+        thumbs = [
+            img["thumbnail"]
+            for img in images[:10]
+            if isinstance(img, dict) and img.get("thumbnail")
         ]
+        if thumbs:
+            result["images"] = thumbs
 
-    if "link" in prop:
-        result["link"] = prop["link"]
+    # Per-source prices. `rate_per_night` is a nested
+    # {lowest, extracted_lowest} object, so flatten it rather than leaking
+    # the raw shape into what is documented as a modest subset.
+    raw_prices = prop.get("prices")
+    if isinstance(raw_prices, list):
+        prices = []
+        for p in raw_prices:
+            if not isinstance(p, dict):
+                continue
+            entry = {"source": p.get("source", "")}
+            rate = p.get("rate_per_night")
+            if isinstance(rate, dict):
+                if rate.get("lowest") is not None:
+                    entry["rate_per_night"] = rate["lowest"]
+                if rate.get("extracted_lowest") is not None:
+                    entry["rate_per_night_value"] = rate["extracted_lowest"]
+            elif rate is not None:
+                entry["rate_per_night"] = rate
+            if p.get("link"):
+                entry["link"] = p["link"]
+            prices.append(entry)
+        if prices:
+            result["prices"] = prices
 
     return result
 

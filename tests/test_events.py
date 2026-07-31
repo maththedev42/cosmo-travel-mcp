@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 import respx
 
@@ -25,13 +28,21 @@ def _set_fake_api_key(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_search_events_normal_query():
-    """Normal query returns normalized events with all fields mapped."""
+    """Normal query returns normalized events with all fields mapped.
+
+    The event shape here matches the real engine: ``address`` is a top-level
+    array of strings and the ``venue`` object carries only
+    {name, rating, reviews, link}. The previous version of this test put the
+    address inside ``venue``, which the engine never does — so the parser read
+    a field that is always missing and the test still passed.
+    """
     mock_response = {
         "events_results": [
             {
                 "title": "Rock Concert",
                 "date": {"when": "Sat, Dec 13, 8:00 PM", "start_date": "Dec 13"},
-                "venue": {"name": "Madison Square Garden", "address": "4 Pennsylvania Plaza"},
+                "address": ["Madison Square Garden, 4 Pennsylvania Plaza", "New York, NY"],
+                "venue": {"name": "Madison Square Garden", "rating": 4.4, "reviews": 12000},
                 "link": "https://example.com/rock-concert",
                 "ticket_info": [
                     {"source": "Ticketmaster", "link": "https://tm.example.com/1"},
@@ -53,11 +64,72 @@ async def test_search_events_normal_query():
     assert "Dec 13" in ev["date"]
     assert "Sat" in ev["date"]
     assert ev["venue"] == "Madison Square Garden"
-    assert ev["address"] == "4 Pennsylvania Plaza"
+    assert ev["address"] == "Madison Square Garden, 4 Pennsylvania Plaza, New York, NY"
     assert ev["link"] == "https://example.com/rock-concert"
     assert len(ev["tickets"]) == 2
     assert ev["tickets"][0]["source"] == "Ticketmaster"
     assert ev["tickets"][1]["source"] == "StubHub"
+
+
+@pytest.mark.asyncio
+async def test_search_events_parses_the_real_captured_response():
+    """Parse a real google_events body end to end (tests/fixtures/README.md)."""
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "google_events_search.json").read_text()
+    )
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=fixture)
+        result = await search_events("New York")
+
+    assert result["total_results"] >= 1
+    ev = result["events"][0]
+    assert ev["title"]
+    # address is joined from the top-level array, so it must be non-empty for
+    # a real event — the bug this pins made it permanently absent.
+    assert ev["address"]
+    assert ev["venue"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "query,expected_q",
+    [
+        ("New York", "Events in New York"),
+        ("Porto Alegre", "Events in Porto Alegre"),
+        ("Boston", "Events in Boston"),
+        ("San Francisco, CA", "Events in San Francisco, CA"),
+        ("jazz concerts in New Orleans", "jazz concerts in New Orleans"),
+        ("Chicago festivals", "Chicago festivals"),
+    ],
+)
+async def test_multi_word_cities_still_get_the_events_prefix(query, expected_q):
+    """A space in the query does not make it events-shaped.
+
+    The prior heuristic skipped the prefix whenever the query contained a
+    space, so every multi-word city — including the spec's own "New York"
+    example — was sent unprefixed.
+    """
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json={"events_results": []})
+        await search_events(query)
+        assert mock.calls.last.request.url.params["q"] == expected_q
+
+
+@pytest.mark.asyncio
+async def test_search_events_uses_the_events_engine():
+    """Guards the historical bug where the engine was clobbered to google_flights."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json={"events_results": []})
+        await search_events("Lisbon")
+        assert mock.calls.last.request.url.params["engine"] == "google_events"
+
+
+@pytest.mark.asyncio
+async def test_htichips_absent_when_when_is_omitted():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json={"events_results": []})
+        await search_events("Lisbon")
+        assert "htichips" not in mock.calls.last.request.url.params
 
 
 @pytest.mark.asyncio

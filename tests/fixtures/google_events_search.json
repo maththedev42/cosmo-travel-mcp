@@ -1,0 +1,117 @@
+{
+ "search_parameters": {
+  "q": "Events in New York",
+  "engine": "google_events",
+  "hl": "en",
+  "gl": "us"
+ },
+ "search_information": {
+  "events_results_state": "Results for exact spelling"
+ },
+ "events_results": [
+  {
+   "title": "Cyrus Chestnut Trio",
+   "date": {
+    "start_date": "Aug 2",
+    "when": "Sun, 8:30 \u2013 11:30 PM"
+   },
+   "address": [
+    "Smoke Jazz & Supper Club, 2751 Broadway",
+    "New York, NY"
+   ],
+   "link": "https://www.ctinsider.com/events-calendar/?_evDiscoveryPath=/event%2F1039210817n-carl-allen",
+   "event_location_map": {
+    "image": "https://www.google.com/maps/vt/data=iRGe5pYFiDzFay7GiSNMDbq0O_Obn0MVVedjf-PeIKcXuoDHjNMaY1DAohxgqGqWENo5hTI8fAb4wWRw4doXJjUCtx_CPJCCK8UdIKYrnjlGCOBRLnw",
+    "link": "https://www.google.com/maps/place//data=!4m2!3m1!1s0x89c2f624dfdffe4b:0x3ac0d3466f00dbe1?sa=X&ved=2ahUKEwjItIT7-_2VAxVjnisGHaYVIkAQ9eIBegQIAxAA&hl=en&gl=us",
+    "serpapi_link": "https://serpapi.com/search.json?data=%214m2%213m1%211s0x89c2f624dfdffe4b%3A0x3ac0d3466f00dbe1&engine=google_maps&gl=us&google_domain=google.com&hl=en&q=Events+in+New+York&type=place"
+   },
+   "description": "Wed-Sun, July 20-August 2",
+   "ticket_info": [
+    {
+     "source": "CT Insider",
+     "source_icon": "https://encrypted-tbn1.gstatic.com/faviconV2?url=https://ctinsider.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.ctinsider.com/events-calendar/?_evDiscoveryPath=/event%2F1039210817n-carl-allen",
+     "link_type": "more info"
+    },
+    {
+     "source": "apple",
+     "source_icon": "https://encrypted-tbn1.gstatic.com/faviconV2?url=https://apple.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://music.apple.com/tn/concerts/ce.b5675674-6226-4734-a6a2-568abc6fb3cd",
+     "link_type": "more info"
+    },
+    {
+     "source": "jambase",
+     "source_icon": "https://encrypted-tbn0.gstatic.com/faviconV2?url=https://jambase.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.jambase.com/show/cyrus-chestnut-smoke-jazz-supper-club-20260802-2",
+     "link_type": "more info"
+    }
+   ],
+   "venue": {
+    "name": "Smoke Jazz & Supper Club",
+    "rating": 4.5,
+    "reviews": 1435,
+    "link": "https://www.google.com/search?sca_esv=27fc7449c11b6da0&gl=us&hl=en&q=Smoke+Jazz+%26+Supper+Club&ludocid=4233615949191764961&ibp=gwp%3B0,7"
+   },
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSnRuwXKNCP_MigBfdwKpZMxJM7lj_veg1ESllbppU&s",
+   "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSErJ_oonheTVJidrVBYqK3MNN_k4VIx6y9Fd-7TTHxeQ&s"
+  },
+  {
+   "title": "Nine Vicious",
+   "date": {
+    "start_date": "Jul 31",
+    "when": "Today, 7:00 \u2013 8:30 PM"
+   },
+   "address": [
+    "Irving Plaza, 17 Irving Pl",
+    "New York, NY"
+   ],
+   "link": "https://www.livenation.com/event/k7vGF_FrJ8l74/nine-vicious-a-tour",
+   "event_location_map": {
+    "image": "https://www.google.com/maps/vt/data=jTWTRbQ-93hoNWLSkc894xws894UPZ3eKv-qpl8-DRHDMJwuJdcSu65GO5yswdGVMEqaLispU4NW68hqt6T9SYodYjBrJUcCDUHJVB3bq-xGpSCoA8s",
+    "link": "https://www.google.com/maps/place//data=!4m2!3m1!1s0x89c2599f49ef3ae9:0xfef9fa6b6a342ec2?sa=X&ved=2ahUKEwjItIT7-_2VAxVjnisGHaYVIkAQ9eIBegQICxAA&hl=en&gl=us",
+    "serpapi_link": "https://serpapi.com/search.json?data=%214m2%213m1%211s0x89c2599f49ef3ae9%3A0xfef9fa6b6a342ec2&engine=google_maps&gl=us&google_domain=google.com&hl=en&q=Events+in+New+York&type=place"
+   },
+   "description": "NINE VICIOUS - A TOUR Friday, July 31, 2026 at 7:00 PM EDT Irving Plaza, New York, NY",
+   "ticket_info": [
+    {
+     "source": "Eventticketscenter.com",
+     "source_icon": "https://encrypted-tbn0.gstatic.com/faviconV2?url=https://eventticketscenter.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.eventticketscenter.com/nine-vicious-new-york-07-31-2026/7865756/t",
+     "link_type": "tickets"
+    },
+    {
+     "source": "Wyndham Garden Chinatown",
+     "source_icon": "https://encrypted-tbn1.gstatic.com/faviconV2?url=https://wyndhamgardenchinatownnyc.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.wyndhamgardenchinatownnyc.com/events/manhattan/nine-vicious-11929240",
+     "link_type": "more info"
+    },
+    {
+     "source": "Live Nation",
+     "source_icon": "https://encrypted-tbn1.gstatic.com/faviconV2?url=https://livenation.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.livenation.com/event/k7vGF_FrJ8l74/nine-vicious-a-tour",
+     "link_type": "more info"
+    },
+    {
+     "source": "AXS",
+     "source_icon": "https://encrypted-tbn2.gstatic.com/faviconV2?url=https://axs.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://www.axs.com/events/1411012/nine-vicious-tickets",
+     "link_type": "more info"
+    },
+    {
+     "source": "doNYC",
+     "source_icon": "https://encrypted-tbn0.gstatic.com/faviconV2?url=https://donyc.com&client=HORIZON&size=96&type=FAVICON&fallback_opts=TYPE,SIZE,URL&nfrp=2",
+     "link": "https://donyc.com/events/2026/7/31/nine-vicious-a-tour-tickets",
+     "link_type": "more info"
+    }
+   ],
+   "venue": {
+    "name": "Irving Plaza",
+    "rating": 4.3,
+    "reviews": 3248,
+    "link": "https://www.google.com/search?sca_esv=27fc7449c11b6da0&gl=us&hl=en&q=Irving+Plaza&ludocid=18372991494084898498&ibp=gwp%3B0,7"
+   },
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCidJ3TI8Vw9j1DE4I8QAHQH7XyRYQS9y89GEKze-u8IBFf75SV51YFlU&s",
+   "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRr_vrGu0iD9cPAYenpz5O-AlQYdn9wo_JcGqYH0M2AOpX-VLECUmM9j8hV6A&s=10"
+  }
+ ]
+}

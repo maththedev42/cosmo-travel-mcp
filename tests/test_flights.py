@@ -1031,6 +1031,38 @@ async def test_filter_outbound_times_present():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("given", ["18, 23", " 18,23 ", "18 , 23"])
+async def test_outbound_times_are_normalized_on_the_wire(given):
+    """Spacing the caller typed must not reach the engine.
+
+    The value was validated *and parsed* into ints, then the caller's raw
+    string was sent anyway — so "18, 23" arrived as a second hour of " 23".
+    """
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            outbound_times=given,
+        )
+    assert _captured_params(route)["outbound_times"] == "18,23"
+
+
+@pytest.mark.asyncio
+async def test_return_times_are_normalized_on_the_wire():
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="GRU", destination="JFK", outbound_date="2025-12-01",
+            return_date="2025-12-10", return_times="6, 12",
+        )
+    assert _captured_params(route)["return_times"] == "6,12"
+
+
+@pytest.mark.asyncio
 async def test_filter_outbound_times_four_values():
     """outbound_times with 4 values accepted."""
     with respx.mock as mock:

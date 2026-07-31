@@ -5,6 +5,51 @@ All notable changes to cosmo-travel-mcp.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`search_events`** — concerts, shows, sports and festivals at a destination,
+  with venue, dates and ticket links. Optional `when` window (today, weekend,
+  next_week…).
+- **`get_accommodation_details`** — drill into one property from a
+  `property_token`: amenities, star distribution, per-category review
+  sentiment, images and per-source prices.
+- **Price insights on flight results** — buy-timing advice, whether current
+  prices are low/typical/high for the route, the recent low, the typical
+  range, and a ~60-day price history. Carbon-emission figures per option.
+- **Flight filters** — include/exclude airlines (or alliances), carry-on bag
+  count, maximum itinerary duration, departure/arrival hour windows, and
+  deep search.
+- **Hotel filters** — sort order, minimum rating, hotel class, free
+  cancellation.
+- **Booking phase** — a `booking_token` from a phase-2 result returns the
+  sellers offering that itinerary with their prices, so "which site is
+  cheapest" is answerable.
+- Captured SerpAPI response fixtures under `tests/fixtures/`, with the rule
+  that shape assertions use real recorded bodies rather than invented ones.
+
+### Fixed
+
+- Buy advice was ungrammatical whenever SerpAPI omitted a field — the common
+  case — producing output like `Prices are currently high for this route: .`
+- A price-insights payload carrying only a price history was discarded whole.
+- Absent carbon-emission figures were reported as `0 kg`, asserting a flight
+  emitted nothing; a null figure crashed the search outright and silently
+  dropped sampled dates from `search_cheapest_dates`.
+- `get_accommodation_details` omitted the `q` parameter the engine requires
+  alongside a `property_token` (HTTP 400), and read its response from a
+  `property` wrapper the engine does not return — the tool could not have
+  worked. It also read a `rating_breakdown` field that does not exist.
+- Event addresses were read from the venue object instead of the event, so
+  they were always missing.
+- Locations with a space in the name — "New York", "Porto Alegre" — never
+  received the events-search prefix.
+- `free_cancellation` is now refused for vacation rentals, where the engine
+  ignores it, instead of being silently dropped.
+- Departure/arrival hour windows were validated and then transmitted
+  unparsed, so `"18, 23"` reached the engine with a leading space.
+
 ## [1.0.0] - 2026-07-31
 
 ### Added

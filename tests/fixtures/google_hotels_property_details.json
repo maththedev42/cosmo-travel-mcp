@@ -1,0 +1,598 @@
+{
+ "type": "hotel",
+ "name": "Fontainebleau Miami Beach",
+ "description": "Designed in the 1950s by architect Morris Lapidus, this buzzy, iconic hotel on Miami Beach is 11.8 miles from Miami airport and 3.1 miles from the Art Deco Historic District.\nContemporary rooms in 4 buildings feature flat-screen TVs, iMacs with Internet access, and iPod docks. Many offer ocean-view balconies. Fashionable suites and penthouses add living rooms; some have kitchens.\nAmenities include hip boutique shops, trendy bars and lively nightclubs, plus several upscale dining options, including a steakhouse, a Chinese restaurant and an Italian eatery. There's also a posh spa with ocean views, along with 3 elegant ballrooms.",
+ "link": "https://fontainebleau.com/?utm_source=google-local&utm_medium=organic&utm_campaign=gmb",
+ "property_token": "ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE",
+ "address": "4441 Collins Ave, Miami Beach, FL 33140",
+ "phone": "(800) 548-8886",
+ "phone_link": "tel:+18005488886",
+ "check_in_time": "4:00\u202fPM",
+ "check_out_time": "11:00\u202fAM",
+ "rate_per_night": {
+  "lowest": "$288",
+  "extracted_lowest": 288,
+  "before_taxes_fees": "$253",
+  "extracted_before_taxes_fees": 253
+ },
+ "total_rate": {
+  "lowest": "$576",
+  "extracted_lowest": 576,
+  "before_taxes_fees": "$506",
+  "extracted_before_taxes_fees": 506
+ },
+ "featured_prices": [
+  {
+   "source": "Expedia.com",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwi5kaiK_P2VAxVzcEcBHRgYDUgYACICCAEQGhoCcXU&co=1&gclid=EAIaIQobChMIuZGoivz9lQMVc3BHAR0YGA1IEAoYASABEgJBdPD_BwE&cid=CAASuwHkaO-TXibpFm7rC3Mzan2nIRV97bMCZy3SgIht2KgjtQpOJZywdcsThailErAIPfchLVHBpF6OieLTuobf5b3pMEE17wMSsh6d0tROxLDDXRrJTYVu6ay973iMDjHYfE_FhQMj46QbleLwE_e-eHJazWN27mv2Pund3R4rnymfWdaysVRkDU8gpxC6C8jcaatQFEwl2PXMDGkQWZz_JHDwjk067a2OiixUaXnGRN2M0NOBW54zCSiBgWMN&sig=AOD64_34pq3DemsDi0tUc2sA4EFjN41N1w&adurl",
+   "logo": "https://www.gstatic.com/travel-hotels/branding/ac238c97-1652-4830-8da8-bb8d8883af88.png",
+   "rooms": [
+    {
+     "name": "Deluxe Room, 1 King Bed, Bay View",
+     "images": [
+      "https://lh3.googleusercontent.com/hrppk/ANjXD_yeskfYZKv7AOUcQLHhgk5BhvMKwu9GK52TvTEyzzPheTNf2inqovF8_inWQ7BVG9zyVRIYvA9FksZXLj5tkaeSwRjRpiSeQzKB6DkrHXFazrxJeOjArDhw-8dgkx8xQvzwjhRwrgNbGAy09mhBRQf1QQ1PPjU"
+     ],
+     "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwi5kaiK_P2VAxVzcEcBHRgYDUgYACICCAEQHBoCcXU&co=1&gclid=EAIaIQobChMIuZGoivz9lQMVc3BHAR0YGA1IEAoYASADEgIJ6vD_BwE&cid=CAASuwHkaO-TXibpFm7rC3Mzan2nIRV97bMCZy3SgIht2KgjtQpOJZywdcsThailErAIPfchLVHBpF6OieLTuobf5b3pMEE17wMSsh6d0tROxLDDXRrJTYVu6ay973iMDjHYfE_FhQMj46QbleLwE_e-eHJazWN27mv2Pund3R4rnymfWdaysVRkDU8gpxC6C8jcaatQFEwl2PXMDGkQWZz_JHDwjk067a2OiixUaXnGRN2M0NOBW54zCSiBgWMN&sig=AOD64_0rJXpE1IcBdMpCArqB529nEPlinw&adurl",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$388",
+      "extracted_lowest": 388,
+      "before_taxes_fees": "$340",
+      "extracted_before_taxes_fees": 340
+     },
+     "total_rate": {
+      "lowest": "$776",
+      "extracted_lowest": 776,
+      "before_taxes_fees": "$681",
+      "extracted_before_taxes_fees": 681
+     },
+     "rates": [
+      {
+       "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwi5kaiK_P2VAxVzcEcBHRgYDUgYACICCAEQHBoCcXU&co=1&gclid=EAIaIQobChMIuZGoivz9lQMVc3BHAR0YGA1IEAoYASADEgIJ6vD_BwE&cid=CAASuwHkaO-TXibpFm7rC3Mzan2nIRV97bMCZy3SgIht2KgjtQpOJZywdcsThailErAIPfchLVHBpF6OieLTuobf5b3pMEE17wMSsh6d0tROxLDDXRrJTYVu6ay973iMDjHYfE_FhQMj46QbleLwE_e-eHJazWN27mv2Pund3R4rnymfWdaysVRkDU8gpxC6C8jcaatQFEwl2PXMDGkQWZz_JHDwjk067a2OiixUaXnGRN2M0NOBW54zCSiBgWMN&sig=AOD64_0rJXpE1IcBdMpCArqB529nEPlinw&adurl",
+       "num_guests": 2,
+       "beds": [
+        {
+         "type": "King",
+         "count": 1
+        }
+       ],
+       "rate_per_night": {
+        "lowest": "$388",
+        "extracted_lowest": 388,
+        "before_taxes_fees": "$340",
+        "extracted_before_taxes_fees": 340
+       },
+       "total_rate": {
+        "lowest": "$776",
+        "extracted_lowest": 776,
+        "before_taxes_fees": "$681",
+        "extracted_before_taxes_fees": 681
+       },
+       "inclusions": [
+        "1 king bed"
+       ]
+      },
+      {
+       "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwi5kaiK_P2VAxVzcEcBHRgYDUgYACICCAEQHRoCcXU&co=1&gclid=EAIaIQobChMIuZGoivz9lQMVc3BHAR0YGA1IEAoYASAEEgKT8PD_BwE&cid=CAASuwHkaO-TXibpFm7rC3Mzan2nIRV97bMCZy3SgIht2KgjtQpOJZywdcsThailErAIPfchLVHBpF6OieLTuobf5b3pMEE17wMSsh6d0tROxLDDXRrJTYVu6ay973iMDjHYfE_FhQMj46QbleLwE_e-eHJazWN27mv2Pund3R4rnymfWdaysVRkDU8gpxC6C8jcaatQFEwl2PXMDGkQWZz_JHDwjk067a2OiixUaXnGRN2M0NOBW54zCSiBgWMN&sig=AOD64_03gCY60OtdzZxeuL190ud1qWrraA&adurl",
+       "num_guests": 2,
+       "free_cancellation": true,
+       "free_cancellation_until_date": "Sep 7",
+       "free_cancellation_until_time": "6:00\u202fPM",
+       "beds": [
+        {
+         "type": "King",
+         "count": 1
+        }
+       ],
+       "rate_per_night": {
+        "lowest": "$396",
+        "extracted_lowest": 396,
+        "before_taxes_fees": "$347",
+        "extracted_before_taxes_fees": 347
+       },
+       "total_rate": {
+        "lowest": "$792",
+        "extracted_lowest": 792,
+        "before_taxes_fees": "$694",
+        "extracted_before_taxes_fees": 694
+       },
+       "inclusions": [
+        "1 king bed",
+        "Free cancellation until Sep 7"
+       ]
+      }
+     ]
+    }
+   ],
+   "num_guests": 2,
+   "rate_per_night": {
+    "lowest": "$364",
+    "extracted_lowest": 364,
+    "before_taxes_fees": "$319",
+    "extracted_before_taxes_fees": 319
+   },
+   "total_rate": {
+    "lowest": "$728",
+    "extracted_lowest": 728,
+    "before_taxes_fees": "$639",
+    "extracted_before_taxes_fees": 639
+   }
+  }
+ ],
+ "prices": [
+  {
+   "source": "Super.com",
+   "link": "https://www.google.com/travel/lodging/clk?pc=AA80Oszlow08afbdnG2u9mFHOpiSiQbNeGvU5TWdwUJgx5K2QZOE8f_0_Rh5UNIEdzkeYAyC62qdQfyz0IZ0rcHh67oJCie0aFes09JrllpDz4oxfMaMBFPljPheT5trMsSow_f5ZW5DUbnrh8Ma6umbyUazMltIx1ab59u4sIYirD4zugI5v6LUrmmGqQ&pcurl=https://www.super.com/travel/transition/?data%3Dprice%3D387.53%2526total_price%3D441.78%2526retail_price%3D696.0%2526retail_total_price%3D793.44%2526surcharge%3D118.0%2526surcharge_tax%3D16.52%2526request_id%3D11476723276363812864%2526ps%3D30660883%2526pb%3DS8nRL7icO8h7KVQhnVMDPpssQ5HuvJ4x3yZuxI3XOb3_O85C8XZPYVujuGZ_n92mx7qg9__RmiW86aEW-bIeTnKgjJEejFrxzjTu2bxRW5A1maWHLuLW_ExqKUOk7ZCa2HIicJIt4hPkv6CS-mT-zeci-wlKNFyhpOSFS72XTcc%25253D%2526gha_pull_request%3DTrue%2526alwd_rand%3Dfalse%2526gt%3D1785536259%2526sg%3DsFsyS%2526sid%3DGHA_MD4%2526cmab_id%3D32%2526ib%3Dfalse%2526s2b%3Dm0%2526all_inclusive%3Dfalse%26utm_source%3Dgha%26utm_content%3Dlocaluniversal%26currency%3DUSD%26user_country%3DUS%26verification%3Dfalse%26rate_rule_ids%3D%26date_type%3Dselected%26rate_rule_id%3Dsignedout_desktop%26display_currency%3DUSD%26display_all_inclusive_price%3D576.28%26checkin_at%3D2026-09-10%26checkout_at%3D2026-09-12%26provider_hotel_id%3D10004082296%26provider%3Dean%26num_adults%3D2%26children%3D%5B%5D%26hotel_campaign%3D%26utm_campaign%3D%26user_locale%3Den-US%26user_list_id%3D%26utm_medium%3Dorganic%26utm_id%3Dgha_organic&s=AD1XQnmmBzTciKtXTaXMKjZ2Scwg&ap=1",
+   "logo": "https://www.gstatic.com/travel-hotels/branding/cfa60c4a-13cd-46d3-9354-ec90c89ec855.png",
+   "num_guests": 2,
+   "rate_per_night": {
+    "lowest": "$288",
+    "extracted_lowest": 288,
+    "before_taxes_fees": "$253",
+    "extracted_before_taxes_fees": 253
+   },
+   "total_rate": {
+    "lowest": "$576",
+    "extracted_lowest": 576,
+    "before_taxes_fees": "$506",
+    "extracted_before_taxes_fees": 506
+   }
+  },
+  {
+   "source": "Vio.com",
+   "link": "https://www.google.com/travel/lodging/clk?pc=AA80OsyiFyQr3-veBcwC9Di4n-wodGYTo0aIcKRHwtvaVQ5H7sqJyHsp5M2zSO3iZ2jkTdAuWUjm2GAZlqsDtr731xQ_urZGQhIhSrjOkMCrsdZOE3KpPFNdxY1vO7b3XDN_D91DX500Ey-DBpuaqR6dDoUUJYiBG1rw-0vjYx0u_Ktph49zeIOTGSk_&pcurl=https://deals.vio.com/?sig%3D73aca13c7f952d2641c156f3e69125e1eb497c325f122828ee5aa8797168b9a12d32303331333438363233%26turl%3Dhttps%253A%252F%252Fwww.vio.com%252FHotel%252FSearch%253FcheckIn%253D2026-09-10%2526checkOut%253D2026-09-12%2526currency%253DUSD%2526forceCurrencyChange%253D1%2526lang%253Den%2526forceLanguageChange%253D1%2526rooms%253D2%253A%2526utm_source%253Dgha%2526utm_medium%253Dcpc%2526hotelId%253D3009623%2526userCountry%253DUS%2526profile%253Dr2d2m73kn8%2526preferredRate%253D587.41%2526deviceType%253Ddesktop%2526label%253Dsrc%25253Dgha%252526cltype%25253Dhotel%252526datype%25253Dselected%252526gsite%25253Dlocaluniversal%252526vf%25253D0%252526ucountry%25253DUS%252526udevice%25253Ddesktop%252526hotel%25253D3009623%252526day%25253D10%252526month%25253D09%252526year%25253D2026%252526los%25253D2%252526price%25253D587.41%252526currency%25253DUSD%252526cid%25253D%252526listid%25253D%252526rateid%25253DUS_D%252526closerateid%25253D%252526promo%25253D0%252526isPrivateRate%25253D0%252526isAudienceUser%25253D0%252526isPaidClick%25253D0%252526%2526cp%253DLobX15UjJCfUJJ_oChIIusECEOhSGNQ2IgNVU0RSATISGhVOSJY2Ggt1bVhmalI2Zl83RSgDMLq9tNMG&s=AD1XQnl4WWHFqA3e7WlhlVVR_zNw&ap=1",
+   "logo": "https://www.gstatic.com/travel-hotels/branding/297592521974050080.png",
+   "num_guests": 2,
+   "rate_per_night": {
+    "lowest": "$294",
+    "extracted_lowest": 294,
+    "before_taxes_fees": "$259",
+    "extracted_before_taxes_fees": 259
+   },
+   "total_rate": {
+    "lowest": "$587",
+    "extracted_lowest": 587,
+    "before_taxes_fees": "$517",
+    "extracted_before_taxes_fees": 517
+   }
+  },
+  {
+   "source": "Etrip.net",
+   "link": "https://www.google.com/travel/lodging/clk?pc=AA80OszH12adDRwLGgqhWMSYzV4rd59s8YcHalVT6DHfscrZc9ipwV0KRTJkBK1_H9K5lyTuNjQEB47j5Hhoka1cVmXXdeahlnagwD78RjVZ-Nn0jk62TCja5psJsKIdQSPl9eICN87tKw7CfcZIiqOZ9HBcAEQLb2TDXeCkwI76IsOjbhqDt9k&pcurl=https://deals.etrip.net/?sig%3De9cc68956712e1e5d60f579a67e54afadd83f5d631dc9782cc50d47864de2f2c2d32303330363031313335%26turl%3Dhttps%253A%252F%252Fsearch.etrip.net%252FHotel%252FSearch%253FcheckIn%253D2026-09-10%2526checkOut%253D2026-09-12%2526currency%253DUSD%2526forceCurrencyChange%253D1%2526lang%253Den%2526forceLanguageChange%253D1%2526rooms%253D2%253A%2526utm_source%253Dgha%2526utm_medium%253Dcpc%2526hotelId%253D3009623%2526userCountry%253DUS%2526profile%253Dr2d2m73kn8%2526preferredRate%253D587.41%2526label%253Dsrc%25253Dgha%252526cltype%25253Dhotel%252526datype%25253Dselected%252526gsite%25253Dlocaluniversal%252526vf%25253D0%252526ucountry%25253DUS%252526udevice%25253Ddesktop%252526hotel%25253D3009623%252526day%25253D10%252526month%25253D09%252526year%25253D2026%252526los%25253D2%252526price%25253D587.41%252526currency%25253DUSD%252526cid%25253D%252526listid%25253D%252526rateid%25253DUS_D%252526closerateid%25253D%252526promo%25253D0%252526isPrivateRate%25253D0%252526isAudienceUser%25253D0%252526isPaidClick%25253D0%252526%2526cp%253DLobX15UjJCfUJJ_oChIIusECEOhSGNQ2IgNVU0RSATISGhVOSJY2Ggt1bVhmalI2Zl83RSgDMLq9tNMG&s=AD1XQnm8lzBEvaNFebk2PzN7RRzo&ap=1",
+   "logo": "https://www.gstatic.com/travel-hotels/branding/10384618555932340059.png",
+   "num_guests": 2,
+   "rate_per_night": {
+    "lowest": "$294",
+    "extracted_lowest": 294,
+    "before_taxes_fees": "$259",
+    "extracted_before_taxes_fees": 259
+   },
+   "total_rate": {
+    "lowest": "$587",
+    "extracted_lowest": 587,
+    "before_taxes_fees": "$517",
+    "extracted_before_taxes_fees": 517
+   }
+  }
+ ],
+ "typical_price_range": {
+  "lowest": "$138",
+  "extracted_lowest": 138,
+  "highest": "$274",
+  "extracted_highest": 274
+ },
+ "nearby_places": [
+  {
+   "category": "Point of interest",
+   "name": "Fontainebleau Miami Beach",
+   "link": "https://www.google.com/search?q=Fontainebleau+Miami+Beach&stick=H4sIAAAAAAAAAONgFmJQ4tTP1TdISU6rKtBSzE620s_JT04syczPgzOsEktKihKTQcxiAOZQmiYyAAAA#fpstate=trskp&trifp=kpq%253DFontainebleau%252BMiami%252BBeach%2526skpm%253D/m/0dcfzp%2526t%253Dd",
+   "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcS-oT1XXi5YtUnrB5kQF1NOiZm73I__j22KN3mQaGav90vOMEeR",
+   "rating": 4.1,
+   "reviews": 16820,
+   "description": "Iconic 1950s lodging offering upscale restaurants & buzzy nightclubs, plus hip bars & a plush spa.",
+   "gps_coordinates": {
+    "latitude": 25.8178372,
+    "longitude": -80.1227119
+   }
+  },
+  {
+   "category": "Point of interest",
+   "name": "P\u00e9rez Art Museum Miami",
+   "link": "https://www.google.com/search?q=P%C3%A9rez+Art+Museum+Miami&stick=H4sIAAAAAAAAAONgFmJQ4tLP1TcwKk82qTDVUsxOttLPyU9OLMnMz4MzrBJLSooSk0HMYgCJfXB2MwAAAA#fpstate=trskp&trifp=kpq%253DP%2525C3%2525A9rez%252BArt%252BMuseum%252BMiami%2526skpm%253D/m/02wc4x5%2526t%253Dd",
+   "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRhoTNiKp4lam7F83-3rHxbiQswfnkNHZMrmkvFYcb5xc5RHodY",
+   "transportations": [
+    {
+     "type": "Taxi",
+     "duration": "17 min"
+    },
+    {
+     "type": "Public transport",
+     "duration": "46 min"
+    }
+   ],
+   "rating": 4.5,
+   "reviews": 7729,
+   "description": "Sleek waterfront museum features modern & contemporary international artwork & educational programs.",
+   "gps_coordinates": {
+    "latitude": 25.785930699999998,
+    "longitude": -80.1861912
+   }
+  }
+ ],
+ "hotel_class": "5-star hotel",
+ "extracted_hotel_class": 5,
+ "images": [
+  {
+   "thumbnail": "https://lh3.googleusercontent.com/gps-proxy/ALd4DhEig75C-64-0e6X93vJ8CptJ027zzgT4ugBRRtsHe34UqkHucqA0GLUaS0Hqvh_xBfSTqk3WX0m3ukZXXopXjl1md9tEpYVMRL-qEag0xU5RZYmhJnA51dJcGAg1tGGxpvq8owNn7oSRovhg1jZT0IejkD8Xwj14Rb601BuotlA7oeIZ2rmrDwnPg=s287-w287-h192-n-k-no-v1",
+   "original_image": "https://images.trvl-media.com/lodging/2000000/1200000/1190600/1190549/4c5e4651_z.jpg"
+  },
+  {
+   "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmnPBjqj5Al58WbHLRpb-a1ksNyq4eAtd5E1lpR-CNSEMOIG7LELDmQKkpG8V-iJNkcpFJgNnC3VaKBQ0QbwEmwRZfplK72tkm4IeAZ-lDosuStJokFbzmIiBQ3LKWEUZUW-shaoA=s287-w287-h192-n-k-no-v1",
+   "original_image": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmnPBjqj5Al58WbHLRpb-a1ksNyq4eAtd5E1lpR-CNSEMOIG7LELDmQKkpG8V-iJNkcpFJgNnC3VaKBQ0QbwEmwRZfplK72tkm4IeAZ-lDosuStJokFbzmIiBQ3LKWEUZUW-shaoA=s10000"
+  },
+  {
+   "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkoYZ0AdgpKOjaPmFk0N28K3ke3nz-hPu6j8W39nuo7jpdJRekSgHp7OnbwwKffYcS8fBlIhrk65qXTwwv9dIyU8vRr30B6lQPGNgbM5sL29neQ6bnQF4yfL5G0jP-rYizS9Xzwjwkg2z-o=s287-w287-h192-n-k-no-v1",
+   "original_image": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkoYZ0AdgpKOjaPmFk0N28K3ke3nz-hPu6j8W39nuo7jpdJRekSgHp7OnbwwKffYcS8fBlIhrk65qXTwwv9dIyU8vRr30B6lQPGNgbM5sL29neQ6bnQF4yfL5G0jP-rYizS9Xzwjwkg2z-o=s10000"
+  }
+ ],
+ "overall_rating": 4.1,
+ "reviews": 17052,
+ "ratings": [
+  {
+   "stars": 5,
+   "count": 10585
+  },
+  {
+   "stars": 4,
+   "count": 2555
+  },
+  {
+   "stars": 3,
+   "count": 1193
+  },
+  {
+   "stars": 2,
+   "count": 794
+  }
+ ],
+ "location_rating": 3.9,
+ "reviews_breakdown": [
+  {
+   "name": "Fitness",
+   "description": "Fitness",
+   "total_mentioned": 1663,
+   "positive": 955,
+   "negative": 550,
+   "neutral": 158,
+   "category_token": "_gyaT3ica1yRnFiSmp5fVDl5uVtmSV5qcTEDjAEAtWsMIQ",
+   "serpapi_link": "https://serpapi.com/search.json?category_token=_gyaT3ica1yRnFiSmp5fVDl5uVtmSV5qcTEDjAEAtWsMIQ&engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE"
+  },
+  {
+   "name": "Wellness",
+   "description": "Wellness",
+   "total_mentioned": 302,
+   "positive": 185,
+   "negative": 84,
+   "neutral": 33,
+   "category_token": "7tfjx3ica1yRnFiSmp5fVDl5RXhqTk5eanExA5wFAM_uDQU",
+   "serpapi_link": "https://serpapi.com/search.json?category_token=7tfjx3ica1yRnFiSmp5fVDl5RXhqTk5eanExA5wFAM_uDQU&engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE"
+  },
+  {
+   "name": "Spa",
+   "description": "Spa",
+   "total_mentioned": 223,
+   "positive": 141,
+   "negative": 58,
+   "neutral": 24,
+   "category_token": "xb4k5nica1yRnFiSmp5fVDl5cXBBIiOIAABfNAiq",
+   "serpapi_link": "https://serpapi.com/search.json?category_token=xb4k5nica1yRnFiSmp5fVDl5cXBBIiOIAABfNAiq&engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE"
+  },
+  {
+   "name": "Bar",
+   "description": "Bar or lounge",
+   "total_mentioned": 950,
+   "positive": 424,
+   "negative": 407,
+   "neutral": 119,
+   "category_token": "L4-to3ica1yRnFiSmp5fVDl5rVNikUJ-kUJOfmleeirDYiAXAMhSDEA",
+   "serpapi_link": "https://serpapi.com/search.json?category_token=L4-to3ica1yRnFiSmp5fVDl5rVNikUJ-kUJOfmleeirDYiAXAMhSDEA&engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE"
+  }
+ ],
+ "amenities": [
+  "Wi-Fi",
+  "Restaurant",
+  "Buffet dinner",
+  "Breakfast"
+ ],
+ "amenities_detailed": {
+  "groups": [
+   {
+    "title": "Internet",
+    "list": [
+     {
+      "title": "Wi-Fi",
+      "label": "free",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Food & drink",
+    "list": [
+     {
+      "title": "Restaurant",
+      "available": true
+     },
+     {
+      "title": "Buffet dinner",
+      "available": true
+     },
+     {
+      "title": "Breakfast",
+      "available": true,
+      "details": {
+       "snippet": "Room service is available for breakfast 7 AM -- 11 AM on weekdays and until 12 PM on Saturday and Sunday.",
+       "snippet_original": "Room service is available for <b>breakfast</b> 7 AM -- 11 AM on weekdays and until 12 PM on Saturday and Sunday.",
+       "snippet_highlighted_words": [
+        "breakfast"
+       ],
+       "link": "https://www.fontainebleau.com/miamibeach/help-center/frequently-asked-questions/#:~:text=Room%20service%20is%20available%20for%20breakfast%207%20AM%20%2D%2D%2011%20AM%20on%20weekdays%20and%20until%2012%20PM%20on%20Saturday%20and%20Sunday.",
+       "displayed_link": "https://www.fontainebleau.com/...",
+       "title": "Frequently Asked Questions - Fontainebleau Miami Beach",
+       "source_logo": "http://t2.gstatic.com/favicon-tbn?q=tbn:ANd9GcS9ME-RGn_ZE9Jztysep5HpGOxlQ3rZ7M0oi2p_JTc6RxbtSMbQ39iRojGhpdN8skPmUwxlvw"
+      }
+     },
+     {
+      "title": "Breakfast buffet",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Policies & payments",
+    "list": [
+     {
+      "title": "Smoke-free property",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Services",
+    "list": [
+     {
+      "title": "Front desk",
+      "label": "24 hour",
+      "available": true
+     },
+     {
+      "title": "Full-service laundry",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Activities",
+    "list": [
+     {
+      "title": "Beach front",
+      "available": true,
+      "details": {
+       "snippet": "Enjoy a relaxing beach day at Fontainebleau, where the sand is just steps away.",
+       "snippet_original": "Enjoy a relaxing <b>beach</b> day at Fontainebleau, where the sand is just steps away.",
+       "snippet_highlighted_words": [
+        "beach"
+       ],
+       "link": "https://www.fontainebleau.com/miamibeach/experiences/family/#:~:text=Enjoy%20a%20relaxing%20beach%20day%20at%20Fontainebleau%2C%20where%20the%20sand%20is%20just%20steps%20away.",
+       "displayed_link": "https://www.fontainebleau.com/...",
+       "title": "Family Experiences &amp; Activities - Fontainebleau Miami Beach",
+       "source_logo": "http://t0.gstatic.com/favicon-tbn?q=tbn:ANd9GcQ2SrpPJtLSL_wqMxuo6C5BuYkJNAv9E9TrkrculoauPyNbSP8P-N1hf7hNo-Z17jUgf63VSA"
+      }
+     },
+     {
+      "title": "Nightclub",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Pools",
+    "list": [
+     {
+      "title": "Pool",
+      "available": true,
+      "details": {
+       "snippet": "Our sprawling outdoor oasis features 10 unique pools, including the adults-only Arkadia Day Club and family-friendly options for guests of all ages.",
+       "snippet_original": "Our sprawling outdoor oasis features 10 unique <b>pools</b>, including the adults-only Arkadia Day Club and family-friendly options for guests of all ages.",
+       "snippet_highlighted_words": [
+        "pools"
+       ],
+       "link": "https://www.fontainebleau.com/miamibeach/experiences/beach/#:~:text=Our%20sprawling%20outdoor%20oasis%20features%2010%20unique%20pools%2C%20including%20the%20adults%2Donly%20Arkadia%20Day%20Club%20and%20family%2Dfriendly%20options%20for%20guests%20of%20all%20ages.",
+       "displayed_link": "https://www.fontainebleau.com/...",
+       "title": "Beach &amp; Equipment Rental - Fontainebleau Miami Beach",
+       "source_logo": "http://t2.gstatic.com/favicon-tbn?q=tbn:ANd9GcS9ME-RGn_ZE9Jztysep5HpGOxlQ3rZ7M0oi2p_JTc6RxbtSMbQ39iRojGhpdN8skPmUwxlvw"
+      }
+     },
+     {
+      "title": "Outdoor pool",
+      "available": true
+     },
+     {
+      "title": "Hot tub",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Children",
+    "list": [
+     {
+      "title": "Kid-friendly",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Wellness",
+    "list": [
+     {
+      "title": "Fitness center",
+      "available": true
+     },
+     {
+      "title": "Spa",
+      "available": true
+     },
+     {
+      "title": "Hair salon",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Parking & transportation",
+    "list": [
+     {
+      "title": "Parking",
+      "available": true,
+      "details": {
+       "snippet": "Overnight valet parking is included for one (1) vehicle per guestroom.",
+       "snippet_original": "Overnight valet <b>parking</b> is included for one (1) vehicle per guestroom.",
+       "snippet_highlighted_words": [
+        "parking"
+       ],
+       "link": "https://www.fontainebleau.com/miamibeach/terms-florida-georgia-resident-rate/#:~:text=Overnight%20valet%20parking%20is%20included%20for%20one%20(1)%20vehicle%20per%20guestroom.",
+       "displayed_link": "https://www.fontainebleau.com/...",
+       "title": "Terms Dream Staycation - Fontainebleau Miami Beach",
+       "source_logo": "http://t3.gstatic.com/faviconV2?url=&client=AMENITY_WEB_SNIPPET&type=FAVICON&size=16&fallback_opts=TYPE,SIZE,URL"
+      }
+     },
+     {
+      "title": "Local shuttle",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Pets",
+    "list": [
+     {
+      "title": "Pet-friendly",
+      "available": true,
+      "details": {
+       "snippet": "Each dog must weigh 50 pounds or less.",
+       "snippet_original": "Each <b>dog</b> must weigh 50 pounds or less.",
+       "snippet_highlighted_words": [
+        "dog"
+       ],
+       "link": "https://www.fontainebleau.com/miamibeach/terms/#:~:text=Each%20dog%20must%20weigh%2050%20pounds%20or%20less.",
+       "displayed_link": "https://www.fontainebleau.com/...",
+       "title": "Terms &amp; Conditions - Fontainebleau Miami Beach",
+       "source_logo": "http://t0.gstatic.com/favicon-tbn?q=tbn:ANd9GcQ2SrpPJtLSL_wqMxuo6C5BuYkJNAv9E9TrkrculoauPyNbSP8P-N1hf7hNo-Z17jUgf63VSA"
+      }
+     }
+    ]
+   },
+   {
+    "title": "Accessibility",
+    "list": [
+     {
+      "title": "Accessible",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Business & events",
+    "list": [
+     {
+      "title": "Business center",
+      "available": true
+     }
+    ]
+   },
+   {
+    "title": "Rooms",
+    "list": [
+     {
+      "title": "Air conditioning",
+      "available": true
+     }
+    ]
+   }
+  ],
+  "popular": [
+   {
+    "title": "Pool",
+    "available": true
+   },
+   {
+    "title": "Spa",
+    "available": true
+   },
+   {
+    "title": "Beach front",
+    "available": true,
+    "details": {
+     "snippet": "Enjoy a relaxing beach day at Fontainebleau, where the sand is just steps away.",
+     "snippet_original": "Enjoy a relaxing <b>beach</b> day at Fontainebleau, where the sand is just steps away.",
+     "snippet_highlighted_words": [
+      "beach"
+     ],
+     "link": "https://www.fontainebleau.com/miamibeach/experiences/family/#:~:text=Enjoy%20a%20relaxing%20beach%20day%20at%20Fontainebleau%2C%20where%20the%20sand%20is%20just%20steps%20away.",
+     "displayed_link": "https://www.fontainebleau.com/...",
+     "title": "Family Experiences &amp; Activities - Fontainebleau Miami Beach",
+     "source_logo": "http://t0.gstatic.com/favicon-tbn?q=tbn:ANd9GcQ2SrpPJtLSL_wqMxuo6C5BuYkJNAv9E9TrkrculoauPyNbSP8P-N1hf7hNo-Z17jUgf63VSA"
+    }
+   },
+   {
+    "title": "Wi-Fi",
+    "label": "free",
+    "available": true
+   }
+  ]
+ },
+ "other_reviews": [
+  {
+   "source": "Tripadvisor",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/icon_100532569.png",
+   "source_rating": {
+    "score": 4.199999809265137,
+    "max_score": 5
+   },
+   "reviews": 21503,
+   "user_review": {
+    "username": "stevegO3075UU",
+    "date": "a week ago",
+    "rating": {
+     "score": 5,
+     "max_score": 5
+    },
+    "comment": "If you stay at the Fontainebleau and you\u2019re at the beach, make sure to ask for Yoel Sierra. He will make your visit an absolute dream. His service and professionalism is only topped by his caring and kindness. He is an asset to this hotels staff and deserves every accolade he gets. Thanks Yoel for making our yearly trip great. Steve and Doreen NY",
+    "link": "https://www.tripadvisor.com/Hotel_Review-g34439-d85177-r1069554431?m=68573&staydates=2026_08_09_2026_08_10&uguests=1_2_0&supdv=desktop&supuc=US&supul=en"
+   },
+   "source_number": 100532569,
+   "serpapi_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE&source_number=100532569"
+  },
+  {
+   "source": "Trip.com",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/b8089cb0-34b4-458c-8749-9bc4614baba4.png",
+   "source_rating": {
+    "score": 4.300000190734863,
+    "max_score": 5
+   },
+   "reviews": 64,
+   "user_review": {
+    "username": "Trip.com Member",
+    "date": "a month ago",
+    "rating": {
+     "score": 5,
+     "max_score": 5
+    },
+    "comment": "It was a beautiful solo stay. The Lapis Spa was amazing 10/10. The hotel has ample amenities and restaurants throughout . Great Stay!"
+   },
+   "source_number": 84,
+   "serpapi_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChYI1sSA47ePqeDYARoJL20vMGRjZnpwEAE&source_number=84"
+  }
+ ]
+}

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 import pytest
 import respx
@@ -505,45 +507,26 @@ async def test_default_absent_all_filters():
 # Sample response for get_accommodation_details
 # ---------------------------------------------------------------------------
 
-_FULL_DETAIL_RESPONSE = {
-    "search_metadata": {"status": "Success"},
-    "property": {
-        "name": "Grand Beach Hotel",
-        "description": "A luxury oceanfront hotel in Miami Beach.",
-        "overall_rating": 4.5,
-        "reviews": 230,
-        "rating_breakdown": [
-            {"name": "Location", "score": 4.8},
-            {"name": "Cleanliness", "score": 4.6},
-        ],
-        "amenities": ["Pool", "Spa", "Gym"],
-        "check_in_time": "3:00 PM",
-        "check_out_time": "11:00 AM",
-        "images": [
-            {"thumbnail": "https://example.com/img1.jpg"},
-            {"thumbnail": "https://example.com/img2.jpg"},
-        ],
-        "prices": [
-            {"source": "Booking.com", "rate_per_night": "$150"},
-            {"source": "Expedia", "rate_per_night": "$145"},
-        ],
-        "link": "https://www.google.com/hotels/grandbeach",
-    },
-}
+_FIXTURES = Path(__file__).parent / "fixtures"
 
+# Real google_hotels property-details body, captured 2026-07-31.
+# See tests/fixtures/README.md — the previous hand-written fixture wrapped
+# everything in a "property" key and invented `rating_breakdown`, neither of
+# which the engine returns, so the parser was a no-op against production.
+_FULL_DETAIL_RESPONSE = json.loads(
+    (_FIXTURES / "google_hotels_property_details.json").read_text()
+)
+
+# Degenerate case, deliberately synthetic: only the handful of fields a
+# minimal property carries.
 _SPARSE_DETAIL_RESPONSE = {
-    "search_metadata": {"status": "Success"},
-    "property": {
-        "name": "Budget Inn",
-        "overall_rating": 3.0,
-        "reviews": 12,
-        "link": "https://www.google.com/hotels/budgetinn",
-    },
+    "name": "Budget Inn",
+    "overall_rating": 3.0,
+    "reviews": 12,
+    "link": "https://www.google.com/hotels/budgetinn",
 }
 
-_NO_PROPERTY_RESPONSE = {
-    "search_metadata": {"status": "Success"},
-}
+_NO_PROPERTY_RESPONSE: dict = {}
 
 # ---------------------------------------------------------------------------
 # get_accommodation_details tests
@@ -552,34 +535,38 @@ _NO_PROPERTY_RESPONSE = {
 
 @pytest.mark.asyncio
 async def test_get_accommodation_details_full_response():
+    """Parses the real captured response, not a hand-invented shape."""
     with respx.mock as mock:
         mock.get(SERPAPI_BASE).respond(json=_FULL_DETAIL_RESPONSE)
         result = await get_accommodation_details(
             property_token="abc123",
+            location="Miami Beach hotels",
             check_in_date="2026-08-01",
             check_out_date="2026-08-05",
         )
 
-    assert result["name"] == "Grand Beach Hotel"
-    assert result["description"] == "A luxury oceanfront hotel in Miami Beach."
-    assert result["overall_rating"] == 4.5
-    assert result["reviews"] == 230
-    assert result["rating_breakdown"] == [
-        {"category": "Location", "score": 4.8},
-        {"category": "Cleanliness", "score": 4.6},
-    ]
-    assert result["amenities"] == ["Pool", "Spa", "Gym"]
-    assert result["check_in_time"] == "3:00 PM"
-    assert result["check_out_time"] == "11:00 AM"
-    assert result["images"] == [
-        "https://example.com/img1.jpg",
-        "https://example.com/img2.jpg",
-    ]
-    assert result["prices"] == [
-        {"source": "Booking.com", "rate_per_night": "$150"},
-        {"source": "Expedia", "rate_per_night": "$145"},
-    ]
-    assert result["link"] == "https://www.google.com/hotels/grandbeach"
+    assert result["name"] == _FULL_DETAIL_RESPONSE["name"]
+    assert result["overall_rating"] == _FULL_DETAIL_RESPONSE["overall_rating"]
+    assert result["reviews"] == _FULL_DETAIL_RESPONSE["reviews"]
+
+    # `ratings` is a star distribution: [{stars, count}, ...]
+    assert result["rating_distribution"][0]["stars"] == 5
+    assert result["rating_distribution"][0]["count"] > 0
+
+    # `reviews_breakdown` is per-category sentiment, not a 0-5 score.
+    first = result["reviews_breakdown"][0]
+    assert first["category"]
+    assert "positive" in first and "negative" in first
+    assert "score" not in first
+
+    assert all(isinstance(a, str) for a in result["amenities"])
+    assert all(isinstance(i, str) and i for i in result["images"])
+    assert len(result["images"]) <= 10
+
+    # rate_per_night arrives as {lowest, extracted_lowest} and is flattened.
+    price = result["prices"][0]
+    assert isinstance(price["rate_per_night"], str)
+    assert isinstance(price["rate_per_night_value"], (int, float))
 
 
 @pytest.mark.asyncio
@@ -588,27 +575,36 @@ async def test_get_accommodation_details_sparse_response():
         mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
         result = await get_accommodation_details(
             property_token="xyz",
+            location="Anywhere",
             check_in_date="2026-08-01",
             check_out_date="2026-08-05",
         )
 
     assert result["name"] == "Budget Inn"
     assert "description" not in result
-    assert "rating_breakdown" not in result
+    assert "reviews_breakdown" not in result
+    assert "rating_distribution" not in result
     assert "amenities" not in result
     assert result["link"] == "https://www.google.com/hotels/budgetinn"
 
 
 @pytest.mark.asyncio
-async def test_get_accommodation_details_passes_property_token():
+async def test_get_accommodation_details_requires_q_on_the_wire():
+    """The engine 400s without `q` even when a property_token is supplied.
+
+    Verified against the live API on 2026-07-31, which is why `location` is a
+    required parameter rather than an optional nicety.
+    """
     with respx.mock as mock:
         mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
         await get_accommodation_details(
             property_token="abc123",
+            location="Miami Beach hotels",
             check_in_date="2026-08-01",
             check_out_date="2026-08-05",
         )
         req = mock.calls.last.request
+        assert req.url.params["q"] == "Miami Beach hotels"
         assert req.url.params["property_token"] == "abc123"
         assert req.url.params["engine"] == "google_hotels"
         assert req.url.params["check_in_date"] == "2026-08-01"
@@ -621,6 +617,7 @@ async def test_get_accommodation_details_no_property_field():
         mock.get(SERPAPI_BASE).respond(json=_NO_PROPERTY_RESPONSE)
         result = await get_accommodation_details(
             property_token="abc123",
+            location="Anywhere",
             check_in_date="2026-08-01",
             check_out_date="2026-08-05",
         )
@@ -633,6 +630,7 @@ async def test_get_accommodation_details_locale_params():
         mock.get(SERPAPI_BASE).respond(json=_SPARSE_DETAIL_RESPONSE)
         await get_accommodation_details(
             property_token="abc123",
+            location="Anywhere",
             check_in_date="2026-08-01",
             check_out_date="2026-08-05",
             country="US",
@@ -641,3 +639,18 @@ async def test_get_accommodation_details_locale_params():
         req = mock.calls.last.request
         assert req.url.params["gl"] == "US"
         assert req.url.params["hl"] == "en"
+
+
+@pytest.mark.asyncio
+async def test_free_cancellation_rejected_for_vacation_rentals():
+    """vacation_rentals defaults to True and the engine ignores the filter there."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).respond(json={"properties": []})
+        with pytest.raises(ValueError, match="free_cancellation"):
+            await search_accommodations(
+                location="Miami",
+                check_in_date="2026-08-01",
+                check_out_date="2026-08-05",
+                free_cancellation=True,
+            )
+        assert route.call_count == 0

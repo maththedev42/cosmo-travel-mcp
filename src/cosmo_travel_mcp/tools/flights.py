@@ -137,6 +137,11 @@ def _parse_times_arg(value: str, *, label: str) -> list[int]:
     return result
 
 
+def _format_times_arg(value: str, *, label: str) -> str:
+    """Normalize a times argument for transmission (``"18, 23"`` → ``"18,23"``)."""
+    return ",".join(str(h) for h in _parse_times_arg(value, label=label))
+
+
 async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights") -> dict[str, Any]:
     """Call SerpAPI and return the JSON response, propagating errors.
 
@@ -599,10 +604,12 @@ async def search_flights(
             params["bags"] = bags
         if max_duration is not None:
             params["max_duration"] = max_duration
+        # Send the parsed form, not the caller's string: "18, 23" would
+        # otherwise reach the engine as " 23" for the second hour.
         if outbound_times:
-            params["outbound_times"] = outbound_times
+            params["outbound_times"] = _format_times_arg(outbound_times, label="outbound_times")
         if return_times:
-            params["return_times"] = return_times
+            params["return_times"] = _format_times_arg(return_times, label="return_times")
         if deep_search:
             params["deep_search"] = "true"
 
