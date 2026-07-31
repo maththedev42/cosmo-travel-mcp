@@ -1,3 +1,5 @@
+[![CI](https://github.com/maththedev42/cosmo-travel-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/maththedev42/cosmo-travel-mcp/actions/workflows/ci.yml)
+
 # cosmo-travel-mcp
 
 One MCP server with six travel tools — flight search, multi-city itineraries,

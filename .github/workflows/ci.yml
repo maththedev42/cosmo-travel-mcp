@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - run: uv sync
+
+      - name: tests (no keys)
+        env:
+          SERPAPI_API_KEY: ""
+          GOOGLE_MAPS_API_KEY: ""
+        run: uv run pytest
+
+      - name: tests (keys set)
+        env:
+          SERPAPI_API_KEY: fake-ci-key
+          GOOGLE_MAPS_API_KEY: fake-ci-key
+        run: uv run pytest
