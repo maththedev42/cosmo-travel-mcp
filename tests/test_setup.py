@@ -226,12 +226,12 @@ def test_server_instructions_non_empty():
 def test_server_version_matches_package():
     """Server version reads from installed package metadata."""
     from cosmo_travel_mcp.server import __version__
-    assert __version__ == "0.1.0"
+    assert __version__ == "1.0.0"
 
 def test_server_version_fallback():
     """Version is set (either from package metadata or fallback)."""
     from cosmo_travel_mcp.server import __version__
-    assert __version__ in ("0.1.0", "unknown")
+    assert __version__ in ("1.0.0", "unknown")
 
 
 # ---------------------------------------------------------------------------

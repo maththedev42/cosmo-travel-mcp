@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cosmo-travel-mcp"
-version = "0.1.0"
+version = "1.0.0"
 description = "MCP server bundling travel-planning tools: flights, accommodations, driving, and setup checks"
 readme = "README.md"
 license = {text = "MIT"}
@@ -23,7 +23,7 @@ keywords = [
     "cli",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",

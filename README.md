@@ -206,6 +206,10 @@ comparison.
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup, test conventions, and
 the walk-through for adding a new tool.
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the release history.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE). Copyright (c) 2026 Matheus Weber.
