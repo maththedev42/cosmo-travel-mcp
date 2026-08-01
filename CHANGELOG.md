@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   <cursor|claude-desktop|windsurf|vscode|cline>` prints a ready-to-paste
   config block and the file it belongs in, so registration is no longer
   Claude-Code-only.
+- **Toll estimates in `compare_drive_or_fly`** — driving cost now includes
+  tolls, fetched from the Routes API `computeRoutes` endpoint. When the toll
+  currency matches the fuel currency they are folded into the total;
+  otherwise they are reported separately. Toll-free routes and unavailable
+  toll data leave the result shape unchanged.
+- **Session response cache** — identical SerpAPI searches repeated within ten
+  minutes are served from memory, marked `cached: true`, and cost no quota.
+  Tune or disable with `COSMO_TRAVEL_CACHE_TTL` (seconds; `0` disables).
 - Captured SerpAPI response fixtures under `tests/fixtures/`, with the rule
   that shape assertions use real recorded bodies rather than invented ones.
 
