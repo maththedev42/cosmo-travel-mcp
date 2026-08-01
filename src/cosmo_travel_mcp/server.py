@@ -10,8 +10,13 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles eight travel-planning tools backed by licensed data
-providers (SerpAPI for flights/hotels/events, Google Maps Routes API for driving).
+cosmo-travel-mcp bundles nine travel-planning tools backed by licensed data
+providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
+for driving).
+
+For a full trip — flights, lodging, what to do, and a day-by-day itinerary —
+use the `plan_trip` prompt, which sequences the tools and explains how to
+assemble the result.
 
 Call `check_setup` first when a travel request needs a tool and setup hasn't
 been confirmed this session — the SerpAPI half of that check is free (doesn't
@@ -19,7 +24,8 @@ count against the monthly search quota).
 
 Env vars and which tools they gate:
 - SERPAPI_API_KEY → search_flights, search_multi_city, search_accommodations,
-  get_accommodation_details, search_cheapest_dates, search_events.
+  get_accommodation_details, search_cheapest_dates, search_events,
+  search_things_to_do.
   Free key (100 searches/month):
   https://serpapi.com/users/sign_up
 - GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
@@ -48,13 +54,23 @@ mcp = FastMCP(
 def main() -> None:
     """Run the MCP server over stdio."""
     # Import and register tool modules.
-    from .tools import cheapest_dates, driving, events, flights, hotels, prompts, setup
+    from .tools import (
+        cheapest_dates,
+        driving,
+        events,
+        flights,
+        hotels,
+        places,
+        prompts,
+        setup,
+    )
 
     flights.register(mcp)
     cheapest_dates.register(mcp)
     driving.register(mcp)
     events.register(mcp)
     hotels.register(mcp)
+    places.register(mcp)
     setup.register(mcp)
     prompts.register(mcp)
 

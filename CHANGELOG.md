@@ -33,6 +33,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   <cursor|claude-desktop|windsurf|vscode|cline>` prints a ready-to-paste
   config block and the file it belongs in, so registration is no longer
   Claude-Code-only.
+- **`search_things_to_do`** — what to do in a city: attractions, museums,
+  parks, landmarks, shopping, nightlife, and food (restaurants, cafés, bars).
+  Each result carries per-weekday `operating_hours` and `coordinates`, so an
+  itinerary can avoid scheduling a stop on its closing day and can group
+  nearby stops into the same day. Food categories additionally return price
+  range, a short description, service options and a reservation link.
+- **`plan_trip` rebuilt as a full itinerary guide** — the prompt now covers
+  every tool the server exposes (it had silently omitted `search_events` and
+  `get_accommodation_details` since they were added) and gains an assembly
+  section: fix the skeleton from flight times, anchor date-bound events,
+  cluster by coordinates, respect opening hours, and never invent a detail no
+  tool returned.
 - **Toll estimates in `compare_drive_or_fly`** — driving cost now includes
   tolls, fetched from the Routes API `computeRoutes` endpoint. When the toll
   currency matches the fuel currency they are folded into the total;

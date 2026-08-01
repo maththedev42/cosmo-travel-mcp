@@ -1,0 +1,498 @@
+{
+  "search_metadata": {
+    "status": "Success"
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "things to do in Miami",
+    "google_domain": "google.com",
+    "hl": "en"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Jungle Island",
+      "place_id": "ChIJkWXRuBC02YgRripCIoUAN9g",
+      "data_id": "0x88d9b410b8d16591:0xd837008522422aae",
+      "data_cid": "15579922007716932270",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b410b8d16591%3A0xd837008522422aae&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b410b8d16591%3A0xd837008522422aae&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.786206999999997,
+        "longitude": -80.175026
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJkWXRuBC02YgRripCIoUAN9g",
+      "provider_id": "/m/02vklws",
+      "rating": 4.1,
+      "reviews": 6554,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction",
+        "Children's camp",
+        "Event venue",
+        "Summer camp organizer",
+        "Amusement park",
+        "Zoo"
+      ],
+      "type_id": "tourist_attraction",
+      "type_ids": [
+        "tourist_attraction",
+        "camp",
+        "event_venue",
+        "summer_camp",
+        "amusement_park",
+        "zoo"
+      ],
+      "address": "1111 Parrot Jungle Trail, Miami, FL 33132",
+      "country": "United States",
+      "open_state": "Open · Closes 5 PM",
+      "hours": "Open · Closes 5 PM",
+      "operating_hours": {
+        "saturday": "9:30 AM–5 PM",
+        "sunday": "9:30 AM–5 PM",
+        "monday": "9:30 AM–5 PM",
+        "tuesday": "9:30 AM–5 PM",
+        "wednesday": "9:30 AM–5 PM",
+        "thursday": "9:30 AM–5 PM",
+        "friday": "9:30 AM–5 PM"
+      },
+      "phone": "(305) 400-7000",
+      "website": "https://www.jungleisland.com/",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts",
+            "Live performances"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Food"
+          ]
+        },
+        {
+          "amenities": [
+            "Baggage storage",
+            "Bar onsite",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly"
+          ]
+        },
+        {
+          "planning": [
+            "Getting tickets in advance recommended"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "Discounts for kids",
+            "Family discount",
+            "Good for kids",
+            "Playground"
+          ]
+        },
+        {
+          "parking": [
+            "On-site parking",
+            "Paid parking garage",
+            "Paid parking lot",
+            "Paid street parking"
+          ]
+        }
+      ],
+      "unsupported_extensions": [
+        {
+          "amenities": [
+            "Restaurant"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"No crowds, customizable hands on experiences and the kids loved it.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWn_jyLzkkxN1PyZymO9Yg6Wu-rZojY_5ibKtWGx3HizeOuXjmnj9mUPHRHAHXnIEKhB5eRUqa_2YaQuHwmi8ay_INTEhqoLiLCSabLiSc2EOPEEuILXp2DifTEVt8arRSa03SkE=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/mmJlJHicHcTRroIgAADQLyJNV6u2Hro3Fi6WpnbVXhwxEjTABFb2g31Df9N2z8P5vLm1vVl53o2Hk0br5sacYQPVyjJlJ1RLr-kNoAYYb4PSJC9U3Y741XXPwzQZz6OMl1UzLxwYzrqt6pm47G2xe4ZIvFjsylaqdilPCUrRBpUqgnv-M2Pp6U7qoCJHhx5SLMhYR4cc8rvGAv9m5IJFRgMYJxC6CJd9sBXXHP7ZBRnSjPhh1sH1Y-r7PuD_U6C-FL9F1g"
+    },
+    {
+      "position": 2,
+      "title": "Wynwood Walls",
+      "place_id": "ChIJ98BffLK22YgRsymdIvOgjNA",
+      "data_id": "0x88d9b6b27c5fc0f7:0xd08ca0f3229d29b3",
+      "data_cid": "15027563022746724787",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b6b27c5fc0f7%3A0xd08ca0f3229d29b3&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b6b27c5fc0f7%3A0xd08ca0f3229d29b3&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.8010178,
+        "longitude": -80.1993841
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJ98BffLK22YgRsymdIvOgjNA",
+      "provider_id": "/g/11b6d4cjb9",
+      "rating": 4.7,
+      "reviews": 49159,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction",
+        "Art center",
+        "Art museum",
+        "Event venue",
+        "Park",
+        "Museum"
+      ],
+      "type_id": "tourist_attraction",
+      "type_ids": [
+        "tourist_attraction",
+        "art_center",
+        "art_museum",
+        "event_venue",
+        "park",
+        "museum"
+      ],
+      "address": "2516 NW 2nd Ave, Miami, FL 33127",
+      "country": "United States",
+      "open_state": "Open · Closes 10 PM",
+      "hours": "Open · Closes 10 PM",
+      "operating_hours": {
+        "saturday": "10:30 AM–10 PM",
+        "sunday": "10:30 AM–6:30 PM",
+        "monday": "10:30 AM–6:30 PM",
+        "tuesday": "10:30 AM–6:30 PM",
+        "wednesday": "10:30 AM–6:30 PM",
+        "thursday": "10:30 AM–10 PM",
+        "friday": "10:30 AM–10 PM"
+      },
+      "phone": "(305) 576-3334",
+      "website": "https://thewynwoodwalls.com/",
+      "extensions": [
+        {
+          "from_the_business": [
+            "Identifies as women-owned"
+          ]
+        },
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts",
+            "Live performances"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Gift shop"
+          ]
+        },
+        {
+          "amenities": [
+            "Cafe",
+            "Offers tours",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly",
+            "LGBTQ+ friendly",
+            "Transgender safespace"
+          ]
+        },
+        {
+          "payments": [
+            "Admission fee"
+          ]
+        },
+        {
+          "children": [
+            "Good for kids"
+          ]
+        },
+        {
+          "parking": [
+            "Free street parking",
+            "Paid parking lot",
+            "Paid street parking"
+          ]
+        }
+      ],
+      "unsupported_extensions": [
+        {
+          "amenities": [
+            "Restaurant"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Loads of art and even got to do some of our own graffiti which was fun\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWl-Jz_1w8Z7CgSWgnoYVPGxNFesy3zps1T-wAa2vd2a1h_w_9b3bApWfll_jFcG3eS9C_F8BzcGH4k9qKfquEmcP3zFmN5Izlvv-61sRlglCSttitrWw1nHrigaYqI5Zod47mH7=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/GqovpnicHcRRDoIgAADQE5ESmdnWh7nUamsuW65-mCFhhaBCUlywM3Sbtt7H-35qrVs1dxxeoxGTknH6VLQnUmgq9IjIxmGtAkQB5YTpPjsUHGwshmZ29iOWF0zI0zFLXruYqjeyrYIHYMJyPFTjEtbY4OCCLmFbXDnH95gkiOZBhOPZ0pIknTyCbnvtnquGZMjGzc5bWz4MYArVnjMe5VrfdF8YKNL-xspTt_bOspr4TeovDHRdF9T_CRA_kqhFeQ"
+    },
+    {
+      "position": 3,
+      "title": "Zoo Miami",
+      "place_id": "ChIJFY7wCsjD2YgRn8R_2IMRjtw",
+      "data_id": "0x88d9c3c80af08e15:0xdc8e1183d87fc49f",
+      "data_cid": "15892659393007699103",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9c3c80af08e15%3A0xdc8e1183d87fc49f&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9c3c80af08e15%3A0xdc8e1183d87fc49f&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.6095318,
+        "longitude": -80.3964056
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJFY7wCsjD2YgRn8R_2IMRjtw",
+      "provider_id": "/m/060yg7",
+      "rating": 4.5,
+      "reviews": 20650,
+      "type": "Zoo",
+      "types": [
+        "Zoo",
+        "Botanical garden",
+        "Non-profit organization"
+      ],
+      "type_id": "zoo",
+      "type_ids": [
+        "zoo",
+        "botanical_garden",
+        "non_profit_organization"
+      ],
+      "address": "12400 SW 152nd St, Miami, FL 33177",
+      "country": "United States",
+      "open_state": "Open · Closes 5 PM",
+      "hours": "Open · Closes 5 PM",
+      "operating_hours": {
+        "saturday": "10 AM–5 PM",
+        "sunday": "10 AM–5 PM",
+        "monday": "10 AM–5 PM",
+        "tuesday": "10 AM–5 PM",
+        "wednesday": "10 AM–5 PM",
+        "thursday": "10 AM–5 PM",
+        "friday": "10 AM–5 PM"
+      },
+      "phone": "(305) 251-0400",
+      "website": "https://www.zoomiami.org/",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Gift shop"
+          ]
+        },
+        {
+          "amenities": [
+            "Cafe",
+            "Offers tours",
+            "Petting zoo"
+          ]
+        },
+        {
+          "planning": [
+            "Getting tickets in advance recommended"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "Good for kids",
+            "Good for kids birthday",
+            "Kid-friendly activities",
+            "Playground"
+          ]
+        },
+        {
+          "parking": [
+            "Free parking lot",
+            "Free street parking",
+            "On-site parking"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Very fun with kids and many interactive exhibits.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmZDG_3nJiLv5mubjJIjG9hZC7DJHacTFOTunksUPHEsVHdFFYRUbzmUTWzcrFJaVzTMQnu1Pug83S_RkN7mfA6nqdvOgW2GsPUap7vcsdVSRxfH1V7q-f8va9kOOhWbM1Rk5AG3g=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/4opQdnicHcTdToMwGADQJyo_EoSZeEFEqEQEuwJxNwsUaB20wD6Khjf0EfY2SzwX5_Yn1nWGJ9MchWPwaeJjp6G7skmtnVoNNkmTz4AYIDADTHJayVMYnx2VfL9vrtTNJXm7xAdxevHCBNeMRhnVaoAix69Q4jaKvkjR7LKg1c6uUVKXO00_lbZzzX3neCbDhyf74FEt7Zbx6iGGvKhnb2PQlkfy22O79BbU-1t9GLJMVE1qk8ENYoc__9iWZSHxP0PqDilmRbY"
+    },
+    {
+      "position": 4,
+      "title": "Phillip & Patricia Frost Museum of Science",
+      "place_id": "ChIJab3yr6C22YgRdh8TY4oVu_w",
+      "data_id": "0x88d9b6a0aff2bd69:0xfcbb158a63131f76",
+      "data_cid": "18211173202314600310",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b6a0aff2bd69%3A0xfcbb158a63131f76&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b6a0aff2bd69%3A0xfcbb158a63131f76&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.785262099999997,
+        "longitude": -80.1878898
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJab3yr6C22YgRdh8TY4oVu_w",
+      "provider_id": "/m/027m41p",
+      "rating": 4.4,
+      "reviews": 8116,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction",
+        "Aquarium",
+        "Museum",
+        "Planetarium",
+        "Science museum"
+      ],
+      "type_id": "tourist_attraction",
+      "type_ids": [
+        "tourist_attraction",
+        "aquarium",
+        "museum",
+        "planetarium",
+        "science_museum"
+      ],
+      "address": "1101 Biscayne Blvd, Miami, FL 33132",
+      "country": "United States",
+      "open_state": "Open · Closes 6 PM",
+      "hours": "Open · Closes 6 PM",
+      "operating_hours": {
+        "saturday": "10 AM–6 PM",
+        "sunday": "10 AM–6 PM",
+        "monday": "10 AM–6 PM",
+        "tuesday": "10 AM–6 PM",
+        "wednesday": "10 AM–6 PM",
+        "thursday": "10 AM–6 PM",
+        "friday": "10 AM–6 PM"
+      },
+      "phone": "(305) 434-9600",
+      "website": "https://www.frostscience.org/",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts",
+            "Live performances"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Gift shop",
+            "Theater"
+          ]
+        },
+        {
+          "amenities": [
+            "Cafe",
+            "Gender-neutral restroom",
+            "Offers tours",
+            "Restaurant",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly",
+            "LGBTQ+ friendly",
+            "Transgender safespace"
+          ]
+        },
+        {
+          "planning": [
+            "Getting tickets in advance recommended"
+          ]
+        },
+        {
+          "payments": [
+            "Admission fee"
+          ]
+        },
+        {
+          "children": [
+            "Good for kids",
+            "Has changing table(s)"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking garage",
+            "Paid parking lot",
+            "Paid street parking"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"There is an immersive 8K dome theater that plays numerous shows;\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWm9bcyvbBek4aZBUl6cjj-Woiwc58PbWFKqcDVl64aV4QZ3i2yy3sBDSV6Y4MwYQGzZgbZVKqes1uNFkHQ0cZpA8aloAjQlAxyi6myNgcb8cuJGqNECIozE0dUkAy3guNjdbp_k=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/PqekAnicHcRLroIwFADQFVWqIEETB8W_RiL6hNiJodemfAoFC2LdoGtwNy_xDM73k7ZtraeWJVN7IJQSkneaP0BVLa_aAajSErVGoJG2yOZ0_IvLCQPzZD4vnIT6F-lCnqNYZT2MvSOLV_sGFpF0nSRyQmpnI2Ns7S_OkXt1Dv01XL-pYDTaN1wPu2BVbEIMtCZeIhXJQ0leJnNLEwhgHnS7dRMs51v1XuL7pSDGFl2Q31l9K2b9EGOM0t-Aqn-SMkWr"
+    }
+  ]
+}

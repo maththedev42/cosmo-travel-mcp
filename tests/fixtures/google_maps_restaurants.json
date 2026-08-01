@@ -1,0 +1,778 @@
+{
+  "search_metadata": {
+    "status": "Success"
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "restaurants in Miami",
+    "google_domain": "google.com",
+    "hl": "en"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Crazy About You",
+      "place_id": "ChIJ56WSjYG22YgRV8CLvPG3z9E",
+      "data_id": "0x88d9b6818d92a5e7:0xd1cfb7f1bc8bc057",
+      "data_cid": "15118504722984321111",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b6818d92a5e7%3A0xd1cfb7f1bc8bc057&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b6818d92a5e7%3A0xd1cfb7f1bc8bc057&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7620008,
+        "longitude": -80.1889886
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJ56WSjYG22YgRV8CLvPG3z9E",
+      "provider_id": "/g/1hc75jt27",
+      "rating": 4.8,
+      "reviews": 19827,
+      "price": "$30–80",
+      "extracted_price": 30,
+      "type": "American restaurant",
+      "types": [
+        "American restaurant",
+        "Brunch restaurant",
+        "Spanish restaurant"
+      ],
+      "type_id": "american_restaurant",
+      "type_ids": [
+        "american_restaurant",
+        "brunch_restaurant",
+        "spanish_restaurant"
+      ],
+      "address": "1155 Brickell Bay Dr PH101, Miami, FL 33131",
+      "country": "United States",
+      "open_state": "Open · Closes 12 AM",
+      "hours": "Open · Closes 12 AM",
+      "operating_hours": {
+        "saturday": "10 AM–12 AM",
+        "sunday": "10 AM–11 PM",
+        "monday": "11:30 AM–11 PM",
+        "tuesday": "11:30 AM–11 PM",
+        "wednesday": "11:30 AM–11 PM",
+        "thursday": "11:30 AM–11 PM",
+        "friday": "11 AM–12 AM"
+      },
+      "phone": "(305) 377-4442",
+      "website": "https://passionrestaurantgroup.com/restaurants/crazy-about-you/",
+      "description": "International bistro with bay views. An eclectic & budget-priced menu summons Spain, Italy & America at this stylish waterside bistro.",
+      "extensions": [
+        {
+          "service_options": [
+            "Outdoor seating",
+            "Delivery",
+            "Onsite services",
+            "Takeout",
+            "Dine-in"
+          ]
+        },
+        {
+          "highlights": [
+            "Fast service",
+            "Great beer selection",
+            "Great cocktails",
+            "Great coffee",
+            "Great dessert",
+            "Great wine list",
+            "Rooftop seating",
+            "Serves local specialty"
+          ]
+        },
+        {
+          "popular_for": [
+            "Breakfast",
+            "Lunch",
+            "Dinner",
+            "Solo dining"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Alcohol",
+            "Beer",
+            "Cocktails",
+            "Coffee",
+            "Comfort food",
+            "Happy hour drinks",
+            "Happy hour food",
+            "Hard liquor",
+            "Healthy options",
+            "Late-night food",
+            "Organic dishes",
+            "Private dining room",
+            "Quick bite",
+            "Small plates",
+            "Vegan options",
+            "Vegetarian options",
+            "Wine"
+          ]
+        },
+        {
+          "dining_options": [
+            "Brunch",
+            "Lunch",
+            "Dinner",
+            "Counter service",
+            "Dessert",
+            "Seating",
+            "Table service"
+          ]
+        },
+        {
+          "amenities": [
+            "Bar onsite",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "atmosphere": [
+            "Casual",
+            "Cozy",
+            "Lively",
+            "Romantic",
+            "Trendy",
+            "Upscale"
+          ]
+        },
+        {
+          "crowd": [
+            "Groups",
+            "Tourists"
+          ]
+        },
+        {
+          "planning": [
+            "Brunch reservations recommended",
+            "Lunch reservations recommended",
+            "Dinner reservations recommended",
+            "Accepts reservations"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "Good for kids",
+            "High chairs",
+            "Kids' menu"
+          ]
+        },
+        {
+          "parking": [
+            "Free street parking",
+            "Paid parking lot",
+            "Paid street parking",
+            "Valet parking"
+          ]
+        },
+        {
+          "pets": [
+            "Dogs allowed",
+            "Dogs allowed inside",
+            "Dogs allowed outside"
+          ]
+        }
+      ],
+      "service_options": {
+        "dine_in": true,
+        "takeout": true,
+        "delivery": true
+      },
+      "reserve_a_table": "https://www.google.com/maps/reserve/v/dine/c/yy5KXVSGZ3A?source=pa&opi=79508299&hl=en-US&gei=UQhuaozQCMONwbkPgf7R0Aw&ahbb=1&sourceurl=https://www.google.com/search?hl%3Den%26pb%3D!4m8!1m3!1d0!2d0!3d0!3m2!1i1920!2i1080!4f13.1!7i20!10b1!12m49!1m5!18b1!30b1!31m1!1b1!34e1!2m4!5m1!6e2!20e3!39b1!6m22!49b1!63m0!66b1!74i150000!85b1!91b1!114b1!149b1!178b1!206b1!209b1!212b1!223b1!232b1!234b1!244b1!246b1!250b1!253b1!258b1!260b1!266b1!10b1!12b1!13b1!14b1!16b1!17m1!3e1!20m3!5e2!6b1!14b1!46m1!1b0!96b1!99b1!19m4!2m3!1i360!2i120!4i8!20m57!2m2!1i203!2i100!3m2!2i4!5b1!6m6!1m2!1i86!2i86!1m2!1i408!2i240!7m33!1m3!1e1!2b0!3e3!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e10!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e4!1m3!1e9!2b1!3e2!2b1!9b0!15m8!1m7!1m2!1m1!1e2!2m2!1i195!2i195!3i20!22m6!1sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!2s1i:0,t:11886,p:ZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!7e81!12e5!17sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:66!18e15!24m107!1m28!13m9!2b1!3b1!4b1!6i1!8b1!9b1!14b1!20b1!25b1!18m17!3b1!4b1!5b1!6b1!13b1!14b1!17b1!21b1!22b1!27m1!1b0!28b0!32b1!33m1!1b1!34b1!36e2!10m1!8e3!11m1!3e1!14m1!3b0!17b1!20m2!1e3!1e6!24b1!25b1!26b1!27b1!29b1!30m1!2b1!36b1!37b1!39m3!2m2!2i1!3i1!43b1!52b1!54m1!1b1!55b1!56m1!1b1!61m2!1m1!1e1!65m5!3m4!1m3!1m2!1i224!2i298!72m22!1m8!2b1!5b1!7b1!12m4!1b1!2b1!4m1!1e1!4b1!8m10!1m6!4m1!1e1!4m1!1e3!4m1!1e4!3sother_user_google_review_posts__and__hotel_and_vr_partner_review_posts!6m1!1e1!9b1!89b1!98m3!1b1!2b1!3b1!103b1!113b1!114m3!1b1!2m1!1b1!117b1!122m1!1b1!126b1!127b1!26m4!2m3!1i80!2i92!4i8!30m28!1m6!1m2!1i0!2i0!2m2!1i530!2i1080!1m6!1m2!1i1870!2i0!2m2!1i1920!2i1080!1m6!1m2!1i0!2i0!2m2!1i1920!2i20!1m6!1m2!1i0!2i1060!2m2!1i1920!2i1080!34m19!2b1!3b1!4b1!6b1!8m6!1b1!3b1!4b1!5b1!6b1!7b1!9b1!12b1!14b1!20b1!23b1!25b1!26b1!31b1!37m1!1e81!42b1!49m10!3b1!6m2!1b1!2b1!7m2!1e3!2b1!8b1!9b1!10e2!50m4!2e2!3m2!1b1!3b1!61b1!67m5!7b1!10b1!14b1!15m1!1b0!69i767!77b1%26q%3Drestaurants%2Bin%2BMiami%26tbm%3Dmap",
+      "user_review": "\"The service was top-notch and the food & drinks were excellent!\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmDadhdYeUEwQTqzv0QbLJflytoRLI5l7keHZKTI8kyqk5SenHgyo9toaJL2t4nYFH8B99zECQk0HsDEMQaw_K61euY7osntYSwgTurOyXuX8bpcj3BUFT86NMLNM81YrF3gAAs=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/VxQgxHicHcThEoEwAADgJ0pLynLnR6gbCjHH_HE1s07Z0pauXtAzeBt3vh_f95NrXamJaZa5PeBS8pI1itVUCs2EHlD5NHmlDKoMZfpov8On5yK95TfCjkGb4Ff_BkkWre5lp-U-WjrluGDossZLWHSvwjkwgXgnPS3TVTTUI0FCBGee1wfzpABILYI4Sdvr2rVYQ8ZSCU0OLcdNve3OzRlmFX3Ys2OIobuJo00MLVKHNvd9NW0tAICR_6eG-AHMV0UY"
+    },
+    {
+      "position": 2,
+      "title": "Dolores But You Can Call Me Lolita",
+      "place_id": "ChIJ9aBMC4S22YgRbGgugfhBkbA",
+      "data_id": "0x88d9b6840b4ca0f5:0xb09141f8812e686c",
+      "data_cid": "12723022957873358956",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b6840b4ca0f5%3A0xb09141f8812e686c&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b6840b4ca0f5%3A0xb09141f8812e686c&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7642717,
+        "longitude": -80.1934058
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJ9aBMC4S22YgRbGgugfhBkbA",
+      "provider_id": "/g/1tp281xy",
+      "rating": 4.8,
+      "reviews": 13067,
+      "type": "American restaurant",
+      "types": [
+        "American restaurant"
+      ],
+      "type_id": "american_restaurant",
+      "type_ids": [
+        "american_restaurant"
+      ],
+      "address": "1000 S Miami Ave, Miami, FL 33130",
+      "country": "United States",
+      "open_state": "Open · Closes 12 AM",
+      "hours": "Open · Closes 12 AM",
+      "operating_hours": {
+        "saturday": "10 AM–12 AM",
+        "sunday": "10 AM–11 PM",
+        "monday": "11:30 AM–11 PM",
+        "tuesday": "11:30 AM–11 PM",
+        "wednesday": "11:30 AM–11 PM",
+        "thursday": "11:30 AM–11:30 PM",
+        "friday": "11:30 AM–12 AM"
+      },
+      "phone": "(305) 403-3103",
+      "website": "https://passionrestaurantgroup.com/restaurants/dolores-lolita/",
+      "description": "Stylish restaurant & lively lounge. Fusion fare served on a rooftop terrace with city views & in a chic dining room, plus DJs & dancing.",
+      "extensions": [
+        {
+          "service_options": [
+            "Outdoor seating",
+            "Delivery",
+            "Onsite services",
+            "Takeout",
+            "Dine-in"
+          ]
+        },
+        {
+          "highlights": [
+            "Fast service",
+            "Great beer selection",
+            "Great cocktails",
+            "Great coffee",
+            "Great dessert",
+            "Great wine list",
+            "Rooftop seating",
+            "Serves local specialty"
+          ]
+        },
+        {
+          "popular_for": [
+            "Lunch",
+            "Dinner",
+            "Solo dining"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Alcohol",
+            "Beer",
+            "Cocktails",
+            "Coffee",
+            "Comfort food",
+            "Happy hour drinks",
+            "Happy hour food",
+            "Hard liquor",
+            "Healthy options",
+            "Late-night food",
+            "Organic dishes",
+            "Private dining room",
+            "Salad bar",
+            "Small plates",
+            "Vegan options",
+            "Vegetarian options",
+            "Wine"
+          ]
+        },
+        {
+          "dining_options": [
+            "Breakfast",
+            "Brunch",
+            "Lunch",
+            "Dinner",
+            "Counter service",
+            "Dessert",
+            "Seating",
+            "Table service"
+          ]
+        },
+        {
+          "amenities": [
+            "Bar onsite",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "atmosphere": [
+            "Casual",
+            "Cozy",
+            "Lively",
+            "Romantic",
+            "Trendy",
+            "Upscale"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly",
+            "Groups",
+            "Tourists"
+          ]
+        },
+        {
+          "planning": [
+            "Brunch reservations recommended",
+            "Lunch reservations recommended",
+            "Dinner reservations recommended",
+            "Accepts reservations"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "High chairs",
+            "Kids' menu"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking lot",
+            "Paid street parking"
+          ]
+        },
+        {
+          "pets": [
+            "Dogs allowed",
+            "Dogs allowed inside",
+            "Dogs allowed outside"
+          ]
+        }
+      ],
+      "service_options": {
+        "dine_in": true,
+        "takeout": true,
+        "delivery": true
+      },
+      "reserve_a_table": "https://www.google.com/maps/reserve/v/dine/c/DPZQOFy4H8M?source=pa&opi=79508299&hl=en-US&gei=UQhuaozQCMONwbkPgf7R0Aw&ahbb=1&sourceurl=https://www.google.com/search?hl%3Den%26pb%3D!4m8!1m3!1d0!2d0!3d0!3m2!1i1920!2i1080!4f13.1!7i20!10b1!12m49!1m5!18b1!30b1!31m1!1b1!34e1!2m4!5m1!6e2!20e3!39b1!6m22!49b1!63m0!66b1!74i150000!85b1!91b1!114b1!149b1!178b1!206b1!209b1!212b1!223b1!232b1!234b1!244b1!246b1!250b1!253b1!258b1!260b1!266b1!10b1!12b1!13b1!14b1!16b1!17m1!3e1!20m3!5e2!6b1!14b1!46m1!1b0!96b1!99b1!19m4!2m3!1i360!2i120!4i8!20m57!2m2!1i203!2i100!3m2!2i4!5b1!6m6!1m2!1i86!2i86!1m2!1i408!2i240!7m33!1m3!1e1!2b0!3e3!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e10!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e4!1m3!1e9!2b1!3e2!2b1!9b0!15m8!1m7!1m2!1m1!1e2!2m2!1i195!2i195!3i20!22m6!1sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!2s1i:0,t:11886,p:ZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!7e81!12e5!17sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:66!18e15!24m107!1m28!13m9!2b1!3b1!4b1!6i1!8b1!9b1!14b1!20b1!25b1!18m17!3b1!4b1!5b1!6b1!13b1!14b1!17b1!21b1!22b1!27m1!1b0!28b0!32b1!33m1!1b1!34b1!36e2!10m1!8e3!11m1!3e1!14m1!3b0!17b1!20m2!1e3!1e6!24b1!25b1!26b1!27b1!29b1!30m1!2b1!36b1!37b1!39m3!2m2!2i1!3i1!43b1!52b1!54m1!1b1!55b1!56m1!1b1!61m2!1m1!1e1!65m5!3m4!1m3!1m2!1i224!2i298!72m22!1m8!2b1!5b1!7b1!12m4!1b1!2b1!4m1!1e1!4b1!8m10!1m6!4m1!1e1!4m1!1e3!4m1!1e4!3sother_user_google_review_posts__and__hotel_and_vr_partner_review_posts!6m1!1e1!9b1!89b1!98m3!1b1!2b1!3b1!103b1!113b1!114m3!1b1!2m1!1b1!117b1!122m1!1b1!126b1!127b1!26m4!2m3!1i80!2i92!4i8!30m28!1m6!1m2!1i0!2i0!2m2!1i530!2i1080!1m6!1m2!1i1870!2i0!2m2!1i1920!2i1080!1m6!1m2!1i0!2i0!2m2!1i1920!2i20!1m6!1m2!1i0!2i1060!2m2!1i1920!2i1080!34m19!2b1!3b1!4b1!6b1!8m6!1b1!3b1!4b1!5b1!6b1!7b1!9b1!12b1!14b1!20b1!23b1!25b1!26b1!31b1!37m1!1e81!42b1!49m10!3b1!6m2!1b1!2b1!7m2!1e3!2b1!8b1!9b1!10e2!50m4!2e2!3m2!1b1!3b1!61b1!67m5!7b1!10b1!14b1!15m1!1b0!69i767!77b1%26q%3Drestaurants%2Bin%2BMiami%26tbm%3Dmap",
+      "user_review": "\"Best Cesar salad my wife and I had ever had and the burger was juicy!\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnymDr1dVEP1fWOkypqMcq-L7wsEwsdv9JlDY8eWD9VfD6s8WqvX2bLeytCh2O41WdnEtpPQE7X28ovewe2TGRD4jBapOVhQhZO2glXvb0YufW3WCqLaDjKJRby82BH5yytb9rxcQ=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/LZI_6XicHcRdDoIgAADgE5FKVtrWQ4mrlc2fNbHeFFFWBiikccSO0G3a-h6-74dpLdXasjo2n7VCtB19KToQwTXlekbE02qlAkQBZW0PWXLB3DzR4NR5mDgNjh9G9mfSg2g1qXBS9egfO3T1KEZ-3qCl8nA_FrCKqNEBg7Hr4JqHWiZpuCqgJ0Y6UXjZZ8i970oZ5yxltxi2XTFW9vXV4DkO-qhE99Mxq4wHd4eFMbryhzdJN5Nj2zZg_wngPybFRdI"
+    },
+    {
+      "position": 3,
+      "title": "CVI.CHE 105",
+      "place_id": "ChIJlz72E5622YgRLXWCKTEFM_M",
+      "data_id": "0x88d9b69e13f63e97:0xf33305312982752d",
+      "data_cid": "17524356283736683821",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b69e13f63e97%3A0xf33305312982752d&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b69e13f63e97%3A0xf33305312982752d&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7754765,
+        "longitude": -80.18844179999999
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJlz72E5622YgRLXWCKTEFM_M",
+      "provider_id": "/g/1tfjgbb4",
+      "rating": 4.9,
+      "reviews": 30751,
+      "price": "$50–100",
+      "extracted_price": 50,
+      "type": "Peruvian restaurant",
+      "types": [
+        "Peruvian restaurant",
+        "Bar",
+        "Cocktail bar",
+        "Latin American restaurant",
+        "Restaurant",
+        "Seafood restaurant",
+        "South American restaurant",
+        "Wine bar"
+      ],
+      "type_id": "peruvian_restaurant",
+      "type_ids": [
+        "peruvian_restaurant",
+        "bar",
+        "cocktail_bar",
+        "latin_american_restaurant",
+        "restaurant",
+        "seafood_restaurant",
+        "south_american_restaurant",
+        "wine_bar"
+      ],
+      "address": "105 NE 3rd Ave, Miami, FL 33132",
+      "country": "United States",
+      "open_state": "Closed · Opens 12 PM",
+      "hours": "Closed · Opens 12 PM",
+      "operating_hours": {
+        "saturday": "12–11:30 PM",
+        "sunday": "12–10:30 PM",
+        "monday": "12–10:30 PM",
+        "tuesday": "12–10:30 PM",
+        "wednesday": "12–10:30 PM",
+        "thursday": "12–10:30 PM",
+        "friday": "12–11:30 PM"
+      },
+      "phone": "(305) 577-3454",
+      "website": "https://www.ceviche105.com/",
+      "description": "Peruvian cuisine in a chic, modern space. Peruvian eatery with a hip, boisterous crowd, cocktails & ceviche & sleek space with eclectic art.",
+      "extensions": [
+        {
+          "service_options": [
+            "Outdoor seating",
+            "No-contact delivery",
+            "Delivery",
+            "Onsite services",
+            "Takeout",
+            "Dine-in"
+          ]
+        },
+        {
+          "highlights": [
+            "Fast service",
+            "Great cocktails",
+            "Great dessert",
+            "Serves local specialty"
+          ]
+        },
+        {
+          "popular_for": [
+            "Lunch",
+            "Dinner",
+            "Solo dining"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Alcohol",
+            "Beer",
+            "Cocktails",
+            "Coffee",
+            "Comfort food",
+            "Happy hour drinks",
+            "Happy hour food",
+            "Hard liquor",
+            "Healthy options",
+            "Late-night food",
+            "Organic dishes",
+            "Private dining room",
+            "Quick bite",
+            "Small plates",
+            "Vegan options",
+            "Vegetarian options",
+            "Wine"
+          ]
+        },
+        {
+          "dining_options": [
+            "Brunch",
+            "Lunch",
+            "Dinner",
+            "Catering",
+            "Dessert",
+            "Seating",
+            "Table service"
+          ]
+        },
+        {
+          "amenities": [
+            "Bar onsite",
+            "Restroom",
+            "Wi-Fi"
+          ]
+        },
+        {
+          "atmosphere": [
+            "Casual",
+            "Cozy",
+            "Romantic",
+            "Trendy",
+            "Upscale"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly",
+            "Groups",
+            "LGBTQ+ friendly",
+            "Tourists",
+            "Transgender safespace"
+          ]
+        },
+        {
+          "planning": [
+            "Brunch reservations recommended",
+            "Lunch reservations recommended",
+            "Reservations required",
+            "Dinner reservations recommended",
+            "Accepts reservations",
+            "Usually a wait"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "Good for kids",
+            "High chairs",
+            "Kids' menu"
+          ]
+        },
+        {
+          "parking": [
+            "Free street parking",
+            "Paid parking lot",
+            "Paid street parking",
+            "Valet parking"
+          ]
+        },
+        {
+          "pets": [
+            "Dogs allowed inside",
+            "Dogs allowed outside"
+          ]
+        }
+      ],
+      "service_options": {
+        "dine_in": true,
+        "takeout": true,
+        "no_contact_delivery": true
+      },
+      "reserve_a_table": "https://www.google.com/maps/reserve/v/dine/c/RCf5Wj2-7IU?source=pa&opi=79508299&hl=en-US&gei=UQhuaozQCMONwbkPgf7R0Aw&ahbb=1&sourceurl=https://www.google.com/search?hl%3Den%26pb%3D!4m8!1m3!1d0!2d0!3d0!3m2!1i1920!2i1080!4f13.1!7i20!10b1!12m49!1m5!18b1!30b1!31m1!1b1!34e1!2m4!5m1!6e2!20e3!39b1!6m22!49b1!63m0!66b1!74i150000!85b1!91b1!114b1!149b1!178b1!206b1!209b1!212b1!223b1!232b1!234b1!244b1!246b1!250b1!253b1!258b1!260b1!266b1!10b1!12b1!13b1!14b1!16b1!17m1!3e1!20m3!5e2!6b1!14b1!46m1!1b0!96b1!99b1!19m4!2m3!1i360!2i120!4i8!20m57!2m2!1i203!2i100!3m2!2i4!5b1!6m6!1m2!1i86!2i86!1m2!1i408!2i240!7m33!1m3!1e1!2b0!3e3!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e10!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e4!1m3!1e9!2b1!3e2!2b1!9b0!15m8!1m7!1m2!1m1!1e2!2m2!1i195!2i195!3i20!22m6!1sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!2s1i:0,t:11886,p:ZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!7e81!12e5!17sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:66!18e15!24m107!1m28!13m9!2b1!3b1!4b1!6i1!8b1!9b1!14b1!20b1!25b1!18m17!3b1!4b1!5b1!6b1!13b1!14b1!17b1!21b1!22b1!27m1!1b0!28b0!32b1!33m1!1b1!34b1!36e2!10m1!8e3!11m1!3e1!14m1!3b0!17b1!20m2!1e3!1e6!24b1!25b1!26b1!27b1!29b1!30m1!2b1!36b1!37b1!39m3!2m2!2i1!3i1!43b1!52b1!54m1!1b1!55b1!56m1!1b1!61m2!1m1!1e1!65m5!3m4!1m3!1m2!1i224!2i298!72m22!1m8!2b1!5b1!7b1!12m4!1b1!2b1!4m1!1e1!4b1!8m10!1m6!4m1!1e1!4m1!1e3!4m1!1e4!3sother_user_google_review_posts__and__hotel_and_vr_partner_review_posts!6m1!1e1!9b1!89b1!98m3!1b1!2b1!3b1!103b1!113b1!114m3!1b1!2m1!1b1!117b1!122m1!1b1!126b1!127b1!26m4!2m3!1i80!2i92!4i8!30m28!1m6!1m2!1i0!2i0!2m2!1i530!2i1080!1m6!1m2!1i1870!2i0!2m2!1i1920!2i1080!1m6!1m2!1i0!2i0!2m2!1i1920!2i20!1m6!1m2!1i0!2i1060!2m2!1i1920!2i1080!34m19!2b1!3b1!4b1!6b1!8m6!1b1!3b1!4b1!5b1!6b1!7b1!9b1!12b1!14b1!20b1!23b1!25b1!26b1!31b1!37m1!1e81!42b1!49m10!3b1!6m2!1b1!2b1!7m2!1e3!2b1!8b1!9b1!10e2!50m4!2e2!3m2!1b1!3b1!61b1!67m5!7b1!10b1!14b1!15m1!1b0!69i767!77b1%26q%3Drestaurants%2Bin%2BMiami%26tbm%3Dmap",
+      "order_online": "https://www.google.com/searchviewer/42?cvd=CLw_EiUKI-ICIDIeEhciFdLX29IPDwoLL2cvMXRmamdiYjQYADoDCPAN&hl=en-US&gl=us&fo_m=MfohQo559jFvMUOzJVpjPL1YMfZ3bInYwBDuMfaXTPp5KXh-&utm_source=tactile&gei=UQhuaozQCMONwbkPgf7R0Aw&ei=UQhuaozQCMONwbkPgf7R0Aw&fo_s=OA,SOE&opi=79508299&ebb=1&cs=0&foub=mcpp",
+      "user_review": "\"Everything from the food, drinks, atmosphere, and service were excellent!\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlmZePFtSgUQ8bbhx6zJicme4CUQKKdStqtBRIX-MpnW_pIq5TuWnIie40kqu56KYCXofRATpGtg5fgL4x71x51mNBeWVlf8zMesvX_CQBdXcJbWYebSzgw9RNAEeWgfFgtkxzO=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/_uhSdnicHcRbboJAFADQFY1AClab-AGktki18upgf0wYLxcjzAydixI26BrcjUnPx3ncGyJt3iyrbV5mqBS2MBj4E0oSSJoJ1VmoDROGGcv_TPc5b7tf2K8pwyJZVFUzzqfNWXTghkUSx6eMegrSqGRbLflRR72XD1xGZ3DtSz948_gQlqpO_Vx_EHo1frnjqzN6TrcLgP-09WLagrmWxzAJTqXYVPwAVTbhbZnu_HfgWK-RLuP0vbo5tm2z5n_B5BPQVkYm"
+    },
+    {
+      "position": 4,
+      "title": "Salty Flame",
+      "place_id": "ChIJva7qQgC32YgRLBF4FWK8YWc",
+      "data_id": "0x88d9b70042eaaebd:0x6761bc621578112c",
+      "data_cid": "7449442388100518188",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b70042eaaebd%3A0x6761bc621578112c&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b70042eaaebd%3A0x6761bc621578112c&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.760263899999998,
+        "longitude": -80.1926335
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJva7qQgC32YgRLBF4FWK8YWc",
+      "provider_id": "/g/11vs5m5q8p",
+      "rating": 4.6,
+      "reviews": 1014,
+      "price": "$40–100",
+      "extracted_price": 40,
+      "type": "Restaurant",
+      "types": [
+        "Restaurant",
+        "Asian fusion restaurant",
+        "Bar & grill",
+        "Catering food and drink supplier",
+        "Cocktail bar",
+        "Lounge bar"
+      ],
+      "type_id": "restaurant",
+      "type_ids": [
+        "restaurant",
+        "asian_fusion_restaurant",
+        "bar_and_grill",
+        "catering_food_and_drink_supplies",
+        "cocktail_bar",
+        "lounge"
+      ],
+      "address": "1414 Brickell Ave, Miami, FL 33131",
+      "country": "United States",
+      "open_state": "Closed · Opens 4 PM",
+      "hours": "Closed · Opens 4 PM",
+      "operating_hours": {
+        "saturday": "4 PM–12 AM",
+        "sunday": "4–10 PM",
+        "monday": "12–10 PM",
+        "tuesday": "12–10 PM",
+        "wednesday": "12–10 PM",
+        "thursday": "12–10 PM",
+        "friday": "12 PM–12 AM"
+      },
+      "phone": "(305) 563-8972",
+      "website": "https://saltyflamerestaurant.com/",
+      "description": "Chic restaurant offering flavorful dishes blending Asian and steakhouse specialties, plus cocktails, wine and beer.",
+      "extensions": [
+        {
+          "from_the_business": [
+            "Identifies as Asian-owned",
+            "Identifies as Latino-owned",
+            "Identifies as veteran-owned",
+            "Identifies as women-owned"
+          ]
+        },
+        {
+          "service_options": [
+            "Outdoor seating",
+            "No-contact delivery",
+            "Delivery",
+            "Takeout",
+            "Dine-in"
+          ]
+        },
+        {
+          "highlights": [
+            "Fast service",
+            "Great beer selection",
+            "Great cocktails",
+            "Great coffee",
+            "Great dessert",
+            "Great wine list",
+            "Live music"
+          ]
+        },
+        {
+          "popular_for": [
+            "Lunch",
+            "Dinner",
+            "Solo dining"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible restroom",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "offerings": [
+            "Alcohol",
+            "Beer",
+            "Cocktails",
+            "Coffee",
+            "Comfort food",
+            "Happy hour drinks",
+            "Happy hour food",
+            "Hard liquor",
+            "Organic dishes",
+            "Private dining room",
+            "Small plates",
+            "Vegan options",
+            "Vegetarian options",
+            "Wine"
+          ]
+        },
+        {
+          "dining_options": [
+            "Brunch",
+            "Lunch",
+            "Dinner",
+            "Dessert",
+            "Seating",
+            "Table service"
+          ]
+        },
+        {
+          "amenities": [
+            "Bar onsite",
+            "Restroom",
+            "Wi-Fi",
+            "Free Wi-Fi"
+          ]
+        },
+        {
+          "atmosphere": [
+            "Cozy",
+            "Romantic",
+            "Trendy",
+            "Upscale"
+          ]
+        },
+        {
+          "crowd": [
+            "Family-friendly",
+            "Groups",
+            "LGBTQ+ friendly",
+            "Tourists"
+          ]
+        },
+        {
+          "planning": [
+            "Dinner reservations recommended",
+            "Accepts reservations"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "children": [
+            "High chairs"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking garage",
+            "Paid parking lot",
+            "Paid street parking",
+            "Usually plenty of parking",
+            "Valet parking"
+          ]
+        },
+        {
+          "pets": [
+            "Dogs allowed",
+            "Dogs allowed outside"
+          ]
+        }
+      ],
+      "unsupported_extensions": [
+        {
+          "accessibility": [
+            "Assistive hearing loop"
+          ]
+        }
+      ],
+      "service_options": {
+        "dine_in": true,
+        "takeout": true,
+        "no_contact_delivery": true
+      },
+      "reserve_a_table": "https://www.google.com/maps/reserve/v/dine/c/wjFtkhFzbWA?source=pa&opi=79508299&hl=en-US&gei=UQhuaozQCMONwbkPgf7R0Aw&ahbb=1&sourceurl=https://www.google.com/search?hl%3Den%26pb%3D!4m8!1m3!1d0!2d0!3d0!3m2!1i1920!2i1080!4f13.1!7i20!10b1!12m49!1m5!18b1!30b1!31m1!1b1!34e1!2m4!5m1!6e2!20e3!39b1!6m22!49b1!63m0!66b1!74i150000!85b1!91b1!114b1!149b1!178b1!206b1!209b1!212b1!223b1!232b1!234b1!244b1!246b1!250b1!253b1!258b1!260b1!266b1!10b1!12b1!13b1!14b1!16b1!17m1!3e1!20m3!5e2!6b1!14b1!46m1!1b0!96b1!99b1!19m4!2m3!1i360!2i120!4i8!20m57!2m2!1i203!2i100!3m2!2i4!5b1!6m6!1m2!1i86!2i86!1m2!1i408!2i240!7m33!1m3!1e1!2b0!3e3!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e8!2b0!3e3!1m3!1e10!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e10!2b0!3e4!1m3!1e9!2b1!3e2!2b1!9b0!15m8!1m7!1m2!1m1!1e2!2m2!1i195!2i195!3i20!22m6!1sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!2s1i:0,t:11886,p:ZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:2!7e81!12e5!17sZlnQ-DgVDr3ay5kYKEKGnD27c8gsrcY:66!18e15!24m107!1m28!13m9!2b1!3b1!4b1!6i1!8b1!9b1!14b1!20b1!25b1!18m17!3b1!4b1!5b1!6b1!13b1!14b1!17b1!21b1!22b1!27m1!1b0!28b0!32b1!33m1!1b1!34b1!36e2!10m1!8e3!11m1!3e1!14m1!3b0!17b1!20m2!1e3!1e6!24b1!25b1!26b1!27b1!29b1!30m1!2b1!36b1!37b1!39m3!2m2!2i1!3i1!43b1!52b1!54m1!1b1!55b1!56m1!1b1!61m2!1m1!1e1!65m5!3m4!1m3!1m2!1i224!2i298!72m22!1m8!2b1!5b1!7b1!12m4!1b1!2b1!4m1!1e1!4b1!8m10!1m6!4m1!1e1!4m1!1e3!4m1!1e4!3sother_user_google_review_posts__and__hotel_and_vr_partner_review_posts!6m1!1e1!9b1!89b1!98m3!1b1!2b1!3b1!103b1!113b1!114m3!1b1!2m1!1b1!117b1!122m1!1b1!126b1!127b1!26m4!2m3!1i80!2i92!4i8!30m28!1m6!1m2!1i0!2i0!2m2!1i530!2i1080!1m6!1m2!1i1870!2i0!2m2!1i1920!2i1080!1m6!1m2!1i0!2i0!2m2!1i1920!2i20!1m6!1m2!1i0!2i1060!2m2!1i1920!2i1080!34m19!2b1!3b1!4b1!6b1!8m6!1b1!3b1!4b1!5b1!6b1!7b1!9b1!12b1!14b1!20b1!23b1!25b1!26b1!31b1!37m1!1e81!42b1!49m10!3b1!6m2!1b1!2b1!7m2!1e3!2b1!8b1!9b1!10e2!50m4!2e2!3m2!1b1!3b1!61b1!67m5!7b1!10b1!14b1!15m1!1b0!69i767!77b1%26q%3Drestaurants%2Bin%2BMiami%26tbm%3Dmap",
+      "order_online": "https://www.google.com/searchviewer/42?cvd=CLw_EicKJeICIjIgEhkiF9LX29IPEQoNL2cvMTF2czVtNXE4cBgAOgMI8A0%3D&hl=en-US&gl=us&fo_m=MfohQo559jFvMUOzJVpjPL1YMfZ3bInYwBDuMfaXTPp5KXh-&utm_source=tactile&gei=UQhuaozQCMONwbkPgf7R0Aw&ei=UQhuaozQCMONwbkPgf7R0Aw&fo_s=OA,SOE&opi=79508299&ebb=1&cs=0&foub=mcpp",
+      "user_review": "\"Great service, amazing drinks, great food, and pleasant atmosphere.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkHwHE4oW5hD-Ik9ACpMRg88FbRy11TBXheYUGo684ZvDHpYyc_o5LfWYQhifAcDgQ3hu1t7B-J2uQWfqn1bou05mWNSfe8FfU9H6BWmUlu2nQ4QzcTNIcvNJY2ZMmhCvFYDT__hQ60diDA=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/YjJXOHicHcTNToMwAADgJ-poGSAz8QCr2C2OWITU7kKy2p9l0KItLPMlPfs2S_wO39-vCWHyj1E0mPVKO6cHOXv5LZwN0oaVcGOkJw-EBz4qSPPWsgu5kufEsdRgsLtsiu10aHSeV6fmhlBbfhjJuxeX5clxwWTiN9G79FUxTs1ZFQJrujYzCg8l2MczZerLopObYTqy-l3JvFLdhmQlG7thji1N6I9o651Y6j2Pj4fRbJeK47bvDc3g5xkXT1cEIQTmfwHsHQggReQ"
+    }
+  ]
+}
