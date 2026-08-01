@@ -2,8 +2,9 @@
 
 # cosmo-travel-mcp
 
-One MCP server with eight travel tools — flight search, multi-city itineraries,
-accommodations, cheapest-dates sampling, and drive-vs-fly comparisons — all backed
+One MCP server with eleven travel tools — flight search, multi-city itineraries,
+accommodations, things to do, events, drive-vs-fly comparisons, itinerary checking
+and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
 API for driving). Both providers offer a free tier that is sufficient for personal
 use: SerpAPI gives 100 searches/month and Google Maps Routes API includes a monthly
@@ -56,9 +57,11 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks six of the eight tools: `search_flights`,
+This one key unlocks seven of the eleven tools: `search_flights`,
 `search_multi_city`, `search_accommodations`, `get_accommodation_details`,
-`search_cheapest_dates`, and `search_events`.
+`search_cheapest_dates`, `search_events`, and `search_things_to_do`.
+`check_itinerary` and `build_calendar` need no key at all — they are pure
+computation and cost nothing.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
@@ -186,6 +189,8 @@ not attempt to edit their config files.
 | `search_things_to_do` | `location`, `category?`, `min_rating?`, `limit?`, `country?`, `language?` | What to do in a city, via SerpAPI Google Maps engine. `category` is one of attractions, museums, parks, landmarks, shopping, nightlife, restaurants, cafes, bars (default `attractions`). Each result carries `operating_hours` (per weekday) and `coordinates`, which is what a day-by-day itinerary is built from; food categories add price range, description and a reservation link. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration + toll estimates via Google Maps Routes API. Tolls are fetched from ``computeRoutes`` with ``extraComputations: ["TOLLS"]`` and degrade gracefully when unavailable. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
 | `search_cheapest_dates` | `origin`, `destination`, `earliest_departure`, `latest_return`, `trip_duration_days`, `max_calls?` (default 6, max 15), `adults?`, `children?`, `cabin_class?`, `currency?` | Samples candidate dates across a flexible window and returns cheapest round-trip per date. **Costs up to `max_calls` SerpAPI searches per call.** |
+| `check_itinerary` | `days` ([{date, stops:[{name, start, end, operating_hours?, coordinates?}]}]) | Checks a drafted itinerary for conflicts: stops on a closing day, visits outside opening hours, overlapping stops, and gaps too short to cross the distance. Returns findings (`blocker` / `warning` / `unchecked`), not prose. **Costs nothing — no API calls.** |
+| `build_calendar` | `items` ([{title, start, end?, location?, description?}]), `calendar_name?`, `timezone_name?` | Generates an RFC 5545 `.ics` plus a Google Calendar link per event. Times are floating local wall-clock. Cannot write to a calendar itself — if a calendar MCP is connected, the AI uses that (with your approval); otherwise it shows the links. **Costs nothing — no API calls.** |
 | `check_setup` | _(none)_ | Validates both API keys and reports which tools are ready. The SerpAPI check is free; the Maps check makes one real API call. |
 
 ## What each call costs
@@ -212,8 +217,10 @@ time if you need a different TTL — the default is 600 (10 minutes).
 | `search_multi_city` | 1 | 0 | |
 | `search_accommodations` | 1 | 0 | |
 | `get_accommodation_details` | 1 | 0 | Drill into a single property from `search_accommodations`. |
-| `search_events` | 1 | 0 | |
+| `search_events` | `(1 + len(also_search)) × pages` | 0 | Default call is 1. A coverage sweep (`pages=2`, two extra angles) is 6 — the response reports `searches_used`. |
 | `search_things_to_do` | 1 | 0 | One per city, per category. A 3-city trip asking for attractions and food is 6 searches. |
+| `check_itinerary` | 0 | 0 | Pure computation. |
+| `build_calendar` | 0 | 0 | Pure computation. |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
 | `compare_drive_or_fly` | 0 | 1 | |
 | `check_setup` | 0 (free account check) | 1 | The Maps check is a minimal `computeRouteMatrix` call. |

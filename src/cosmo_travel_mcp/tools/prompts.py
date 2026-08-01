@@ -123,10 +123,22 @@ def plan_trip(
     parts.append(
         "\n## 7. What's on while they're there — `search_events`\n"
         "Concerts, shows, sports and festivals, with dates and ticket links. "
-        "Pass the city and a `when` window when the travel dates fall inside "
-        "one (today, tomorrow, week, weekend, next_week, month, next_month). "
         "Events are date-bound, so they anchor the itinerary: build the day "
-        "around the show, not the other way round."
+        "around the show, not the other way round.\n"
+        "**A default one-search call misses most of what is on.** Measured "
+        "live: a single query returned 9 events for a city where a sweep "
+        "found 20. To actually cover a destination:\n"
+        "- `pages=2` or `3` — the biggest single win; page 2 alone surfaced "
+        "eight events that four different phrasings had all missed.\n"
+        "- `also_search` — extra angles **in the local language**, because "
+        "different phrasings reach different corpora. This is the only way "
+        "niche things show up: a local race, a skate contest, a free street "
+        "party. For a Brazilian city try `esportes em <cidade>`, "
+        "`festival de rua em <cidade>`, `feira em <cidade>`.\n"
+        "- Omit `when` for a trip more than a week out — the window filters "
+        "hide everything outside it.\n"
+        "Each query × page costs one search, and the response reports "
+        "`searches_used`. Say what the sweep cost if it was large."
     )
 
     # ── Assembly ──────────────────────────────────────────────────────
@@ -157,6 +169,38 @@ def plan_trip(
         "link must come from a tool result. If something was not returned — "
         "an admission price, a reservation — say it needs checking rather "
         "than filling it in."
+    )
+
+    # ── Step 9 ────────────────────────────────────────────────────────
+    parts.append(
+        "\n## 9. Check it before showing it — `check_itinerary`\n"
+        "Costs nothing. Pass the drafted days as "
+        "`[{date, stops: [{name, start, end, operating_hours, coordinates}]}]`, "
+        "copying `operating_hours` and `coordinates` **verbatim** from the "
+        "`search_things_to_do` results — do not translate or reformat them.\n"
+        "It returns findings, not prose: `blocker` (a closed day, a visit "
+        "outside opening hours, two stops at once), `warning` (not enough "
+        "time to cross the distance), `unchecked` (hours it could not read — "
+        "verify those by hand).\n"
+        "**Fix every blocker and re-run before presenting the plan.** A "
+        "polished itinerary that sends someone to a museum on its closing "
+        "day is worse than a rough one that does not."
+    )
+
+    # ── Step 10 ───────────────────────────────────────────────────────
+    parts.append(
+        "\n## 10. Offer to put it in the calendar — `build_calendar`\n"
+        "Costs nothing. It returns an `.ics` file plus a Google Calendar link "
+        "per event; it cannot write to anyone's calendar itself.\n"
+        "- **If a calendar tool is connected in this session, offer to create "
+        "the events with it — and ask before writing anything.** This server "
+        "cannot see your other tools, so that decision is yours.\n"
+        "- Otherwise, present the links, and offer to save the `.ics` to a "
+        "file if you can write one.\n"
+        "Times are floating local wall-clock, which is what a traveller "
+        "means. For flights, add one item per leg using each airport's own "
+        "local time. Do not dump forty events on someone: anchor the "
+        "essentials (flights, check-ins, booked shows) and offer the rest."
     )
 
     return "\n".join(parts)

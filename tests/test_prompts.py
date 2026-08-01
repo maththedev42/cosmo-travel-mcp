@@ -62,6 +62,8 @@ def test_plan_trip_with_full_args():
         "get_accommodation_details",
         "search_things_to_do",
         "search_events",
+        "check_itinerary",
+        "build_calendar",
     ):
         assert tool in result, f"plan_trip never mentions {tool}"
     # Cost caveat: the free-tier size and the word "quota" must both appear,

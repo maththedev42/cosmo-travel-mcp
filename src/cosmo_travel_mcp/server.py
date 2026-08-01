@@ -10,7 +10,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles nine travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles eleven travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
 for driving).
 
@@ -60,6 +60,7 @@ def main() -> None:
         events,
         flights,
         hotels,
+        itinerary,
         places,
         prompts,
         setup,
@@ -70,6 +71,7 @@ def main() -> None:
     driving.register(mcp)
     events.register(mcp)
     hotels.register(mcp)
+    itinerary.register(mcp)
     places.register(mcp)
     setup.register(mcp)
     prompts.register(mcp)

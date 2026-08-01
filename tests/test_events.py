@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 import respx
 
@@ -320,3 +321,187 @@ async def test_search_events_minimal_event():
 
     ev = result["events"][0]
     assert ev == {"title": "Minimal Event"}
+
+
+# ---------------------------------------------------------------------------
+# Coverage sweep: pagination, extra angles, dedupe, barren angles
+#
+# Measured against the live engine for Porto Alegre on 2026-08-01: one query
+# returns ~10 results and one slice of the corpus. Page 2 of the *first* query
+# alone returned 8 events that four different phrasings had all missed, and a
+# "free events" angle returned SerpAPI's no-results error body — which used to
+# raise straight out of the tool.
+# ---------------------------------------------------------------------------
+
+
+def _ev(title: str, when: str = "sáb., 1 de ago.") -> dict:
+    return {"title": title, "date": {"when": when}}
+
+
+def _page(*titles: str) -> dict:
+    return {"events_results": [_ev(t) for t in titles]}
+
+
+_NO_RESULTS = {"error": "Google hasn't returned any results for this query."}
+
+
+@pytest.mark.asyncio
+async def test_no_results_body_is_empty_not_an_exception():
+    """SerpAPI reports "nothing matched" as an error body, not an empty array.
+
+    The old tests mocked {"events_results": []}, a shape the engine does not
+    send for this case, so the real path raised ValueError out of the tool.
+    """
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_NO_RESULTS)
+
+        result = await search_events(query="Quietville")
+
+    assert result["events"] == []
+    assert result["total_results"] == 0
+    assert result["searches_used"] == 1
+
+
+@pytest.mark.asyncio
+async def test_one_barren_angle_does_not_sink_the_sweep():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page("Helloween")),
+                httpx.Response(200, json=_NO_RESULTS),
+                httpx.Response(200, json=_page("CATS RUN RS 2026")),
+            ]
+        )
+
+        result = await search_events(
+            query="Porto Alegre",
+            also_search=["festas gratuitas em Porto Alegre", "esportes em Porto Alegre"],
+        )
+
+    titles = [e["title"] for e in result["events"]]
+    assert titles == ["Helloween", "CATS RUN RS 2026"]
+    assert result["searches_used"] == 3
+
+
+@pytest.mark.asyncio
+async def test_a_short_page_is_not_the_last_page():
+    """The live engine returns 9 results for a page and 9 more at the next offset.
+
+    Treating "fewer than a full page" as the end skipped page 2 entirely,
+    which is where eight otherwise-unseen events came from.
+    """
+    nine = [f"Show {i}" for i in range(9)]
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page(*nine)),
+                httpx.Response(200, json=_page("Martinho da Vila")),
+                httpx.Response(200, json={"events_results": []}),
+            ]
+        )
+
+        result = await search_events(query="Porto Alegre", pages=3)
+
+    assert route.call_count == 3
+    assert "Martinho da Vila" in [e["title"] for e in result["events"]]
+
+
+@pytest.mark.asyncio
+async def test_offset_advances_by_results_received_not_a_fixed_page_size():
+    """A 9-result page must be followed by start=9, or item 9 is never fetched."""
+    nine = [f"Show {i}" for i in range(9)]
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page(*nine)),
+                httpx.Response(200, json=_page("Tenth")),
+            ]
+        )
+
+        await search_events(query="Porto Alegre", pages=2)
+
+    assert [c.request.url.params.get("start") for c in route.calls] == [None, "9"]
+
+
+@pytest.mark.asyncio
+async def test_empty_page_stops_paging():
+    """An empty page really is the end — paging on would burn quota."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page("Only One")),
+                httpx.Response(200, json={"events_results": []}),
+            ]
+        )
+
+        result = await search_events(query="Porto Alegre", pages=5)
+
+    assert route.call_count == 2
+    assert result["searches_used"] == 2
+
+
+@pytest.mark.asyncio
+async def test_duplicates_across_angles_are_merged_case_and_accent_insensitively():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page("ROUPA NOVA")),
+                httpx.Response(200, json=_page("Roupa Nova")),
+            ]
+        )
+
+        result = await search_events(query="Porto Alegre", also_search=["shows"])
+
+    assert result["total_results"] == 1
+
+
+@pytest.mark.asyncio
+async def test_differently_titled_events_are_not_merged():
+    """Losing a real event is worse than showing a near-duplicate."""
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).mock(
+            side_effect=[
+                httpx.Response(200, json=_page("TIAGO IORC")),
+                httpx.Response(200, json=_page("TIAGO IORC - TURNÊ TROCO LIKES 10 ANOS")),
+            ]
+        )
+
+        result = await search_events(query="Porto Alegre", also_search=["shows"])
+
+    assert result["total_results"] == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pages", [0, 6])
+async def test_pages_out_of_range_rejected(pages):
+    with pytest.raises(ValueError, match="pages must be between 1 and 5"):
+        await search_events(query="Porto Alegre", pages=pages)
+
+
+@pytest.mark.asyncio
+async def test_too_many_extra_angles_rejected():
+    with pytest.raises(ValueError, match="at most 6 extra angles"):
+        await search_events(query="X", also_search=[f"a{i}" for i in range(7)])
+
+
+@pytest.mark.asyncio
+async def test_queries_actually_run_are_reported():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_page("A"))
+
+        result = await search_events(query="Porto Alegre", also_search=["shows", "  "])
+
+    assert result["queries"] == ["Porto Alegre", "shows"]
+
+
+@pytest.mark.asyncio
+async def test_cached_pages_do_not_count_as_searches_spent():
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=_page("A"))
+
+        first = await search_events(query="Porto Alegre")
+        second = await search_events(query="Porto Alegre")
+
+    assert first["searches_used"] == 1
+    assert second["searches_used"] == 0
+    assert second["cached"] is True

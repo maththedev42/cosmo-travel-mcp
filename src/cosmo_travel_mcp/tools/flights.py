@@ -90,6 +90,24 @@ def _reset_cache() -> None:
     _RESPONSE_CACHE = OrderedDict()
 
 
+# SerpAPI reports "nothing matched" as an ``error`` body rather than an empty
+# result array, so ``_call_serpapi`` raises for it like any other error. For a
+# search that is *allowed* to match nothing — an events query for a quiet city,
+# one angle of a multi-angle sweep — that is a crash where an empty list is the
+# right answer. Callers that can legitimately come back empty test for it.
+_NO_RESULTS_MARKERS: tuple[str, ...] = (
+    "hasn't returned any results",
+    "has not returned any results",
+    "no results found",
+)
+
+
+def is_no_results_error(exc: Exception) -> bool:
+    """True when *exc* is SerpAPI's "nothing matched" response, not a failure."""
+    message = str(exc).casefold()
+    return any(marker.casefold() in message for marker in _NO_RESULTS_MARKERS)
+
+
 def _cache_key(params: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
     """Build a canonical cache key from the outgoing params, minus the API key."""
     stable = {k: v for k, v in params.items() if k != "api_key"}

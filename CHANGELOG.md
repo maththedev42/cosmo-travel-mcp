@@ -33,6 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   <cursor|claude-desktop|windsurf|vscode|cline>` prints a ready-to-paste
   config block and the file it belongs in, so registration is no longer
   Claude-Code-only.
+- **`check_itinerary`** — checks a drafted plan before it reaches the traveller:
+  stops scheduled on a closing day, visits outside opening hours, overlapping
+  stops, and gaps too short to cross the distance between them. Returns
+  findings (`blocker` / `warning` / `unchecked`), never prose — how they are
+  shown is the client's business. Hours it cannot read are reported as
+  `unchecked` rather than assumed open. Costs nothing.
+- **`build_calendar`** — emits an RFC 5545 `.ics` and a Google Calendar link
+  per event, with escaping, line folding and deterministic UIDs so a re-import
+  does not duplicate. Times are floating local wall-clock. It cannot write to
+  a calendar itself: when a calendar MCP is connected the AI is told to use it
+  and to confirm first, and otherwise to present the links. Costs nothing.
+- **Event coverage sweep** — `search_events` gains `pages` (1–5) and
+  `also_search` (up to 6 extra query angles), deduplicated, with
+  `searches_used` reported. One query returns one slice of Google's corpus:
+  measured live on Porto Alegre, a default call found 9 events where a sweep
+  found 20, including a local race and tribute shows that no single phrasing
+  surfaced. Barren angles no longer sink the sweep.
 - **`search_things_to_do`** — what to do in a city: attractions, museums,
   parks, landmarks, shopping, nightlife, and food (restaurants, cafés, bars).
   Each result carries per-weekday `operating_hours` and `coordinates`, so an
@@ -58,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `search_events` raised `ValueError` instead of returning an empty result
+  when a query matched nothing. SerpAPI reports "nothing found" as an `error`
+  body rather than an empty array, and the tests mocked an empty array — a
+  shape the engine never sends for that case — so the real path crashed.
 - Buy advice was ungrammatical whenever SerpAPI omitted a field — the common
   case — producing output like `Prices are currently high for this route: .`
 - A price-insights payload carrying only a price history was discarded whole.
