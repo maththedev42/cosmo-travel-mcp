@@ -199,6 +199,12 @@ SerpAPI-backed tool response gains a `quota_warning` field with the current
 estimate.  Call `check_setup` for the exact number — the warning is a
 locally-decremented best effort and does not account for concurrent clients.
 
+**Repeated identical searches within 10 minutes are free**: the server caches
+successful SerpAPI responses in memory. A cache hit is marked `cached: true`
+on the tool response and costs zero searches.  Set the environment variable
+`COSMO_TRAVEL_CACHE_TTL` (seconds; `0` disables the cache) at registration
+time if you need a different TTL — the default is 600 (10 minutes).
+
 | Tool | SerpAPI searches per call | Maps calls per call | Notes |
 |---|---|---|---|
 | `search_flights` | 1 | 0 | Phase-2 (return legs) and phase-3 (booking options) calls cost 1 additional search each. |

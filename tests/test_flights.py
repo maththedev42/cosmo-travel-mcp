@@ -11,6 +11,7 @@ import respx
 
 from cosmo_travel_mcp.tools.flights import (
     SERPAPI_BASE,
+    _CACHE_TTL_SECONDS,
     _LOW_QUOTA_THRESHOLD,
     _QUOTA_SEARCHES_LEFT,
     _build_base_params,
@@ -19,6 +20,7 @@ from cosmo_travel_mcp.tools.flights import (
     _parse_flights_response,
     _parse_price_insights,
     _refresh_quota_from_account,
+    _reset_cache,
     _reset_quota_counter,
     search_flights,
     search_multi_city,
@@ -36,8 +38,9 @@ def _set_fake_api_key(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _reset_quota():
-    """Reset the module-level quota counter so tests are order-independent."""
+    """Reset the module-level quota counter and response cache so tests are order-independent."""
     _reset_quota_counter()
+    _reset_cache()
 
 
 
@@ -1692,3 +1695,183 @@ async def test_retried_search_decrements_once():
     )
     assert route.call_count == 2  # first timed out, second succeeded
     assert "About 6" in result["quota_warning"]  # 7→6 after decrement
+
+
+# ---------------------------------------------------------------------------
+# Cache tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_skips_http_and_adds_cached_flag():
+    """Identical call twice → 1 HTTP call, second response has cached: true."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        # First call — goes to HTTP.
+        r1 = await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert "cached" not in r1
+        assert route.call_count == 1
+
+        # Second call — cache hit.
+        r2 = await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert r2["cached"] is True
+        assert route.call_count == 1  # no second HTTP call
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_does_not_decrement_quota():
+    """Cache hit costs nothing — quota counter decremented once, not twice."""
+    import cosmo_travel_mcp.tools.flights as flights_module
+
+    with respx.mock as mock:
+        account_route = mock.get("https://serpapi.com/account.json").respond(
+            json={"plan_searches_left": 10}
+        )
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        # After first call: 10 → 9.
+        assert flights_module._QUOTA_SEARCHES_LEFT == 9, (
+            f"Expected 9, got {flights_module._QUOTA_SEARCHES_LEFT!r}. "
+            f"Account route called {account_route.call_count} time(s)."
+        )
+
+        await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        # Cache hit — still 9.
+        assert flights_module._QUOTA_SEARCHES_LEFT == 9
+        assert route.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_different_params_no_cache_hit():
+    """Different params (any single param differs) → 2 HTTP calls."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        await search_flights(
+            origin="JFK", destination="SFO", outbound_date="2025-12-01",
+        )
+        assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_ttl_expiry_re_fetches(monkeypatch):
+    """TTL expiry → 2 HTTP calls."""
+    fake_time = [100.0]
+    monkeypatch.setattr("cosmo_travel_mcp.tools.flights.time.monotonic", lambda: fake_time[0])
+
+    response_json = _serpapi_search_response()
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=response_json)
+        )
+
+        await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert route.call_count == 1
+
+        # Advance past TTL.
+        fake_time[0] += _CACHE_TTL_SECONDS + 1
+
+        await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_error_response_not_cached():
+    """Error response → not cached; next identical call hits HTTP again."""
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE)
+        route.side_effect = [
+            httpx.Response(200, json={"error": "No results found."}),
+            httpx.Response(200, json=_serpapi_search_response()),
+        ]
+
+        with pytest.raises(ValueError, match="No results found."):
+            await search_flights(
+                origin="JFK", destination="LAX", outbound_date="2025-12-01",
+            )
+
+        # Second call must hit HTTP again.
+        result = await search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert route.call_count == 2
+        assert "cached" not in result
+
+
+@pytest.mark.asyncio
+async def test_cache_disabled_when_env_var_is_zero(monkeypatch):
+    """COSMO_TRAVEL_CACHE_TTL=0 → caching off, 2 HTTP calls."""
+    monkeypatch.setenv("COSMO_TRAVEL_CACHE_TTL", "0")
+    # Re-import the module-level constant so it picks up the env var change.
+    import importlib
+    import cosmo_travel_mcp.tools.flights as flights_module
+    importlib.reload(flights_module)
+    # Restore the autouse fixture hooks by re-resetting.
+    _reset_cache()
+    _reset_quota_counter()
+
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).mock(
+            return_value=httpx.Response(200, json=_serpapi_search_response())
+        )
+        await flights_module.search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        await flights_module.search_flights(
+            origin="JFK", destination="LAX", outbound_date="2025-12-01",
+        )
+        assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_eviction_when_cache_exceeds_max_entries(monkeypatch):
+    """Exceed the cap → oldest entry re-fetches."""
+    monkeypatch.setattr(
+        "cosmo_travel_mcp.tools.flights._CACHE_MAX_ENTRIES", 2
+    )
+
+    fake_time = [100.0]
+    monkeypatch.setattr(
+        "cosmo_travel_mcp.tools.flights.time.monotonic", lambda: fake_time[0]
+    )
+
+    with respx.mock as mock:
+        route = mock.get(SERPAPI_BASE).respond(
+            json=_serpapi_search_response()
+        )
+
+        # Fill cache with 2 entries.
+        await search_flights(origin="A1", destination="B1", outbound_date="2025-12-01")
+        fake_time[0] += 1
+        await search_flights(origin="A2", destination="B2", outbound_date="2025-12-01")
+
+        # Third entry → evicts oldest (A1→B1).
+        fake_time[0] += 1
+        await search_flights(origin="A3", destination="B3", outbound_date="2025-12-01")
+
+        # A1→B1 was evicted — must fetch again.
+        fake_time[0] += 1
+        await search_flights(origin="A1", destination="B1", outbound_date="2025-12-01")
+
+        # 4 HTTP calls: A1, A2, A3, A1 (re-fetch after eviction)
+        assert route.call_count == 4

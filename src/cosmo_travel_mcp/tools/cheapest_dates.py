@@ -169,7 +169,7 @@ async def search_cheapest_dates(
             "type": 1,
         }
         try:
-            data = await _call_serpapi(params)
+            data, _from_cache = await _call_serpapi(params)
             result = _parse_flights_response(data, requested_currency=currency)
         except ValueError:
             raise  # Configuration errors (missing API key) must propagate.

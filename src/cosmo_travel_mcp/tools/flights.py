@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -52,6 +54,32 @@ _LOW_QUOTA_THRESHOLD: int = 10
 _QUOTA_DISABLED = object()
 
 _QUOTA_SEARCHES_LEFT: int | None | object = None
+
+# ---------------------------------------------------------------------------
+# Session-scoped SerpAPI response cache
+# ---------------------------------------------------------------------------
+
+# TTL in seconds — power-user knob, default 10 min (600 s).  0 disables.
+_CACHE_TTL_SECONDS: int = int(os.environ.get("COSMO_TRAVEL_CACHE_TTL", "600"))
+
+# Max entries before eviction (oldest ejected, FIFO).
+_CACHE_MAX_ENTRIES: int = 128
+
+# OrderedDict so eviction is cheap.  Key: canonical param tuple; value:
+# (expiry_monotonic: float, response_data: dict[str, Any]).
+_RESPONSE_CACHE: OrderedDict[tuple[tuple[str, Any], ...], tuple[float, dict[str, Any]]] = OrderedDict()
+
+
+def _reset_cache() -> None:
+    """Reset the module-level response cache (for tests)."""
+    global _RESPONSE_CACHE
+    _RESPONSE_CACHE = OrderedDict()
+
+
+def _cache_key(params: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """Build a canonical cache key from the outgoing params, minus the API key."""
+    stable = {k: v for k, v in params.items() if k != "api_key"}
+    return tuple(sorted(stable.items()))
 
 
 def _reset_quota_counter() -> None:
@@ -215,16 +243,39 @@ def _format_times_arg(value: str, *, label: str) -> str:
     return ",".join(str(h) for h in _parse_times_arg(value, label=label))
 
 
-async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights") -> dict[str, Any]:
-    """Call SerpAPI and return the JSON response, propagating errors.
+async def _call_serpapi(
+    params: dict[str, Any], *, engine: str = "google_flights",
+) -> tuple[dict[str, Any], bool]:
+    """Call SerpAPI and return ``(data, from_cache)``.
+
+    ``from_cache`` is ``True`` when the response was served from the
+    session-scoped in-memory cache — the caller should surface
+    ``cached: true`` on the tool response so the AI client can tell the
+    user.
 
     Retries exactly once (with a short backoff) on transient failures:
     httpx transport errors (connect/read timeouts, connection errors) and
     HTTP 502/503/504 responses.  SerpAPI ``{"error": ...}`` JSON bodies and
     any other 4xx/5xx status are *never* retried — they propagate immediately.
+
+    Responses from successful upstream calls are cached in memory for the
+    session (TTL controlled by ``COSMO_TRAVEL_CACHE_TTL``, default 10 min).
+    Cache hits do not decrement the quota counter.
     """
     api_key = _get_api_key()
     params = {**params, "engine": engine, "api_key": api_key}
+
+    # --- cache lookup (before any HTTP call) ---
+    if _CACHE_TTL_SECONDS > 0:
+        key = _cache_key(params)
+        now_mono = time.monotonic()
+        entry = _RESPONSE_CACHE.get(key)
+        if entry is not None:
+            expiry, cached_data = entry
+            if now_mono < expiry:
+                return cached_data, True
+            # Expired — evict.
+            del _RESPONSE_CACHE[key]
 
     for attempt in (1, 2):
         try:
@@ -237,12 +288,19 @@ async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights
             data: dict[str, Any] = resp.json()
             if "error" in data:
                 raise ValueError(data["error"])
+            # --- cache the successful response ---
+            if _CACHE_TTL_SECONDS > 0:
+                now_mono = time.monotonic()
+                # Evict oldest if at capacity.
+                while len(_RESPONSE_CACHE) >= _CACHE_MAX_ENTRIES:
+                    _RESPONSE_CACHE.popitem(last=False)
+                _RESPONSE_CACHE[key] = (now_mono + _CACHE_TTL_SECONDS, data)
             # Best-effort quota tracking (never breaks searches).
             await _maybe_fetch_quota()
             global _QUOTA_SEARCHES_LEFT
             if isinstance(_QUOTA_SEARCHES_LEFT, int):
                 _QUOTA_SEARCHES_LEFT -= 1
-            return data
+            return data, False
         except httpx.TransportError:
             if attempt == 1:
                 await asyncio.sleep(_RETRY_BACKOFF_SECONDS)
@@ -691,7 +749,7 @@ async def search_flights(
         if deep_search:
             params["deep_search"] = "true"
 
-    data = await _call_serpapi(params)
+    data, from_cache = await _call_serpapi(params)
 
     if booking_token:
         # Booking-phase response: selected_flights + booking_options.
@@ -711,10 +769,14 @@ async def search_flights(
                 "booking link."
             ),
         }
+        if from_cache:
+            booking_result["cached"] = True
         _inject_quota_warning(booking_result)
         return booking_result
 
     result = _parse_flights_response(data, requested_currency=currency)
+    if from_cache:
+        result["cached"] = True
 
     # Annotate phase for round-trip
     if departure_token:
@@ -814,8 +876,10 @@ async def search_multi_city(
     if deep_search:
         params["deep_search"] = "true"
 
-    data = await _call_serpapi(params)
+    data, from_cache = await _call_serpapi(params)
     result = _parse_flights_response(data, requested_currency=currency)
+    if from_cache:
+        result["cached"] = True
     _inject_quota_warning(result)
     return result
 
