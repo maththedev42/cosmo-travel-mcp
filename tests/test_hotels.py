@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 
+import httpx
 import pytest
 import respx
 
@@ -654,3 +655,72 @@ async def test_free_cancellation_rejected_for_vacation_rentals():
                 free_cancellation=True,
             )
         assert route.call_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Ratings on hotel search results
+#
+# Captured from the live google_hotels engine 2026-08-01. The engine reports
+# `overall_rating` for hotels and never `rating`, so reading `rating` alone
+# dropped the guest rating from every hotel — while sort_by="highest_rating"
+# kept working, leaving results ordered by an invisible field.
+# ---------------------------------------------------------------------------
+
+_HOTELS_SEARCH = json.loads(
+    (Path(__file__).parent / "fixtures" / "google_hotels_search.json").read_text()
+)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_overall_rating_is_surfaced_as_rating():
+    respx.get(SERPAPI_BASE).mock(return_value=httpx.Response(200, json=_HOTELS_SEARCH))
+
+    result = await search_accommodations(
+        location="Miami Beach, FL",
+        check_in_date="2026-12-28",
+        check_out_date="2026-12-30",
+        vacation_rentals=False,
+    )
+
+    rated = [p for p in result["results"] if p["name"] == "Sherry Frontenac Oceanfront Hotel"]
+    assert rated, "fixture must contain the rated property"
+    assert rated[0]["rating"] == 3.1
+    assert rated[0]["reviews"] == 1681
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_property_without_a_rating_omits_the_key_rather_than_faking_one():
+    respx.get(SERPAPI_BASE).mock(return_value=httpx.Response(200, json=_HOTELS_SEARCH))
+
+    result = await search_accommodations(
+        location="Miami Beach, FL",
+        check_in_date="2026-12-28",
+        check_out_date="2026-12-30",
+        vacation_rentals=False,
+    )
+
+    unrated = [p for p in result["results"] if p["name"] == "2025 BMW 14"]
+    assert unrated, "fixture must contain the unrated property"
+    assert "rating" not in unrated[0]
+    assert "reviews" not in unrated[0]
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_location_rating_is_kept_distinct_from_guest_rating():
+    respx.get(SERPAPI_BASE).mock(return_value=httpx.Response(200, json=_HOTELS_SEARCH))
+
+    result = await search_accommodations(
+        location="Miami Beach, FL",
+        check_in_date="2026-12-28",
+        check_out_date="2026-12-30",
+        vacation_rentals=False,
+    )
+
+    by_name = {p["name"]: p for p in result["results"]}
+    assert by_name["Sherry Frontenac Oceanfront Hotel"]["location_rating"] == 4.1
+    # The unrated listing still has a location rating — they are different signals.
+    assert by_name["2025 BMW 14"]["location_rating"] == 3.4
+    assert "rating" not in by_name["2025 BMW 14"]

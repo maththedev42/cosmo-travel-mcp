@@ -188,8 +188,19 @@ async def test_check_setup_neither_key_set(monkeypatch):
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
     result = await check_setup()
 
-    serpapi_tools = ["search_flights", "search_multi_city", "search_accommodations", "get_accommodation_details", "search_cheapest_dates", "search_events"]
+    serpapi_tools = [
+        "search_flights", "search_multi_city", "search_accommodations",
+        "get_accommodation_details", "search_cheapest_dates", "search_events",
+        "search_things_to_do",
+    ]
+    # These need no key at all, so "neither key set" leaves them usable —
+    # they are deliberately exempt from the not-ready assertions below.
+    keyless_tools = ["check_itinerary", "build_calendar"]
+
     for tool in result["tools"]:
+        if tool["tool"] in keyless_tools:
+            assert tool["ready"] is True
+            continue
         assert tool["ready"] is False
         assert "not set" in tool["reason"]
         if tool["tool"] in serpapi_tools:
@@ -367,3 +378,49 @@ async def test_per_tool_reasons_point_at_the_guide(monkeypatch):
     assert "`setup`" in flights["reason"]
     # The full command block belongs in `setup`, not duplicated per tool.
     assert "claude mcp add" not in flights["reason"]
+
+
+# ---------------------------------------------------------------------------
+# check_setup must report EVERY registered tool
+#
+# `plan_trip` silently omitted two tools for a whole release, and check_setup
+# then did the same for three more. This is the "what can I use right now"
+# surface: a tool missing from it reads as a tool that does not exist.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_check_setup_reports_every_registered_tool(monkeypatch):
+    """The status list must match what server.py actually registers."""
+    from cosmo_travel_mcp.server import mcp
+    from cosmo_travel_mcp.tools import (
+        cheapest_dates, driving, events, flights, hotels, itinerary, places,
+    )
+    from cosmo_travel_mcp.tools import setup as setup_mod
+
+    for module in (flights, cheapest_dates, driving, events, hotels,
+                   itinerary, places, setup_mod):
+        module.register(mcp)
+    registered = {t.name for t in (await mcp.list_tools())}
+
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+    result = await check_setup()
+    reported = {t["tool"] for t in result["tools"]}
+
+    missing = registered - reported - {"check_setup"}
+    assert not missing, f"check_setup never mentions: {sorted(missing)}"
+
+
+@pytest.mark.asyncio
+async def test_keyless_tools_are_ready_without_any_key(monkeypatch):
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+
+    result = await check_setup()
+    keyless = {t["tool"]: t for t in result["tools"] if t["tool"] in
+               ("check_itinerary", "build_calendar")}
+
+    assert set(keyless) == {"check_itinerary", "build_calendar"}
+    assert all(t["ready"] for t in keyless.values())
+    assert "costs nothing" in result["summary"]

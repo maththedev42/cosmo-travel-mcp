@@ -182,10 +182,22 @@ async def check_setup() -> dict[str, Any]:
         "tool": "search_events",
         "ready": False,
     }
+    things_to_do_status: dict[str, Any] = {
+        "tool": "search_things_to_do",
+        "ready": False,
+    }
     driving_status: dict[str, Any] = {
         "tool": "compare_drive_or_fly",
         "ready": False,
     }
+
+    # No key, no network, no quota — these are always usable, and saying so
+    # matters: this is the "what can I use right now" surface, and a tool
+    # missing from it reads as a tool that does not exist.
+    keyless_statuses: list[dict[str, Any]] = [
+        {"tool": "check_itinerary", "ready": True, "reason": "no API key required"},
+        {"tool": "build_calendar", "ready": True, "reason": "no API key required"},
+    ]
 
     serpapi_statuses = [
         flights_status,
@@ -194,6 +206,7 @@ async def check_setup() -> dict[str, Any]:
         accommodation_details_status,
         cheapest_dates_status,
         events_status,
+        things_to_do_status,
     ]
 
     # --- SerpAPI check (free --- does not count against monthly quota) ---
@@ -246,7 +259,9 @@ async def check_setup() -> dict[str, Any]:
         accommodation_details_status,
         cheapest_dates_status,
         events_status,
+        things_to_do_status,
         driving_status,
+        *keyless_statuses,
     ]
 
     # Build a human-readable summary, one line per tool.
@@ -255,6 +270,8 @@ async def check_setup() -> dict[str, Any]:
         if t["ready"]:
             if t["tool"] == "compare_drive_or_fly":
                 summary_lines.append(f"{t['tool']}: ready (Maps key valid)")
+            elif "plan_searches_left" not in t:
+                summary_lines.append(f"{t['tool']}: ready (no API key needed, costs nothing)")
             elif t["tool"] == "search_cheapest_dates":
                 left = t.get("plan_searches_left", "?")
                 summary_lines.append(

@@ -1,0 +1,354 @@
+{
+  "search_parameters": {
+    "engine": "google_hotels",
+    "q": "Miami Beach, FL",
+    "gl": "us",
+    "hl": "en",
+    "currency": "USD",
+    "check_in_date": "2026-12-28",
+    "check_out_date": "2026-12-30",
+    "adults": 2,
+    "children": 0
+  },
+  "properties": [
+    {
+      "type": "vacation rental",
+      "name": "2025 BMW 14",
+      "link": "https://exoticz3742.my.futurestay.com/properties/2062",
+      "property_token": "ChoQuLyXo92Ys5bXARoNL2cvMTFsdGc0dDBidBAC",
+      "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-12-28&check_out_date=2026-12-30&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChoQuLyXo92Ys5bXARoNL2cvMTFsdGc0dDBidBAC&q=Miami+Beach%2C+FL",
+      "gps_coordinates": {
+        "latitude": 25.844539642333984,
+        "longitude": -80.14561462402344
+      },
+      "check_in_time": "3:00 PM",
+      "check_out_time": "11:00 AM",
+      "rate_per_night": {
+        "lowest": "$103",
+        "extracted_lowest": 103
+      },
+      "total_rate": {
+        "lowest": "$205",
+        "extracted_lowest": 205
+      },
+      "prices": [
+        {
+          "source": "Futurestay",
+          "logo": "https://www.gstatic.com/travel-hotels/branding/07031e88-a3d0-406a-aa32-bd9b487f8428.png",
+          "official": true,
+          "num_guests": 2,
+          "rate_per_night": {
+            "lowest": "$103",
+            "extracted_lowest": 103
+          }
+        }
+      ],
+      "nearby_places": [
+        {
+          "name": "Treasures ON Bay",
+          "transportations": [
+            {
+              "type": "Walking",
+              "duration": "1 min"
+            }
+          ]
+        },
+        {
+          "name": "Miami International Airport",
+          "transportations": [
+            {
+              "type": "Taxi",
+              "duration": "35 min"
+            },
+            {
+              "type": "Public transport",
+              "duration": "1 hr 30 min"
+            }
+          ]
+        },
+        {
+          "name": "Petralunga",
+          "transportations": [
+            {
+              "type": "Walking",
+              "duration": "6 min"
+            }
+          ]
+        }
+      ],
+      "images": [
+        {
+          "thumbnail": "https://lh4.googleusercontent.com/proxy/LNBjAb9yimKZWmyHO6IZNVYGSyjd8FOEx_vxEq5ALLD8EWDhHJ_UFRmR0jWbOLHTtRHa1pSCu12toyc5eq4z1SklgaSQiBlA_L1Gqum79XkG2yvVwDID3QWs8KBnlsh0MNejndfvry0nCeBBOJkwHnXOxWjkJw=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://obj.futurestay.com/public/users/3742/properties/2062/ddf0df69-8243-4f2e-af58-df967e43cf67"
+        },
+        {
+          "thumbnail": "https://lh6.googleusercontent.com/proxy/7bC4lGI1NlnPd077CpTXb6VqhBM87fpThjgKkopkTBF0fCdlTlXVweIzmjgo_AaSZYb6r1pN6hft_67tNj5A0wRBoUKg6_ow6YIemtp7KY3n0TSdVE0nnsG-IQp2vulkrTn2FqlIBg1qSOpY316qEu-5-m8gfA=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://obj.futurestay.com/public/users/3742/properties/2062/55fdd8b2-2625-41ff-b0c7-4aecf2aea356"
+        },
+        {
+          "thumbnail": "https://lh4.googleusercontent.com/proxy/_sYN28katM11-utXnlPrk5YmTh-FCcVOnpTQug38mmfPXmd7QRuXzEORIiSGnC_KFHAx8puzQlEFhPhsJRXFGuJPH6k1dR7GukpnHl7fQM0AuGB4HD90F6RZIRI5pSCgpKLDsnDeCt9vdVMW4HseAloYpYeU4Q=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://obj.futurestay.com/public/users/3742/properties/2062/c5bcf266-3f4d-497e-aa34-6e1269ce5640"
+        },
+        {
+          "thumbnail": "https://lh6.googleusercontent.com/proxy/a77SSXZqnbGYlZtWGLpxAPaEfT01YFO9ioE-3jtBEOta-vleuTzdmseb4yTMF-zMSqQxQIsrnutMY2MUEPXLTgueidu5GoggPqERhrKcEC6o1Qs0Sn5mifn8hk89OZplFdqAccn1e0OQCn9vBIymoJshfC8ID7c=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://obj.futurestay.com/public/users/3742/properties/2062/701eac30-71d9-4613-82a9-52518324a699"
+        },
+        {
+          "thumbnail": "https://lh5.googleusercontent.com/proxy/nlDjiZBc4rtCBTSJG3YfeQnJcw8dW7YPrJs8O3nxm31jM-qnOFD925jZ4wIEyptyUtVyep-eHM9ZIrM316DdIV1pshzkW1wG-GS_N9ljxsIqTxAIGsmTcrnUZSX4bEIKQ5-qHzQ47okiw7C_IicTjEoOcr_T-A=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://obj.futurestay.com/public/users/3742/properties/2062/32371a75-d964-47c8-a7e1-6f4be9e72958"
+        }
+      ],
+      "location_rating": 3.4,
+      "amenities": [
+        "Air conditioning",
+        "Smoke-free"
+      ],
+      "excluded_amenities": [
+        "No airport shuttle",
+        "No balcony",
+        "No beach access",
+        "Not kid-friendly",
+        "No crib",
+        "No elevator",
+        "No fireplace",
+        "No free breakfast",
+        "No fitness center",
+        "No heating",
+        "No hot tub",
+        "No indoor pool",
+        "No ironing board",
+        "No kitchen",
+        "No microwave",
+        "No outdoor grill",
+        "No outdoor pool",
+        "No oven stove",
+        "No patio",
+        "Not pet-friendly",
+        "No cable TV",
+        "No washer",
+        "Not wheelchair accessible",
+        "No parking",
+        "No Wi-Fi"
+      ],
+      "health_and_safety": {
+        "groups": [
+          {
+            "title": "Minimized contact",
+            "list": [
+              {
+                "title": "Buffer maintained between room bookings",
+                "available": true
+              }
+            ]
+          }
+        ]
+      },
+      "essential_info": [
+        "Entire apartment",
+        "Sleeps 5",
+        "3 beds"
+      ],
+      "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChoQuLyXo92Ys5bXARoNL2cvMTFsdGc0dDBidBAC",
+      "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChoQuLyXo92Ys5bXARoNL2cvMTFsdGc0dDBidBAC"
+    },
+    {
+      "type": "hotel",
+      "name": "Sherry Frontenac Oceanfront Hotel",
+      "description": "Art deco hotel offering warmly furnished rooms, some with ocean views, plus a pool & restaurant.",
+      "link": "http://sherryfrontenac.com/",
+      "property_token": "ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ",
+      "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-12-28&check_out_date=2026-12-30&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ&q=Miami+Beach%2C+FL",
+      "gps_coordinates": {
+        "latitude": 25.8492902,
+        "longitude": -80.1200515
+      },
+      "check_in_time": "4:00 PM",
+      "check_out_time": "11:00 AM",
+      "rate_per_night": {
+        "lowest": "$170",
+        "extracted_lowest": 170
+      },
+      "total_rate": {
+        "lowest": "$339",
+        "extracted_lowest": 339
+      },
+      "nearby_places": [
+        {
+          "name": "Deauville Resort",
+          "transportations": [
+            {
+              "type": "Walking",
+              "duration": "1 min"
+            }
+          ]
+        },
+        {
+          "name": "Miami International Airport",
+          "transportations": [
+            {
+              "type": "Taxi",
+              "duration": "32 min"
+            },
+            {
+              "type": "Public transport",
+              "duration": "1 hr 21 min"
+            }
+          ]
+        },
+        {
+          "name": "Gino’s Bottega Italiana",
+          "transportations": [
+            {
+              "type": "Walking",
+              "duration": "1 min"
+            }
+          ]
+        }
+      ],
+      "hotel_class": "3-star hotel",
+      "extracted_hotel_class": 3,
+      "images": [
+        {
+          "thumbnail": "https://lh3.googleusercontent.com/proxy/MhY0t4M-tEsWKGeM4hw0VY4IRtXUv3MMAmSAwM6qPwAgXCXItr4EehOZCqlF4AzmCwdOo28Qa4dpejwwP6G3OpHo4GLN0VPwmmXchfohcQfmZ_zPrhB9fYIRVffqwkJZFZWAsW-9zOlfVqy3BMr4lRSx3SUKdxA=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_a_020_20250929_172229.jpg"
+        },
+        {
+          "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlYttMmTcRsBDyPOYLGnTKI0592ie65cVafLh9lAZdePD3Zw7ntDld7PNToH-qWzLajWpWljQS4VQpFCUISDye3kcmXaxk4llAfeZXxIstcFfzETwxnagd1MP_fYIOkbFtKwZdF=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlYttMmTcRsBDyPOYLGnTKI0592ie65cVafLh9lAZdePD3Zw7ntDld7PNToH-qWzLajWpWljQS4VQpFCUISDye3kcmXaxk4llAfeZXxIstcFfzETwxnagd1MP_fYIOkbFtKwZdF=s10000"
+        },
+        {
+          "thumbnail": "https://lh4.googleusercontent.com/proxy/Kn8VHAeUZH5EYSPbhlWNZTddMvhZ-jMPhwTG3tOFTBkPJvx80w0NQNd-D3lraC7m2JQcW53Uw75BdhirUWtinmiYypgFvPgDIBLCgL_S-5tKwtmnzt2jPHsC8LqWWf_3UQq6LssJIYaiI4U_pyM5GiMy2EDmpWY=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_s_001_20250929_172707.jpg"
+        },
+        {
+          "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkV4RE0qSNSFxvogX9CqKYhXwOq21vLIZQZ2TadAdF-Tt4EDgL6alnAHitCd09Ik8yz4syYg55krQcmAl9Xcur74ow46qKZOUYshv2YoP0XjtQVCfm1BShqPLTZA7bmRPbPmmRB=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkV4RE0qSNSFxvogX9CqKYhXwOq21vLIZQZ2TadAdF-Tt4EDgL6alnAHitCd09Ik8yz4syYg55krQcmAl9Xcur74ow46qKZOUYshv2YoP0XjtQVCfm1BShqPLTZA7bmRPbPmmRB=s10000"
+        },
+        {
+          "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmhx2RCZD0BYk5j9tto6l8cgQG2e4X0Di7YYVqCMZ0ilOqzRZMhc93MIrk9ayvYS7sp5HXowvaMv_dh-Pm2ZXypLg0fO-l-cnH_x0bVwchZhXlCRJ2kVx9z2s0YCM5X5Pv1vp4mlw=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmhx2RCZD0BYk5j9tto6l8cgQG2e4X0Di7YYVqCMZ0ilOqzRZMhc93MIrk9ayvYS7sp5HXowvaMv_dh-Pm2ZXypLg0fO-l-cnH_x0bVwchZhXlCRJ2kVx9z2s0YCM5X5Pv1vp4mlw=s10000"
+        },
+        {
+          "thumbnail": "https://lh4.googleusercontent.com/proxy/SqORSv8B6M2I3F_2iPlFbwshOkopvEHBIowzUzKWcNYuEP-jsLiCU1CJrTdzrkmty6DJLOKVT-OlA0nK5dkGmyx8YHx2-SbnN_V-W1Xw9HvQ8o5MpugjYb3CoQRChg-6eLHGwb0wo5iapX30UAxtNeys0FMAag=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_l_006_20250929_172422.jpg"
+        },
+        {
+          "thumbnail": "https://lh6.googleusercontent.com/proxy/EgZg1BlRGWVoAh2_KjeTRhrWGCPxulvEDqZAz5APRO8-XRKDK4sQeL7SVU2fOXeGIb5fbfuu0AysLS37raEWAFgBzPhuc7kpeJWQYErt2OpvDZcYASLTCt3qLck37gA2MDdb8h7fCPPDInttZvcIzzuyNXg7kPA=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_a_003_20250929_172148.jpg"
+        },
+        {
+          "thumbnail": "https://lh3.googleusercontent.com/proxy/zOedAGD-GYDUY19T9-XQecd5qe9k_6bkZGa5Y6oMSeurfGgruWc_H6chlVpHXmyxRSteAxB-ZX_Sm5il0P470vIq5OgMwDIvW3YEumzR0IPORbZthZXYdaBIiH9wiSFh7eMRi1f2393EkF-7L_WW9rmW-XwY6w=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_p_005_20250929_172845.jpg"
+        },
+        {
+          "thumbnail": "https://lh5.googleusercontent.com/proxy/s1KYaDtzZ9amapclh_DuHuPZmooL9dgyk4ZxD_QJpnxW4QkjV-r6F1MHoWOeB6zXg6hp4tS7LN8ds-SuD_z4F0uRz9wSlLXYXpFUzOYjRpij_XjAyA6AUt-05lLlwFUOL-IKuyq2sYTkxjnd-3JTBfLJqZaUAA=s287-w287-h192-n-k-no-v1",
+          "original_image": "https://photos.hotelbeds.com/giata/original/13/137482/137482a_hb_a_016_20250929_172219.jpg"
+        }
+      ],
+      "overall_rating": 3.1,
+      "reviews": 1681,
+      "ratings": [
+        {
+          "stars": 5,
+          "count": 487
+        },
+        {
+          "stars": 4,
+          "count": 298
+        },
+        {
+          "stars": 3,
+          "count": 241
+        },
+        {
+          "stars": 2,
+          "count": 168
+        },
+        {
+          "stars": 1,
+          "count": 487
+        }
+      ],
+      "location_rating": 4.1,
+      "reviews_breakdown": [
+        {
+          "name": "Fitness",
+          "description": "Fitness",
+          "total_mentioned": 177,
+          "positive": 90,
+          "negative": 69,
+          "neutral": 18,
+          "category_token": "_gyaT3ica1yRnFiSmp5fVDl5uVtmSV5qcTEDjAEAtWsMIQ",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=_gyaT3ica1yRnFiSmp5fVDl5uVtmSV5qcTEDjAEAtWsMIQ&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        },
+        {
+          "name": "Breakfast",
+          "description": "Breakfast",
+          "total_mentioned": 126,
+          "positive": 36,
+          "negative": 77,
+          "neutral": 13,
+          "category_token": "nNbvjnica1yRnFiSmp5fVDl5pVNRamJ2WmJxCROCCQDoEA2V",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=nNbvjnica1yRnFiSmp5fVDl5pVNRamJ2WmJxCROCCQDoEA2V&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        },
+        {
+          "name": "Room",
+          "description": "Room amenities",
+          "total_mentioned": 211,
+          "positive": 53,
+          "negative": 136,
+          "neutral": 22,
+          "category_token": "NVEFkXica1yRnFiSmp5fVDl5XVB-fq5CYm5qXmZJZmox0xIQHwDoEQ2I",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=NVEFkXica1yRnFiSmp5fVDl5XVB-fq5CYm5qXmZJZmox0xIQHwDoEQ2I&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        },
+        {
+          "name": "Service",
+          "description": "Service",
+          "total_mentioned": 360,
+          "positive": 142,
+          "negative": 203,
+          "neutral": 15,
+          "category_token": "nHbA-nica1yRnFiSmp5fVDl5eXBqUVlmcioDjAEAtXYMCw",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=nHbA-nica1yRnFiSmp5fVDl5eXBqUVlmcioDjAEAtXYMCw&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        },
+        {
+          "name": "Pool",
+          "description": "Pool",
+          "total_mentioned": 96,
+          "positive": 68,
+          "negative": 22,
+          "neutral": 6,
+          "category_token": "ysOZZnica1yRnFiSmp5fVDl5SUB-fg4jmAQAcoYJmA",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=ysOZZnica1yRnFiSmp5fVDl5SUB-fg4jmAQAcoYJmA&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        },
+        {
+          "name": "Property",
+          "description": "Property",
+          "total_mentioned": 333,
+          "positive": 114,
+          "negative": 194,
+          "neutral": 25,
+          "category_token": "yz-cXHica1yRnFiSmp5fVDl5RUBRfkFqUUklE5wFANGaDTc",
+          "serpapi_link": "https://serpapi.com/search.json?category_token=yz-cXHica1yRnFiSmp5fVDl5RUBRfkFqUUklE5wFANGaDTc&engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+        }
+      ],
+      "amenities": [
+        "Breakfast ($)",
+        "Free Wi-Fi",
+        "Parking ($)",
+        "Outdoor pool",
+        "Air conditioning",
+        "Fitness center",
+        "Spa",
+        "Beach access",
+        "Bar",
+        "Restaurant",
+        "Accessible",
+        "Kid-friendly",
+        "Smoke-free property"
+      ],
+      "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ",
+      "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChgIncHLmISaicycARoLL2cvMXRrNndxNW0QAQ"
+    }
+  ]
+}

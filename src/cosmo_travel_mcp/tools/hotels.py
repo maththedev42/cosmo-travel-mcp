@@ -109,10 +109,22 @@ def _parse_property(item: dict[str, Any]) -> dict[str, Any]:
         if "extracted_lowest" in total:
             parsed["total_rate"]["extracted_lowest"] = total["extracted_lowest"]
 
-    if "rating" in item:
-        parsed["rating"] = item["rating"]
-    if "reviews" in item:
+    # Hotels report `overall_rating`; only some listings use `rating`. Reading
+    # `rating` alone dropped the guest rating from every hotel result — the
+    # search still sorted by `highest_rating`, so results came back ordered by
+    # a field the caller could not see. Verified against the live engine
+    # 2026-08-01 (see tests/fixtures/google_hotels_search.json).
+    rating = item.get("overall_rating", item.get("rating"))
+    if rating is not None:
+        parsed["rating"] = rating
+    if item.get("reviews") is not None:
         parsed["reviews"] = item["reviews"]
+
+    # A distinct signal from the guest rating — how good the *location* is.
+    if item.get("location_rating") is not None:
+        parsed["location_rating"] = item["location_rating"]
+    if item.get("extracted_hotel_class") is not None:
+        parsed["hotel_class"] = item["extracted_hotel_class"]
 
     if "link" in item:
         parsed["link"] = item["link"]

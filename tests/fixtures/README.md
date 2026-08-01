@@ -8,6 +8,7 @@ reading fields the API never returns.
 |---|---|---|---|
 | `google_events_search.json` | `google_events` | `q=Events in New York`, `hl=en`, `gl=us` | 2026-07-31 |
 | `google_hotels_property_details.json` | `google_hotels` | `q=Miami Beach hotels` + `property_token`, `check_in_date=2026-09-10`, `check_out_date=2026-09-12`, `adults=2`, `currency=USD` | 2026-07-31 |
+| `google_hotels_search.json` | `google_hotels` | `q=Miami Beach, FL`, `check_in_date=2026-12-28`, `check_out_date=2026-12-30`, `adults=2`, `currency=USD`, `vacation_rentals=false` | 2026-08-01 |
 | `google_maps_things_to_do.json` | `google_maps` | `q=things to do in Miami`, `type=search`, `hl=en` | 2026-08-01 |
 | `google_maps_restaurants.json` | `google_maps` | `q=restaurants in Miami`, `type=search`, `hl=en` | 2026-08-01 |
 
@@ -31,3 +32,9 @@ Arrays are truncated to keep the files reviewable; shapes are untouched.
 **Rule:** a test asserting on the *shape* of an upstream response uses a
 captured fixture. Hand-built payloads are for degenerate cases only
 (missing field, null value, malformed member) and must say so in a comment.
+
+`google_hotels_search.json` deliberately keeps one property **with** a
+rating and one **without**: the engine reports `overall_rating` (never
+`rating`) for hotels, and some listings carry no guest rating at all but
+do carry a `location_rating`. A fixture with only rated properties would
+not have caught either.
