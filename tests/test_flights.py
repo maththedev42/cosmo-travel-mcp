@@ -1499,8 +1499,14 @@ async def test_quota_warning_decrements_on_subsequent_searches():
 @respx.mock
 @pytest.mark.asyncio
 async def test_quota_warning_account_fetch_fails_gracefully():
-    """Account fetch fails → no warning, searches still succeed."""
-    respx.get(SERPAPI_ACCOUNT_URL).respond(500)
+    """Account fetch fails → no warning, searches still succeed, fetch not retried.
+
+    Asserting only the absence of the warning is not enough: a failed fetch
+    that re-runs on every search produces no warning either, while adding an
+    HTTP round-trip to every call for the rest of the session. The call count
+    is the assertion that actually pins the behavior.
+    """
+    account = respx.get(SERPAPI_ACCOUNT_URL).respond(500)
     respx.get(SERPAPI_BASE).respond(
         json={
             "search_metadata": {"status": "Success"},
@@ -1514,11 +1520,66 @@ async def test_quota_warning_account_fetch_fails_gracefully():
     )
     assert "quota_warning" not in result
 
-    # Second call: still disabled (no retry)
-    result = await search_flights(
-        origin="JFK", destination="LAX", outbound_date="2025-12-02",
+    # Second and third: still disabled, and no further fetch attempts.
+    for day in ("2025-12-02", "2025-12-03"):
+        result = await search_flights(
+            origin="JFK", destination="LAX", outbound_date=day,
+        )
+        assert "quota_warning" not in result
+
+    assert account.call_count == 1
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_account_response_without_the_field_disables_rather_than_retries():
+    """A 200 that omits plan_searches_left is as unusable as a failed fetch."""
+    account = respx.get(SERPAPI_ACCOUNT_URL).respond(json={"account_id": "x"})
+    respx.get(SERPAPI_BASE).respond(
+        json={
+            "search_metadata": {"status": "Success"},
+            "best_flights": [_flight_item_fixture("AA")],
+        }
     )
-    assert "quota_warning" not in result
+
+    for day in ("2025-12-01", "2025-12-02", "2025-12-03"):
+        result = await search_flights(
+            origin="JFK", destination="LAX", outbound_date=day,
+        )
+        assert "quota_warning" not in result
+
+    assert account.call_count == 1
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_quota_counter_decrements_once_for_a_retried_search():
+    """The A-01 retry path is one search upstream, so it costs one unit."""
+    respx.get(SERPAPI_ACCOUNT_URL).respond(json={"plan_searches_left": 50})
+
+    calls = {"n": 0}
+
+    def flaky(request):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.ConnectTimeout("transient")
+        return httpx.Response(
+            200,
+            json={
+                "search_metadata": {"status": "Success"},
+                "best_flights": [_flight_item_fixture("AA")],
+            },
+        )
+
+    respx.get(SERPAPI_BASE).mock(side_effect=flaky)
+
+    import cosmo_travel_mcp.tools.flights as flights_module
+
+    flights_module._RETRY_BACKOFF_SECONDS = 0
+    await search_flights(origin="JFK", destination="LAX", outbound_date="2025-12-01")
+
+    assert calls["n"] == 2  # the retry really happened
+    assert flights_module._QUOTA_SEARCHES_LEFT == 49
 
 
 @respx.mock

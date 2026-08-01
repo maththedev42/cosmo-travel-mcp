@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Booking phase** — a `booking_token` from a phase-2 result returns the
   sellers offering that itinerary with their prices, so "which site is
   cheapest" is answerable.
+- **Low-quota warning** — once fewer than ten SerpAPI searches remain on the
+  plan, every search response carries a `quota_warning`. The account is
+  checked once per session (free, no quota spent) and counted down locally.
+- **Setup for other MCP clients** — `cosmo-travel-mcp setup --client
+  <cursor|claude-desktop|windsurf|vscode|cline>` prints a ready-to-paste
+  config block and the file it belongs in, so registration is no longer
+  Claude-Code-only.
 - Captured SerpAPI response fixtures under `tests/fixtures/`, with the rule
   that shape assertions use real recorded bodies rather than invented ones.
 

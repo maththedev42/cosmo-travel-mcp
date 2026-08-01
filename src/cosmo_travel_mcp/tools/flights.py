@@ -44,10 +44,14 @@ STOPS_MAP: dict[str, int] = {
 # Threshold below which every SerpAPI-backed response gets a quota_warning.
 _LOW_QUOTA_THRESHOLD: int = 10
 
-# Cached estimate of searches remaining.  ``None`` means "not yet fetched"
-# or "feature disabled because the account fetch failed."  Decremented on
-# every successful SerpAPI search once the counter is live.
-_QUOTA_SEARCHES_LEFT: int | None = None
+# Cached estimate of searches remaining.  ``None`` means "not yet fetched";
+# ``_QUOTA_DISABLED`` means the account fetch failed and the feature is off
+# for the rest of the session.  The two must stay distinct — collapsing them
+# makes every subsequent search re-attempt the fetch.  Decremented on every
+# successful SerpAPI search once the counter is live.
+_QUOTA_DISABLED = object()
+
+_QUOTA_SEARCHES_LEFT: int | None | object = None
 
 
 def _reset_quota_counter() -> None:
@@ -64,7 +68,10 @@ def _refresh_quota_from_account(account: dict[str, Any]) -> None:
     """
     global _QUOTA_SEARCHES_LEFT
     raw = account.get("plan_searches_left")
-    _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else None
+    # check_setup just proved the account endpoint works, so a live number
+    # re-anchors the estimate and re-enables warnings even if an earlier
+    # fetch had disabled them.
+    _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else _QUOTA_DISABLED
 
 
 async def _maybe_fetch_quota() -> None:
@@ -76,7 +83,7 @@ async def _maybe_fetch_quota() -> None:
     """
     global _QUOTA_SEARCHES_LEFT
     if _QUOTA_SEARCHES_LEFT is not None:
-        return  # Already seeded (or disabled).
+        return  # Already seeded, or disabled after a failed fetch.
 
     key = _get_api_key()
     try:
@@ -88,14 +95,16 @@ async def _maybe_fetch_quota() -> None:
             resp.raise_for_status()
             account: dict[str, Any] = resp.json()
             raw = account.get("plan_searches_left")
-            _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else None
+            # A response without the field is as unusable as a failed
+            # fetch — disable rather than retry it on every search.
+            _QUOTA_SEARCHES_LEFT = int(raw) if raw is not None else _QUOTA_DISABLED
     except Exception:
-        _QUOTA_SEARCHES_LEFT = None  # Disable warnings for the session.
+        _QUOTA_SEARCHES_LEFT = _QUOTA_DISABLED
 
 
 def _inject_quota_warning(result: dict[str, Any]) -> None:
     """Add a ``quota_warning`` top-level key when searches are running low."""
-    if _QUOTA_SEARCHES_LEFT is not None and _QUOTA_SEARCHES_LEFT <= _LOW_QUOTA_THRESHOLD:
+    if isinstance(_QUOTA_SEARCHES_LEFT, int) and _QUOTA_SEARCHES_LEFT <= _LOW_QUOTA_THRESHOLD:
         result["quota_warning"] = (
             f"About {_QUOTA_SEARCHES_LEFT} SerpAPI searches left this month "
             "on your plan — check_setup shows the exact number."
@@ -231,7 +240,7 @@ async def _call_serpapi(params: dict[str, Any], *, engine: str = "google_flights
             # Best-effort quota tracking (never breaks searches).
             await _maybe_fetch_quota()
             global _QUOTA_SEARCHES_LEFT
-            if _QUOTA_SEARCHES_LEFT is not None:
+            if isinstance(_QUOTA_SEARCHES_LEFT, int):
                 _QUOTA_SEARCHES_LEFT -= 1
             return data
         except httpx.TransportError:
