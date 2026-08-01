@@ -1819,28 +1819,44 @@ async def test_error_response_not_cached():
 
 
 @pytest.mark.asyncio
-async def test_cache_disabled_when_env_var_is_zero(monkeypatch):
-    """COSMO_TRAVEL_CACHE_TTL=0 → caching off, 2 HTTP calls."""
-    monkeypatch.setenv("COSMO_TRAVEL_CACHE_TTL", "0")
-    # Re-import the module-level constant so it picks up the env var change.
-    import importlib
-    import cosmo_travel_mcp.tools.flights as flights_module
-    importlib.reload(flights_module)
-    # Restore the autouse fixture hooks by re-resetting.
-    _reset_cache()
-    _reset_quota_counter()
+async def test_cache_disabled_when_env_var_is_zero():
+    """COSMO_TRAVEL_CACHE_TTL=0 → caching off, 2 HTTP calls.
 
-    with respx.mock as mock:
-        route = mock.get(SERPAPI_BASE).mock(
-            return_value=httpx.Response(200, json=_serpapi_search_response())
-        )
-        await flights_module.search_flights(
-            origin="JFK", destination="LAX", outbound_date="2025-12-01",
-        )
-        await flights_module.search_flights(
-            origin="JFK", destination="LAX", outbound_date="2025-12-01",
-        )
-        assert route.call_count == 2
+    ``_CACHE_TTL_SECONDS`` is read from the environment once at import, so
+    proving the env var is wired up means reloading the module. The reload
+    MUST be undone: an earlier version restored the env var via ``monkeypatch``
+    but left the module reloaded at TTL=0, which silently disabled caching for
+    every test that ran afterwards — including the eviction test below, which
+    then passed vacuously.
+    """
+    import importlib
+    import os
+    import cosmo_travel_mcp.tools.flights as flights_module
+
+    previous = os.environ.get("COSMO_TRAVEL_CACHE_TTL")
+    os.environ["COSMO_TRAVEL_CACHE_TTL"] = "0"
+    try:
+        importlib.reload(flights_module)
+        assert flights_module._CACHE_TTL_SECONDS == 0, "env var not read at import"
+
+        with respx.mock as mock:
+            route = mock.get(SERPAPI_BASE).mock(
+                return_value=httpx.Response(200, json=_serpapi_search_response())
+            )
+            await flights_module.search_flights(
+                origin="JFK", destination="LAX", outbound_date="2025-12-01",
+            )
+            await flights_module.search_flights(
+                origin="JFK", destination="LAX", outbound_date="2025-12-01",
+            )
+            assert route.call_count == 2
+    finally:
+        if previous is None:
+            os.environ.pop("COSMO_TRAVEL_CACHE_TTL", None)
+        else:
+            os.environ["COSMO_TRAVEL_CACHE_TTL"] = previous
+        importlib.reload(flights_module)
+        assert flights_module._CACHE_TTL_SECONDS > 0, "caching left disabled for later tests"
 
 
 @pytest.mark.asyncio
@@ -1875,3 +1891,13 @@ async def test_eviction_when_cache_exceeds_max_entries(monkeypatch):
 
         # 4 HTTP calls: A1, A2, A3, A1 (re-fetch after eviction)
         assert route.call_count == 4
+
+        # A count of 4 is also what a completely disabled cache produces, so
+        # assert the other half: A3 is still resident and must NOT re-fetch.
+        # Without this the test passes whether eviction works or caching is off.
+        fake_time[0] += 1
+        result = await search_flights(
+            origin="A3", destination="B3", outbound_date="2025-12-01"
+        )
+        assert route.call_count == 4, "a surviving entry must still be served from cache"
+        assert result["cached"] is True

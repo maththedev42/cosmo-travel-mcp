@@ -136,7 +136,7 @@ async def search_events(
     if language:
         params["hl"] = language
 
-    data = await _call_serpapi(params, engine="google_events")
+    data, from_cache = await _call_serpapi(params, engine="google_events")
 
     raw_events = data.get("events_results", [])
     if not isinstance(raw_events, list):
@@ -144,10 +144,13 @@ async def search_events(
 
     parsed = [_parse_event(e) for e in raw_events]
 
-    return {
+    result: dict[str, Any] = {
         "events": parsed,
         "total_results": len(parsed),
     }
+    if from_cache:
+        result["cached"] = True
+    return result
 
 
 # ---------------------------------------------------------------------------

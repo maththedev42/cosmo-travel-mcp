@@ -207,16 +207,19 @@ async def search_accommodations(
             )
         params["free_cancellation"] = "true"
 
-    data = await _call_serpapi(params, engine="google_hotels")
+    data, from_cache = await _call_serpapi(params, engine="google_hotels")
 
     properties = data.get("properties", [])
     parsed = [_parse_property(p) for p in properties]
 
-    return {
+    result: dict[str, Any] = {
         "results": parsed,
         "vacation_rentals": vacation_rentals,
         "total_results": len(parsed),
     }
+    if from_cache:
+        result["cached"] = True
+    return result
 
 
 async def get_accommodation_details(
@@ -268,7 +271,7 @@ async def get_accommodation_details(
     if language:
         params["hl"] = language
 
-    data = await _call_serpapi(params, engine="google_hotels")
+    data, from_cache = await _call_serpapi(params, engine="google_hotels")
 
     # The property-details response carries its fields at the top level —
     # there is no `property` wrapper (verified against the live API
@@ -352,6 +355,8 @@ async def get_accommodation_details(
         if prices:
             result["prices"] = prices
 
+    if from_cache:
+        result["cached"] = True
     return result
 
 
