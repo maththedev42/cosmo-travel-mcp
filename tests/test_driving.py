@@ -504,7 +504,15 @@ async def test_compare_drive_or_fly_compute_routes_failure_graceful():
 
 @pytest.mark.asyncio
 async def test_compare_drive_or_fly_tolls_only_no_fuel():
-    """Tolls present but no fuel params → toll fields attached, no fuel cost."""
+    """Tolls present but no fuel params → toll fields attached, NO total.
+
+    This expectation changed deliberately (2026-08-01 review): the original
+    B-10 behavior set ``estimated_total_driving_cost = tolls`` here, and the
+    flight comparison then presented tolls alone as the full cost of driving
+    — a 500 flight vs 15.50 of tolls read as "driving saves 484.50" with
+    fuel never counted. Tolls without fuel/rental inputs stay visible via
+    ``estimated_toll_cost`` but never become a "total".
+    """
     with respx.mock as mock:
         mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
         mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
@@ -517,6 +525,5 @@ async def test_compare_drive_or_fly_tolls_only_no_fuel():
     assert result["estimated_toll_cost"] == 15.5
     assert result["toll_currency"] == "USD"
     assert "estimated_fuel_cost" not in result
-    # Tolls only, currency matches → total = tolls
-    assert result["estimated_total_driving_cost"] == 15.5
+    assert "estimated_total_driving_cost" not in result
     assert "toll_note" not in result

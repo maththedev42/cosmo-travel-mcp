@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .flights import SERPAPI_BASE, _call_serpapi, _get_api_key
+from .flights import SERPAPI_BASE, _call_serpapi, _get_api_key, _inject_quota_warning
 
 # ---------------------------------------------------------------------------
 # Validation helpers
@@ -219,6 +219,7 @@ async def search_accommodations(
     }
     if from_cache:
         result["cached"] = True
+    _inject_quota_warning(result)
     return result
 
 
@@ -357,6 +358,7 @@ async def get_accommodation_details(
 
     if from_cache:
         result["cached"] = True
+    _inject_quota_warning(result)
     return result
 
 

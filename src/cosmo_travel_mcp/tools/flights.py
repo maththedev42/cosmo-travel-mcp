@@ -59,8 +59,22 @@ _QUOTA_SEARCHES_LEFT: int | None | object = None
 # Session-scoped SerpAPI response cache
 # ---------------------------------------------------------------------------
 
+def _cache_ttl_from_env() -> int:
+    """Read COSMO_TRAVEL_CACHE_TTL, falling back to the default on garbage.
+
+    This runs at import: a malformed value must degrade to the default, not
+    kill the server before the MCP handshake — the client would only show
+    "server died" with the real cause buried in a traceback.
+    """
+    raw = os.environ.get("COSMO_TRAVEL_CACHE_TTL", "600")
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 600
+
+
 # TTL in seconds — power-user knob, default 10 min (600 s).  0 disables.
-_CACHE_TTL_SECONDS: int = int(os.environ.get("COSMO_TRAVEL_CACHE_TTL", "600"))
+_CACHE_TTL_SECONDS: int = _cache_ttl_from_env()
 
 # Max entries before eviction (oldest ejected, FIFO).
 _CACHE_MAX_ENTRIES: int = 128
@@ -843,14 +857,22 @@ async def search_multi_city(
         raise ValueError(f"max_duration must be > 0, got {max_duration}")
 
     multi_city_json: list[dict[str, Any]] = []
-    for leg in legs:
+    for i, leg in enumerate(legs, start=1):
+        missing = [k for k in ("origin", "destination", "date") if not leg.get(k)]
+        if missing:
+            raise ValueError(
+                f"Leg {i} is missing required key(s): {', '.join(missing)} — "
+                "each leg needs origin, destination, and date."
+            )
         entry: dict[str, Any] = {
             "departure_id": leg["origin"],
             "arrival_id": leg["destination"],
             "date": leg["date"],
         }
         if "times" in leg:
-            entry["times"] = leg["times"]
+            # Same rule as search_flights' outbound_times: validate and send
+            # the parsed form, so "18, 23" never reaches the engine raw.
+            entry["times"] = _format_times_arg(str(leg["times"]), label=f"legs[{i}].times")
         multi_city_json.append(entry)
 
     params = _build_base_params(

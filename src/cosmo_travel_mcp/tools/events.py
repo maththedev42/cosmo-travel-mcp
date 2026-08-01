@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .flights import _call_serpapi
+from .flights import _call_serpapi, _inject_quota_warning
 
 WHEN_VALUES = frozenset({
     "today", "tomorrow", "week", "weekend",
@@ -150,6 +150,7 @@ async def search_events(
     }
     if from_cache:
         result["cached"] = True
+    _inject_quota_warning(result)
     return result
 
 

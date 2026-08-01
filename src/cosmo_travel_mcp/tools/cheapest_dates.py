@@ -169,7 +169,7 @@ async def search_cheapest_dates(
             "type": 1,
         }
         try:
-            data, _from_cache = await _call_serpapi(params)
+            data, from_cache = await _call_serpapi(params)
             result = _parse_flights_response(data, requested_currency=currency)
         except ValueError:
             raise  # Configuration errors (missing API key) must propagate.
@@ -188,13 +188,19 @@ async def search_cheapest_dates(
                 "return_date": return_date.isoformat(),
                 "error": "no priced itineraries returned for this date",
             }
-        return {
+        entry: dict[str, Any] = {
             "outbound_date": outbound.isoformat(),
             "return_date": return_date.isoformat(),
             "cheapest_price": cheapest["price"],
             "currency": cheapest["currency"],
             "stops": cheapest["stops"],
         }
+        if from_cache:
+            # This date's search was served from the session cache and cost
+            # no quota — without the flag, a fully cached sampling still
+            # reads as having spent max_calls searches.
+            entry["cached"] = True
+        return entry
 
     results = await asyncio.gather(*(_search_one(d) for d in candidates))
 

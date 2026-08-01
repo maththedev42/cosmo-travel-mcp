@@ -238,9 +238,12 @@ async def compare_drive_or_fly(
     # when the toll currency matches the caller's fuel currency.  When they
     # differ, keep the total fuel+rental-only and add a note so the client
     # can reconcile.
-    if fuel_cost is not None or rental_car_cost_total is not None or (
-        toll_cost is not None and toll_cost > 0
-    ):
+    #
+    # Tolls alone never create a total: without fuel/rental inputs a
+    # "total driving cost" of just the tolls would understate the trip, and
+    # the flight comparison below would then present R$15 of tolls as the
+    # full cost of driving.  Tolls stay visible via estimated_toll_cost.
+    if fuel_cost is not None or rental_car_cost_total is not None:
         base_total = (fuel_cost or 0) + (rental_car_cost_total or 0)
         if toll_cost and toll_currency and toll_currency == currency:
             total_driving = base_total + toll_cost
