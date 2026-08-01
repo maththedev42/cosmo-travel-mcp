@@ -8,8 +8,11 @@ import pytest
 import respx
 
 from cosmo_travel_mcp.tools.driving import (
+    COMPUTE_ROUTES_URL,
     ROUTES_API_BASE,
+    _fetch_toll_info,
     _parse_duration,
+    _parse_money,
     compare_drive_or_fly,
 )
 
@@ -285,3 +288,235 @@ async def test_compare_drive_or_fly_empty_response():
         mock.post(ROUTES_API_BASE).respond(json=[])
         with pytest.raises(ValueError, match="No route found"):
             await compare_drive_or_fly(origin="Nowhere", destination="Noplace")
+
+
+# ---------------------------------------------------------------------------
+# Money parsing
+# ---------------------------------------------------------------------------
+
+
+def test_parse_money_whole_dollars():
+    assert _parse_money({"currencyCode": "USD", "units": "15", "nanos": 0}) == 15.0
+
+
+def test_parse_money_with_cents():
+    assert _parse_money({"currencyCode": "USD", "units": "15", "nanos": 500_000_000}) == 15.5
+
+
+def test_parse_money_zero():
+    assert _parse_money({"currencyCode": "BRL", "units": "0", "nanos": 0}) == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Toll info — computeRoutes mock payloads
+# ---------------------------------------------------------------------------
+
+_COMPUTE_ROUTES_WITH_TOLL = {
+    "routes": [
+        {
+            "distanceMeters": 379000,
+            "duration": "13200s",
+            "travelAdvisory": {
+                "tollInfo": {
+                    "estimatedPrice": [
+                        {"currencyCode": "USD", "units": "15", "nanos": 500_000_000}
+                    ]
+                }
+            },
+        }
+    ]
+}
+
+_COMPUTE_ROUTES_NO_TOLL = {
+    "routes": [
+        {
+            "distanceMeters": 379000,
+            "duration": "13200s",
+        }
+    ]
+}
+
+_COMPUTE_ROUTES_EMPTY_TOLL_PRICE = {
+    "routes": [
+        {
+            "distanceMeters": 379000,
+            "duration": "13200s",
+            "travelAdvisory": {"tollInfo": {"estimatedPrice": []}},
+        }
+    ]
+}
+
+_COMPUTE_ROUTES_NO_ROUTES = {"routes": []}
+
+
+# ---------------------------------------------------------------------------
+# Toll info — fetch helper
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_toll_info_returns_cost_and_currency():
+    with respx.mock as mock:
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        cost, currency = await _fetch_toll_info(
+            "fake-key", "Orlando, FL", "Miami, FL"
+        )
+    assert cost == 15.5
+    assert currency == "USD"
+
+
+@pytest.mark.asyncio
+async def test_fetch_toll_info_no_toll_data():
+    with respx.mock as mock:
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_NO_TOLL)
+        cost, currency = await _fetch_toll_info(
+            "fake-key", "Orlando, FL", "Miami, FL"
+        )
+    assert cost is None
+    assert currency is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_toll_info_empty_routes():
+    with respx.mock as mock:
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_NO_ROUTES)
+        cost, currency = await _fetch_toll_info(
+            "fake-key", "Orlando, FL", "Miami, FL"
+        )
+    assert cost is None
+    assert currency is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_toll_info_empty_price_list():
+    with respx.mock as mock:
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_EMPTY_TOLL_PRICE)
+        cost, currency = await _fetch_toll_info(
+            "fake-key", "Orlando, FL", "Miami, FL"
+        )
+    assert cost is None
+    assert currency is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_toll_info_api_failure_returns_none():
+    with respx.mock as mock:
+        mock.post(COMPUTE_ROUTES_URL).respond(status_code=500)
+        cost, currency = await _fetch_toll_info(
+            "fake-key", "Orlando, FL", "Miami, FL"
+        )
+    assert cost is None
+    assert currency is None
+
+
+# ---------------------------------------------------------------------------
+# Toll integration — compare_drive_or_fly
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_compare_drive_or_fly_with_tolls_same_currency():
+    """Toll currency matches fuel currency → total = fuel + tolls + rental."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Orlando, FL",
+            destination="Miami, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            rental_car_cost_total=200.0,
+            currency="USD",
+        )
+
+    assert result["estimated_fuel_cost"] == 173.71
+    assert result["estimated_toll_cost"] == 15.5
+    assert result["toll_currency"] == "USD"
+    # 173.71 + 200.0 + 15.5 = 389.21
+    assert result["estimated_total_driving_cost"] == 389.21
+    assert "toll_note" not in result
+
+
+@pytest.mark.asyncio
+async def test_compare_drive_or_fly_with_tolls_currency_mismatch():
+    """Toll currency ≠ fuel currency → total stays fuel-only + note field."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Orlando, FL",
+            destination="Miami, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+        )
+
+    assert result["estimated_fuel_cost"] == 173.71
+    assert result["estimated_toll_cost"] == 15.5
+    assert result["toll_currency"] == "USD"
+    # Fuel-only total (no tolls added because currency mismatch)
+    assert result["estimated_total_driving_cost"] == 173.71
+    assert "toll_note" in result
+    assert "15.5 USD" in result["toll_note"]
+    assert "BRL" in result["toll_note"]
+
+
+@pytest.mark.asyncio
+async def test_compare_drive_or_fly_no_toll_info_backward_compatible():
+    """No tollInfo → output shape identical to current behavior."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_NO_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Orlando, FL",
+            destination="Miami, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+        )
+
+    assert "estimated_fuel_cost" in result
+    assert "estimated_toll_cost" not in result
+    assert "toll_currency" not in result
+    assert "toll_note" not in result
+    # Total = fuel only (no rental, no tolls)
+    assert result["estimated_total_driving_cost"] == 173.71
+
+
+@pytest.mark.asyncio
+async def test_compare_drive_or_fly_compute_routes_failure_graceful():
+    """computeRoutes fails + matrix succeeds → today's result, no error."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(status_code=503)
+        result = await compare_drive_or_fly(
+            origin="Orlando, FL",
+            destination="Miami, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+        )
+
+    assert result["distance_km"] == 379.0
+    assert "estimated_fuel_cost" in result
+    assert result["estimated_total_driving_cost"] == 173.71
+    assert "estimated_toll_cost" not in result
+    assert "toll_note" not in result
+
+
+@pytest.mark.asyncio
+async def test_compare_drive_or_fly_tolls_only_no_fuel():
+    """Tolls present but no fuel params → toll fields attached, no fuel cost."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Orlando, FL",
+            destination="Miami, FL",
+            currency="USD",
+        )
+
+    assert result["estimated_toll_cost"] == 15.5
+    assert result["toll_currency"] == "USD"
+    assert "estimated_fuel_cost" not in result
+    # Tolls only, currency matches → total = tolls
+    assert result["estimated_total_driving_cost"] == 15.5
+    assert "toll_note" not in result

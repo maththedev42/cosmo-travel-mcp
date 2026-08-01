@@ -7,10 +7,10 @@ comparison. It does NOT fetch flight prices itself — use ``search_flights`` fo
 This is deliberately narrower than a general-purpose Google Maps integration. Use a
 dedicated Maps MCP server for mapping, geocoding, or places needs.
 
-Limitation: toll costs are not estimated in this version. The Routes API supports
-``extraComputations: ["TOLLS"]``, but coverage is regional and it complicates response
-parsing. Future extension: add a ``include_tolls`` parameter that appends toll fields
-to the field mask and parses the tolls array from the response.
+Toll estimates are fetched via ``computeRoutes`` with ``extraComputations: ["TOLLS"]``
+(added alongside the primary ``computeRouteMatrix`` call).  Toll data is enrichment —
+when the computeRoutes call fails the tool degrades gracefully to the matrix-only
+result.  Toll currency is returned as-is; no conversion is performed.
 """
 
 from __future__ import annotations
@@ -27,8 +27,10 @@ from ..onboarding import MAPS_ENV, missing_key_message
 # ---------------------------------------------------------------------------
 
 ROUTES_API_BASE = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix"
+COMPUTE_ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
 
 FIELD_MASK = "originIndex,destinationIndex,status,condition,distanceMeters,duration"
+TOLL_FIELD_MASK = "routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,6 +61,68 @@ def _parse_duration(duration_str: str) -> int:
     raise ValueError(f"Unexpected duration format: {duration_str!r}")
 
 
+def _parse_money(money_obj: dict[str, Any]) -> float:
+    """Parse a Routes API Money object (``{currencyCode, units, nanos}``) into a float.
+
+    ``units`` is a string of the whole-currency amount (e.g. ``"15"``).
+    ``nanos`` is the fractional part in nanounits (e.g. 500_000_000 → 0.50).
+    """
+    units = int(money_obj.get("units", "0"))
+    nanos = money_obj.get("nanos", 0)
+    return units + nanos / 1_000_000_000
+
+
+async def _fetch_toll_info(
+    api_key: str, origin: str, destination: str
+) -> tuple[float | None, str | None]:
+    """Fetch toll estimates from ``computeRoutes`` with ``TOLLS`` extra computation.
+
+    Returns ``(estimated_toll_cost, toll_currency)`` or ``(None, None)`` when
+    toll data is unavailable or the API call fails.  Toll data is enrichment;
+    callers must degrade gracefully on ``(None, None)``.
+
+    Uses a minimal field mask to keep response size small:
+    ``routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo``.
+    """
+    headers = {
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": TOLL_FIELD_MASK,
+        "Content-Type": "application/json",
+    }
+    body: dict[str, Any] = {
+        "origin": {"address": origin},
+        "destination": {"address": destination},
+        "travelMode": "DRIVE",
+        "extraComputations": ["TOLLS"],
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(COMPUTE_ROUTES_URL, headers=headers, json=body)
+            resp.raise_for_status()
+        data: dict[str, Any] = resp.json()
+    except Exception:
+        return None, None
+
+    routes: list[dict[str, Any]] = data.get("routes", [])
+    if not routes:
+        return None, None
+
+    toll_info: dict[str, Any] | None = (
+        routes[0].get("travelAdvisory", {}).get("tollInfo")
+    )
+    if not toll_info:
+        return None, None
+
+    estimated_prices: list[dict[str, Any]] = toll_info.get("estimatedPrice", [])
+    if not estimated_prices:
+        return None, None
+
+    price = estimated_prices[0]
+    toll_cost = _parse_money(price)
+    toll_currency = price.get("currencyCode", "")
+    return toll_cost, toll_currency
+
+
 # ---------------------------------------------------------------------------
 # Tool
 # ---------------------------------------------------------------------------
@@ -77,7 +141,11 @@ async def compare_drive_or_fly(
     """Compare driving vs flying between two places.
 
     Uses the Google Maps Routes API (``computeRouteMatrix``) to get driving distance
-    and duration. Optionally folds in flight numbers the caller already has to build a
+    and duration. Also fetches toll estimates via ``computeRoutes`` with
+    ``extraComputations: ["TOLLS"]``; toll data is enrichment — when unavailable the
+    tool degrades gracefully to the matrix-only result.
+
+    Optionally folds in flight numbers the caller already has to build a
     side-by-side comparison.
 
     Args:
@@ -94,7 +162,9 @@ async def compare_drive_or_fly(
 
     Returns:
         A dict with ``distance_km``, ``driving_duration_minutes``, and optionally
-        ``estimated_fuel_cost``, ``estimated_total_driving_cost``, and ``comparison``.
+        ``estimated_fuel_cost``, ``estimated_toll_cost`` + ``toll_currency``,
+        ``estimated_total_driving_cost`` (fuel + tolls + rental when currencies
+        match), and ``comparison``.
     """
     api_key = _get_maps_api_key()
 
@@ -148,16 +218,42 @@ async def compare_drive_or_fly(
         "driving_duration_minutes": driving_minutes,
     }
 
+    # Toll enrichment: fetch asynchronously after the matrix call succeeds.
+    # Degrades gracefully — when computeRoutes fails or returns no toll data,
+    # the result is identical to today's matrix-only output.
+    toll_cost, toll_currency = await _fetch_toll_info(api_key, origin, destination)
+
     # Fuel cost: only when both inputs are provided.
     fuel_cost: float | None = None
     if fuel_price_per_liter is not None and fuel_efficiency_km_per_liter is not None:
         fuel_cost = round((distance_km / fuel_efficiency_km_per_liter) * fuel_price_per_liter, 2)
         result["estimated_fuel_cost"] = fuel_cost
 
-    # Total driving cost: fuel cost (if computed) + rental (if provided).
-    if fuel_cost is not None or rental_car_cost_total is not None:
-        total_driving = (fuel_cost or 0) + (rental_car_cost_total or 0)
-        result["estimated_total_driving_cost"] = total_driving
+    # Toll data: attach when present and non-zero.
+    if toll_cost is not None and toll_cost > 0:
+        result["estimated_toll_cost"] = toll_cost
+        result["toll_currency"] = toll_currency
+
+    # Total driving cost: fuel (if computed) + rental (if provided) + tolls
+    # when the toll currency matches the caller's fuel currency.  When they
+    # differ, keep the total fuel+rental-only and add a note so the client
+    # can reconcile.
+    if fuel_cost is not None or rental_car_cost_total is not None or (
+        toll_cost is not None and toll_cost > 0
+    ):
+        base_total = (fuel_cost or 0) + (rental_car_cost_total or 0)
+        if toll_cost and toll_currency and toll_currency == currency:
+            total_driving = base_total + toll_cost
+            result["estimated_total_driving_cost"] = round(total_driving, 2)
+        elif toll_cost and toll_currency:
+            # Currencies differ: total is fuel+rental only; tolls listed separately.
+            result["estimated_total_driving_cost"] = base_total
+            result["toll_note"] = (
+                f"Tolls ({toll_cost} {toll_currency}) are listed separately "
+                f"— the caller's fuel currency is {currency}."
+            )
+        else:
+            result["estimated_total_driving_cost"] = base_total
 
     # Comparison: only when flight numbers are provided.
     if flight_price is not None or flight_duration_minutes is not None:
