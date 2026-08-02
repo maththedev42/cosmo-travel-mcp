@@ -5,10 +5,24 @@ All notable changes to cosmo-travel-mcp.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-08-02
+
+First public release. Eleven tools and one prompt.
 
 ### Added
 
+- **`search_flights`** — one-way and round-trip flight search via SerpAPI.
+  Round trips are two-phase: a `departure_token` from a phase-1 result returns
+  the return legs priced against that outbound.
+- **`search_multi_city`** — multi-city itineraries with 2–6 legs.
+- **`search_accommodations`** — hotels and vacation rentals via the Google
+  Hotels engine.
+- **`search_cheapest_dates`** — cheapest round-trip sampling across a flexible
+  date window, with a `max_calls` cap because each sampled date costs a search.
+- **`compare_drive_or_fly`** — driving distance and duration via the Google
+  Maps Routes API, with optional flight comparison.
+- **`check_setup`** — validates both API keys live and reports quota status
+  and remediation hints. The SerpAPI half is free.
 - **`search_events`** — concerts, shows, sports and festivals at a destination,
   with venue, dates and ticket links. Optional `when` window (today, weekend,
   next_week…).
@@ -29,10 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Low-quota warning** — once fewer than ten SerpAPI searches remain on the
   plan, every search response carries a `quota_warning`. The account is
   checked once per session (free, no quota spent) and counted down locally.
-- **Setup for other MCP clients** — `cosmo-travel-mcp setup --client
-  <cursor|claude-desktop|windsurf|vscode|cline>` prints a ready-to-paste
-  config block and the file it belongs in, so registration is no longer
-  Claude-Code-only.
 - **`check_itinerary`** — checks a drafted plan before it reaches the traveller:
   stops scheduled on a closing day, visits outside opening hours, overlapping
   stops, and gaps too short to cross the distance between them. Returns
@@ -56,12 +66,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   itinerary can avoid scheduling a stop on its closing day and can group
   nearby stops into the same day. Food categories additionally return price
   range, a short description, service options and a reservation link.
-- **`plan_trip` rebuilt as a full itinerary guide** — the prompt now covers
-  every tool the server exposes (it had silently omitted `search_events` and
-  `get_accommodation_details` since they were added) and gains an assembly
-  section: fix the skeleton from flight times, anchor date-bound events,
-  cluster by coordinates, respect opening hours, and never invent a detail no
-  tool returned.
+- **`plan_trip` prompt** — the entry point for a whole trip. Sequences all
+  eleven tools, states the search budget, and carries an assembly section: fix
+  the skeleton from flight times, anchor date-bound events, cluster stops by
+  coordinates, respect opening hours, leave slack, and never invent a detail
+  no tool returned.
 - **Toll estimates in `compare_drive_or_fly`** — driving cost now includes
   tolls, fetched from the Routes API `computeRoutes` endpoint. When the toll
   currency matches the fuel currency they are folded into the total;
@@ -72,59 +81,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Tune or disable with `COSMO_TRAVEL_CACHE_TTL` (seconds; `0` disables).
 - Captured SerpAPI response fixtures under `tests/fixtures/`, with the rule
   that shape assertions use real recorded bodies rather than invented ones.
-
-### Fixed
-
-- `search_events` raised `ValueError` instead of returning an empty result
-  when a query matched nothing. SerpAPI reports "nothing found" as an `error`
-  body rather than an empty array, and the tests mocked an empty array — a
-  shape the engine never sends for that case — so the real path crashed.
-- Buy advice was ungrammatical whenever SerpAPI omitted a field — the common
-  case — producing output like `Prices are currently high for this route: .`
-- A price-insights payload carrying only a price history was discarded whole.
-- Absent carbon-emission figures were reported as `0 kg`, asserting a flight
-  emitted nothing; a null figure crashed the search outright and silently
-  dropped sampled dates from `search_cheapest_dates`.
-- `get_accommodation_details` omitted the `q` parameter the engine requires
-  alongside a `property_token` (HTTP 400), and read its response from a
-  `property` wrapper the engine does not return — the tool could not have
-  worked. It also read a `rating_breakdown` field that does not exist.
-- Event addresses were read from the venue object instead of the event, so
-  they were always missing.
-- Locations with a space in the name — "New York", "Porto Alegre" — never
-  received the events-search prefix.
-- `free_cancellation` is now refused for vacation rentals, where the engine
-  ignores it, instead of being silently dropped.
-- Departure/arrival hour windows were validated and then transmitted
-  unparsed, so `"18, 23"` reached the engine with a leading space.
-
-## [1.0.0] - 2026-07-31
-
-### Added
-
-- **Six MCP tools** powered by licensed commercial data:
-  - `search_flights` — one-way and round-trip flight search via SerpAPI.
-  - `search_multi_city` — multi-city itineraries with 2–6 legs.
-  - `search_accommodations` — hotels and vacation rentals via SerpAPI Google Hotels engine.
-  - `search_cheapest_dates` — cheapest round-trip sampling across a flexible date window.
-  - `compare_drive_or_fly` — driving distance/duration via Google Maps Routes API with optional flight comparison.
-  - `check_setup` — validates both API keys live and reports quota status and remediation hints.
-- **`plan_trip` MCP prompt** — starter entry point for AI clients.
-- **Setup CLI** (`cosmo-travel-mcp setup` and `setup --register`) with key validation, hidden input, and Claude Code registration.
-- **Onboarding** — `check_setup` returns a `setup` field with exact remediation commands; server instructions and version exposed at startup.
-- **Quota-cost transparency** — per-tool cost table in README, multi-city/round-trip pricing notes, and cheapest-dates quota guard (`max_calls` cap).
-- **Transient-failure retry** — `_call_serpapi` retries once on transient SerpAPI errors.
-- **CI workflow** (`.github/workflows/ci.yml`) — dual-env test matrix (no keys + fake keys), `uv` caching.
-- **Trusted-publishing workflow** (`.github/workflows/publish.yml`) — PyPI publish via OIDC on `v*` tags, no stored API tokens.
-- **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`, issue templates, PR template.
-- **Release runbook** — `docs/RELEASING.md` with one-time PyPI trusted-publisher setup and per-release tag flow.
-
-### Fixed
-
-- Three latent correctness bugs found in review (early 2026-07 cycle).
-- README no longer recommends `export` for MCP use — keys must be passed via `-e` at registration time.
-- Server registration now uses the installed binary path, not `uvx` (which exceeded the 30-second MCP startup budget).
-- Missing-key tool errors are now self-sufficient with inline remediation instructions.
-- Production defects from the initial scaffold (01b cycle) repaired.
+- **Setup CLI** — `cosmo-travel-mcp setup` and `setup --register`: key
+  validation, hidden input, and Claude Code registration in one command.
+  `setup --client <cursor|claude-desktop|windsurf|vscode|cline>` prints a
+  ready-to-paste config block and the file it belongs in, so registration is
+  not Claude-Code-only.
+- **Onboarding** — `check_setup` returns a `setup` field with the exact
+  remediation commands, and the server exposes its instructions and version at
+  startup. Registration uses the installed binary path, not `uvx`, which
+  exceeded the 30-second MCP startup budget.
+- **Quota-cost transparency** — a per-tool cost table in the README,
+  round-trip and multi-city pricing notes, and the `max_calls` guard on
+  `search_cheapest_dates`.
+- **Transient-failure retry** — `_call_serpapi` retries once on transient
+  SerpAPI errors.
+- **CI** (`.github/workflows/ci.yml`) — dual-env test matrix (no keys, fake
+  keys) with `uv` caching. 365 tests.
+- **Trusted publishing** (`.github/workflows/publish.yml`) — PyPI release via
+  OIDC on `v*` tags, with no stored API tokens.
+- **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
+  `docs/RELEASING.md`, issue templates and a PR template.
 
 [1.0.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.0
