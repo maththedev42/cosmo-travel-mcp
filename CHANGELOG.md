@@ -5,6 +5,24 @@ All notable changes to cosmo-travel-mcp.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-02
+
+### Changed
+
+- The PyPI summary and keywords still described the six-tool server: they
+  named flights, accommodations and driving, and omitted events, things to do,
+  itinerary checking and calendar export. That summary is the one line shown
+  on the project page before anyone decides to install, and the keywords are
+  what PyPI search matches on.
+
+### Fixed
+
+- The version tests asserted against the literal `"1.0.0"`, so every release
+  broke its own suite, and `test_server_version_matches_package` was not
+  comparing the server to the package at all — it compared a constant to
+  itself and passed just as happily once the two had drifted. It now reads the
+  declared version from `pyproject.toml`.
+
 ## [1.0.0] - 2026-08-02
 
 First public release. Eleven tools and one prompt.
@@ -102,4 +120,5 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.0.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.0

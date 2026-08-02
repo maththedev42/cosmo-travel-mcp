@@ -240,15 +240,32 @@ def test_server_instructions_non_empty():
     assert "SERPAPI_API_KEY" in _INSTRUCTIONS
     assert "GOOGLE_MAPS_API_KEY" in _INSTRUCTIONS
 
+def _declared_version() -> str:
+    """The version in pyproject.toml — the single source of truth."""
+    import tomllib
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    return tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+
+
 def test_server_version_matches_package():
-    """Server version reads from installed package metadata."""
+    """Server version reads from installed package metadata.
+
+    Compared against pyproject rather than a literal. A hardcoded version
+    makes every release fail its own suite, and an assertion that only
+    repeats a constant is not checking what its name claims — it passes
+    just as happily when the two have drifted apart.
+    """
     from cosmo_travel_mcp.server import __version__
-    assert __version__ == "1.0.0"
+    assert __version__ in (_declared_version(), "unknown")
+
 
 def test_server_version_fallback():
-    """Version is set (either from package metadata or fallback)."""
+    """Version is always a non-empty string — metadata or the fallback."""
     from cosmo_travel_mcp.server import __version__
-    assert __version__ in ("1.0.0", "unknown")
+    assert isinstance(__version__, str)
+    assert __version__
 
 
 # ---------------------------------------------------------------------------

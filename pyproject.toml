@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cosmo-travel-mcp"
-version = "1.0.0"
-description = "MCP server bundling travel-planning tools: flights, accommodations, driving, and setup checks"
+version = "1.0.1"
+description = "MCP server for planning a whole trip: flights, hotels, events, things to do, driving costs, itinerary checking and calendar export"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -15,8 +15,14 @@ keywords = [
     "mcp",
     "model-context-protocol",
     "travel",
+    "trip-planning",
+    "itinerary",
     "flights",
+    "hotels",
     "accommodations",
+    "events",
+    "things-to-do",
+    "calendar",
     "serpapi",
     "google-maps",
     "driving",
