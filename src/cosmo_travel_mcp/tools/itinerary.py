@@ -271,7 +271,22 @@ async def check_itinerary(days: list[dict[str, Any]]) -> dict[str, Any]:
 
             # ── opening hours ─────────────────────────────────────────
             hours_map = stop.get("operating_hours")
-            if isinstance(hours_map, dict) and hours_map and day_date is not None:
+            usable_hours = isinstance(hours_map, dict) and bool(hours_map)
+            # A scheduled stop with no hours at all is not a stop that passed —
+            # it is a stop nobody checked. Reporting it as clean is the failure
+            # this severity exists to prevent, and it bites hardest on exactly
+            # the stops an itinerary is built around: `search_events` results
+            # carry a date and a venue but no `operating_hours`, so a concert or
+            # a show is the *most* likely stop to be silently unverified.
+            if not usable_hours and start is not None and day_date is not None:
+                findings.append(_finding(
+                    "unchecked", day_index, "hours_missing",
+                    f"{name}: no operating_hours supplied — nothing about this stop's "
+                    f"opening was verified. Confirm it is open on "
+                    f"{day_date.isoformat()} by hand.",
+                    stop=name,
+                ))
+            if usable_hours and day_date is not None:
                 hours, resolved = _hours_for_date(hours_map, day_date)
                 if not resolved:
                     findings.append(_finding(

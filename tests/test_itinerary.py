@@ -29,6 +29,14 @@ PT_HOURS = {
     "sexta-feira": "10:00–19:00",
 }
 
+# Hours that can never fail a window check, so the ordering and transit tests
+# below stay about ordering and transit. They still have to be *present*: a
+# scheduled stop with no hours is reported `unchecked`, by design.
+ALWAYS = dict.fromkeys(
+    ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+    "Open 24 hours",
+)
+
 # 2026-08-03 is a Monday; 2026-08-04 a Tuesday.
 MONDAY = "2026-08-03"
 TUESDAY = "2026-08-04"
@@ -133,8 +141,8 @@ async def test_open_24_hours_never_flags_a_window():
 async def test_overlapping_stops_are_a_blocker():
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("A", "10:00", "12:00"),
-             _stop("B", "11:00", "13:00"))
+             _stop("A", "10:00", "12:00", operating_hours=ALWAYS),
+             _stop("B", "11:00", "13:00", operating_hours=ALWAYS))
     ])
 
     assert [f["reason"] for f in result["findings"]] == ["overlap"]
@@ -143,7 +151,7 @@ async def test_overlapping_stops_are_a_blocker():
 @pytest.mark.asyncio
 async def test_backwards_stop_is_a_blocker():
     result = await check_itinerary([
-        _day(TUESDAY, _stop("A", "15:00", "14:00"))
+        _day(TUESDAY, _stop("A", "15:00", "14:00", operating_hours=ALWAYS))
     ])
 
     assert [f["reason"] for f in result["findings"]] == ["negative_duration"]
@@ -153,8 +161,8 @@ async def test_backwards_stop_is_a_blocker():
 async def test_sequential_stops_pass():
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("A", "10:00", "12:00"),
-             _stop("B", "13:00", "15:00"))
+             _stop("A", "10:00", "12:00", operating_hours=ALWAYS),
+             _stop("B", "13:00", "15:00", operating_hours=ALWAYS))
     ])
 
     assert result["findings"] == []
@@ -174,8 +182,8 @@ ZOO_MIAMI = {"lat": 25.6110, "lng": -80.3990}
 async def test_impossible_transit_gap_is_flagged():
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD),
-             _stop("Zoo Miami", "11:10", "13:00", coordinates=ZOO_MIAMI))
+             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD, operating_hours=ALWAYS),
+             _stop("Zoo Miami", "11:10", "13:00", coordinates=ZOO_MIAMI, operating_hours=ALWAYS))
     ])
 
     assert [f["reason"] for f in result["findings"]] == ["transit"]
@@ -187,8 +195,8 @@ async def test_impossible_transit_gap_is_flagged():
 async def test_generous_transit_gap_passes():
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD),
-             _stop("Zoo Miami", "13:00", "15:00", coordinates=ZOO_MIAMI))
+             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD, operating_hours=ALWAYS),
+             _stop("Zoo Miami", "13:00", "15:00", coordinates=ZOO_MIAMI, operating_hours=ALWAYS))
     ])
 
     assert result["findings"] == []
@@ -199,8 +207,8 @@ async def test_overlapping_stops_report_overlap_only_not_negative_transit():
     """An overlap already says it; "-30 min allowed" on top is noise."""
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("Wynwood Walls", "10:00", "12:00", coordinates=WYNWOOD),
-             _stop("Zoo Miami", "11:30", "13:00", coordinates=ZOO_MIAMI))
+             _stop("Wynwood Walls", "10:00", "12:00", coordinates=WYNWOOD, operating_hours=ALWAYS),
+             _stop("Zoo Miami", "11:30", "13:00", coordinates=ZOO_MIAMI, operating_hours=ALWAYS))
     ])
 
     assert [f["reason"] for f in result["findings"]] == ["overlap"]
@@ -212,8 +220,8 @@ async def test_nearby_stops_do_not_trigger_transit_warnings():
     near = {"lat": 25.8015, "lng": -80.1995}
     result = await check_itinerary([
         _day(TUESDAY,
-             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD),
-             _stop("Cafe next door", "11:05", "12:00", coordinates=near))
+             _stop("Wynwood Walls", "10:00", "11:00", coordinates=WYNWOOD, operating_hours=ALWAYS),
+             _stop("Cafe next door", "11:05", "12:00", coordinates=near, operating_hours=ALWAYS))
     ])
 
     assert result["findings"] == []
@@ -374,3 +382,30 @@ async def test_note_tells_the_client_to_confirm_before_writing():
 async def test_malformed_items_are_rejected(bad, match):
     with pytest.raises(ValueError, match=match):
         await build_calendar(bad)
+
+
+@pytest.mark.asyncio
+async def test_scheduled_stop_without_hours_is_unchecked_not_clean():
+    """A concert has a venue and a time but no operating_hours.
+
+    Found by running the plan-a-trip skill end to end: three date-bound stops
+    (the New Year's Eve street party, a concert, a theatre show) came back with
+    `unchecked: 0` and an empty findings list, which reads as "verified" for
+    stops nothing had looked at.
+    """
+    result = await check_itinerary([
+        _day(TUESDAY, _stop("Joshua Bell at Lincoln Center", "14:00", "17:00"))
+    ])
+
+    assert result["unchecked"] == 1
+    assert result["blockers"] == 0
+    assert result["findings"][0]["reason"] == "hours_missing"
+
+
+@pytest.mark.asyncio
+async def test_unscheduled_note_without_hours_stays_quiet():
+    """An entry with no start time is not a claim about opening, so it is not noise."""
+    result = await check_itinerary([_day(TUESDAY, {"name": "Free time"})])
+
+    assert result["findings"] == []
+    assert result["stops_checked"] == 1
