@@ -123,6 +123,38 @@ async def _fetch_toll_info(
     return toll_cost, toll_currency
 
 
+# Daily ECB reference rates. Keyless, free, no account — chosen so that adding
+# currency conversion does not add a credential the user has to provision.
+# Note the host: api.frankfurter.app 301s here, and httpx does not follow
+# redirects by default, so pointing at the old one silently yields no rate.
+FX_BASE = "https://api.frankfurter.dev/v1/latest"
+
+# Conversion is enrichment, like tolls: a slow or dead FX host must never turn a
+# working route comparison into an error.
+FX_TIMEOUT_SECONDS = 5.0
+
+
+async def _fetch_fx_rate(base: str, quote: str) -> float | None:
+    """Fetch ``1 base -> ? quote`` from the ECB daily reference rates.
+
+    Returns ``None`` on any failure — the caller then keeps the toll listed in
+    its own currency rather than claiming a conversion it could not make.
+    """
+    if not base or not quote or base == quote:
+        return None
+    try:
+        async with httpx.AsyncClient(
+            timeout=FX_TIMEOUT_SECONDS, follow_redirects=True
+        ) as client:
+            resp = await client.get(FX_BASE, params={"base": base, "symbols": quote})
+            resp.raise_for_status()
+            rates = resp.json().get("rates", {})
+        rate = rates.get(quote)
+        return float(rate) if rate else None
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Tool
 # ---------------------------------------------------------------------------
@@ -137,6 +169,7 @@ async def compare_drive_or_fly(
     flight_price: float | None = None,
     flight_duration_minutes: float | None = None,
     currency: str = "BRL",
+    fx_rate: float | None = None,
 ) -> dict[str, Any]:
     """Compare driving vs flying between two places.
 
@@ -155,16 +188,23 @@ async def compare_drive_or_fly(
                               country/time.
         fuel_efficiency_km_per_liter: Vehicle fuel efficiency in km per liter.
         rental_car_cost_total: Flat rental-car cost already known or estimated.
+                               Omit it to get ``rental_breakeven`` instead — the
+                               most you can pay for the car and still beat flying.
         flight_price: Flight price the caller already knows (from ``search_flights``).
         flight_duration_minutes: Flight duration the caller already knows.
         currency: Currency label for the caller-supplied numbers (default ``"BRL"``).
-                  No currency conversion is performed.
+        fx_rate: Multiplier converting the *toll* currency into ``currency`` — tolls
+                 come back in the road's local currency, which is often not the one
+                 the caller priced fuel in. Supply it to make the conversion
+                 deterministic; omit it and the tool fetches a daily ECB reference
+                 rate. When neither is available, tolls stay listed separately and
+                 no conversion is claimed.
 
     Returns:
         A dict with ``distance_km``, ``driving_duration_minutes``, and optionally
         ``estimated_fuel_cost``, ``estimated_toll_cost`` + ``toll_currency``,
-        ``estimated_total_driving_cost`` (fuel + tolls + rental when currencies
-        match), and ``comparison``.
+        ``toll_cost_converted`` + ``fx_rate_used`` + ``fx_source``,
+        ``estimated_total_driving_cost``, ``rental_breakeven``, and ``comparison``.
     """
     api_key = _get_maps_api_key()
 
@@ -243,17 +283,36 @@ async def compare_drive_or_fly(
     # "total driving cost" of just the tolls would understate the trip, and
     # the flight comparison below would then present R$15 of tolls as the
     # full cost of driving.  Tolls stay visible via estimated_toll_cost.
+    # Tolls in the caller's currency, so they can join the total.  A caller-
+    # supplied rate wins over the fetched one: it is deterministic and the
+    # caller may be pricing at a card rate rather than the ECB reference.
+    toll_in_currency: float | None = None
+    if toll_cost and toll_currency:
+        if toll_currency == currency:
+            toll_in_currency = toll_cost
+        else:
+            rate = fx_rate
+            source = "caller"
+            if rate is None:
+                rate = await _fetch_fx_rate(toll_currency, currency)
+                source = "ecb_daily"
+            if rate:
+                toll_in_currency = round(toll_cost * rate, 2)
+                result["toll_cost_converted"] = toll_in_currency
+                result["fx_rate_used"] = rate
+                result["fx_source"] = source
+
     if fuel_cost is not None or rental_car_cost_total is not None:
         base_total = (fuel_cost or 0) + (rental_car_cost_total or 0)
-        if toll_cost and toll_currency and toll_currency == currency:
-            total_driving = base_total + toll_cost
-            result["estimated_total_driving_cost"] = round(total_driving, 2)
+        if toll_in_currency is not None:
+            result["estimated_total_driving_cost"] = round(base_total + toll_in_currency, 2)
         elif toll_cost and toll_currency:
-            # Currencies differ: total is fuel+rental only; tolls listed separately.
+            # No rate available: total is fuel+rental only, tolls listed apart.
             result["estimated_total_driving_cost"] = base_total
             result["toll_note"] = (
                 f"Tolls ({toll_cost} {toll_currency}) are listed separately "
-                f"— the caller's fuel currency is {currency}."
+                f"— the caller's fuel currency is {currency} and no exchange "
+                "rate was available. Pass fx_rate to fold them into the total."
             )
         else:
             result["estimated_total_driving_cost"] = base_total
@@ -266,6 +325,32 @@ async def compare_drive_or_fly(
             if total_driving_cost is not None:
                 comparison["cost_difference"] = round(flight_price - total_driving_cost, 2)
                 comparison["currency"] = currency
+            # The rental is usually the unknown: the caller is deciding whether
+            # to rent at all. Report the ceiling that keeps driving cheaper, so
+            # the answer becomes a number to check against a quote rather than
+            # a comparison that needs a guessed rental to even run.
+            running_cost = (fuel_cost or 0) + (toll_in_currency or 0)
+            if rental_car_cost_total is None:
+                breakeven = round(flight_price - running_cost, 2)
+                comparison["rental_breakeven"] = breakeven
+                # Name only what is actually in the number. Saying "fuel and
+                # tolls" when the tolls could not be converted overstates the
+                # ceiling by the whole toll, in the caller's favour.
+                covers = "fuel" if fuel_cost is not None else "nothing"
+                if toll_in_currency is not None:
+                    covers = "fuel and tolls" if fuel_cost is not None else "tolls"
+                note = (
+                    f"Driving beats flying while the car costs less than "
+                    f"{breakeven} {currency} — that is the flight at "
+                    f"{flight_price} minus {running_cost:.2f} of {covers}."
+                )
+                if toll_cost and toll_in_currency is None:
+                    note += (
+                        f" Tolls of {toll_cost} {toll_currency} are NOT in that "
+                        "ceiling — no exchange rate was available, so the real "
+                        "break-even is lower by their converted value."
+                    )
+                comparison["rental_breakeven_note"] = note
         if flight_duration_minutes is not None:
             comparison["time_difference_minutes"] = round(flight_duration_minutes - driving_minutes)
         result["comparison"] = comparison

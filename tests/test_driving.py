@@ -9,6 +9,7 @@ import respx
 
 from cosmo_travel_mcp.tools.driving import (
     COMPUTE_ROUTES_URL,
+    FX_BASE,
     ROUTES_API_BASE,
     _fetch_toll_info,
     _parse_duration,
@@ -527,3 +528,140 @@ async def test_compare_drive_or_fly_tolls_only_no_fuel():
     assert "estimated_fuel_cost" not in result
     assert "estimated_total_driving_cost" not in result
     assert "toll_note" not in result
+
+
+# ---------------------------------------------------------------------------
+# Currency conversion — tolls arrive in the road's currency, not the caller's
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_caller_supplied_fx_rate_folds_tolls_into_total():
+    """A caller-supplied rate converts the toll and completes the total."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+            fx_rate=5.5,
+        )
+
+    assert result["toll_cost_converted"] == 85.25  # 15.5 USD * 5.5
+    assert result["fx_rate_used"] == 5.5
+    assert result["fx_source"] == "caller"
+    # 173.71 fuel + 85.25 tolls — the total no longer silently drops the tolls.
+    assert result["estimated_total_driving_cost"] == 258.96
+    assert "toll_note" not in result
+
+
+@pytest.mark.asyncio
+async def test_missing_fx_rate_is_fetched_from_ecb():
+    """With no rate supplied, fall back to the daily ECB reference rate."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        mock.get(FX_BASE).respond(json={"base": "USD", "rates": {"BRL": 5.4}})
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+        )
+
+    assert result["fx_rate_used"] == 5.4
+    assert result["fx_source"] == "ecb_daily"
+    assert result["toll_cost_converted"] == 83.7
+
+
+@pytest.mark.asyncio
+async def test_caller_fx_rate_wins_over_the_fetched_one():
+    """The caller may be pricing at a card rate; their number takes priority."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        fx = mock.get(FX_BASE).respond(json={"base": "USD", "rates": {"BRL": 5.4}})
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+            fx_rate=6.0,
+        )
+
+    assert not fx.called, "should not spend a request when the caller gave a rate"
+    assert result["fx_rate_used"] == 6.0
+    assert result["fx_source"] == "caller"
+
+
+@pytest.mark.asyncio
+async def test_fx_failure_degrades_to_a_note_and_claims_no_conversion():
+    """A dead FX host must not break the comparison, nor invent a rate."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        mock.get(FX_BASE).respond(status_code=500)
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+        )
+
+    assert "toll_cost_converted" not in result
+    assert "fx_rate_used" not in result
+    assert result["estimated_total_driving_cost"] == 173.71
+    assert "15.5 USD" in result["toll_note"]
+
+
+# ---------------------------------------------------------------------------
+# Rental break-even — the rental is the number the caller does not have
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_rental_breakeven_reported_when_rental_unknown():
+    """Omitting the rental yields the ceiling that keeps driving cheaper."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            currency="BRL",
+            fx_rate=5.5,
+            flight_price=500.0,
+        )
+
+    # 500 flight - (173.71 fuel + 85.25 tolls) = 241.04
+    assert result["comparison"]["rental_breakeven"] == 241.04
+    assert "241.04 BRL" in result["comparison"]["rental_breakeven_note"]
+
+
+@pytest.mark.asyncio
+async def test_rental_breakeven_omitted_when_rental_is_known():
+    """With a real rental cost there is nothing to solve for."""
+    with respx.mock as mock:
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTE_RESPONSE)
+        mock.post(COMPUTE_ROUTES_URL).respond(json=_COMPUTE_ROUTES_WITH_TOLL)
+        result = await compare_drive_or_fly(
+            origin="Miami, FL",
+            destination="Orlando, FL",
+            fuel_price_per_liter=5.50,
+            fuel_efficiency_km_per_liter=12.0,
+            rental_car_cost_total=200.0,
+            currency="BRL",
+            fx_rate=5.5,
+            flight_price=500.0,
+        )
+
+    assert "rental_breakeven" not in result["comparison"]
+    assert result["comparison"]["cost_difference"] == round(500 - 458.96, 2)

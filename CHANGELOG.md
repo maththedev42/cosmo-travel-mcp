@@ -5,6 +5,52 @@ All notable changes to cosmo-travel-mcp.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The booking phase returned nothing usable.** `_parse_booking_options` read
+  `book_with` and `price` off the outer dict, but the engine nests every option
+  one level down under a slot key naming how the ticket is sold — `together`
+  for a single booking, `departing`/`returning` when the directions are sold
+  apart. Every entry came back with a blank seller and a null price, which is
+  exactly the shape of "this ticket has no sellers". The answer to *where do I
+  buy this* was unavailable for the whole 1.0 line.
+
+  The tests could not catch it: their fixtures were hand-written in the same
+  flat shape the parser assumed, so they asserted `seller == "Delta"` against
+  bytes the engine never sends and stayed green. They are now driven by a
+  recorded live response (`tests/fixtures/google_flights_booking.json`), and an
+  unrecognized container yields no row rather than a blank one — a caller can
+  act on an empty list, but will present a blank seller as fact.
+
+- The `bags` parameter is carry-on only, which the docstring did not say.
+  Callers read it as "bags" and priced trips without hold luggage.
+
+### Added
+
+- Booking options now carry `fare` (Basic Economy, Main Cabin, ...),
+  `fare_conditions` and `sold_as`. Three rows for one flight at three prices
+  look like a caller bug until the fare tier explains them.
+
+- **Checked-bag prices.** The booking response's `baggage_prices` is now
+  surfaced, both per option and for the itinerary. This is the only place the
+  engine prices hold luggage — `bags` filters carry-on and nothing else.
+
+- `compare_drive_or_fly` converts tolls into the caller's currency. Tolls come
+  back in the road's local currency, so the total silently dropped them
+  whenever it differed from the one fuel was priced in. Pass `fx_rate` to make
+  it deterministic, or let the tool fetch a daily ECB reference rate.
+
+- `compare_drive_or_fly` reports `rental_breakeven` when no rental cost is
+  given: the most the car can cost and still beat flying. The rental is
+  normally the unknown — the caller is deciding whether to rent at all — so
+  requiring it to run the comparison forced a guess into the answer.
+
+- Every flight and accommodation response echoes `adults`. `search_flights`
+  defaults to 1 and `search_accommodations` to 2; comparing the two without
+  noticing doubles one side of the trip budget and reads as a data error.
+
 ## [1.0.1] - 2026-08-02
 
 ### Changed
