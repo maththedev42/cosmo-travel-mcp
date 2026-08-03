@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import httpx
 import pytest
@@ -1227,49 +1228,79 @@ async def test_multi_city_airlines_mutual_exclusion():
 # ---------------------------------------------------------------------------
 
 
-def test_parse_booking_options_full():
-    """Full booking_options entry with all optional fields."""
+def test_parse_booking_options_against_recorded_response():
+    """The recorded live response must parse into usable sellers.
+
+    This is the regression that the hand-written fixtures could not be: they
+    were written in the same flat shape the parser wrongly assumed, so they
+    stayed green while production returned blank sellers and null prices for
+    every option. Drive this one from bytes the engine actually sent.
+    """
+    recorded = json.loads(
+        (Path(__file__).parent / "fixtures" / "google_flights_booking.json").read_text()
+    )
+    result = _parse_booking_options(recorded["booking_options"])
+
+    assert len(result) == len(recorded["booking_options"])
+    # The bug's signature: entries present, every field empty.
+    assert all(opt["seller"] for opt in result), "seller came back blank"
+    assert all(opt["price"] is not None for opt in result), "price came back null"
+
+    basic = result[0]
+    assert basic["seller"] == "American"
+    assert basic["fare"] == "Basic Economy"
+    assert basic["price"] == 593
+    assert basic["marketed_as"] == ["AA 1126"]
+    assert basic["sold_as"] == "together"
+    assert basic["url"].startswith("http")
+    # Checked-bag pricing — the `bags` search parameter is carry-on only, so
+    # this is the one place hold luggage gets a number.
+    assert "1st checked bag: 279" in basic["baggage_prices"]
+    assert "No ticket changes" in basic["fare_conditions"]
+
+    # Fare tiers are what distinguish the rows; without them three options for
+    # the same flight at three prices look like a bug in the caller.
+    assert [opt["fare"] for opt in result] == [
+        "Basic Economy",
+        "Main Cabin",
+        "Main Plus",
+    ]
+
+
+def test_parse_booking_options_flat_shape_yields_nothing():
+    """The pre-fix assumption must not silently produce blank entries.
+
+    Reading book_with/price off the outer dict is what shipped broken. If the
+    engine ever sends an unrecognized container, return nothing rather than a
+    row whose seller is "" and whose price is None — a caller can act on an
+    empty list, but will present a blank seller as fact.
+    """
+    flat = [{"book_with": "Delta", "price": 450}]
+    assert _parse_booking_options(flat) == []
+
+
+def test_parse_booking_options_split_ticket_slots():
+    """Legs sold separately arrive under departing/returning, not together."""
     raw = [
         {
-            "book_with": "Delta",
-            "marketed_as": "Delta Air Lines",
-            "price": 450,
-            "baggage_prices": {"carry_on": 0, "checked": 35},
-            "booking_request": {"url": "https://delta.com/booking/abc123"},
-            "local_prices": {"base": 400, "taxes": 50},
+            "departing": {"book_with": "Delta", "price": 450, "option_title": "Main"},
+            "returning": {"book_with": "United", "price": 380},
         }
     ]
     result = _parse_booking_options(raw)
-    assert len(result) == 1
-    opt = result[0]
-    assert opt["seller"] == "Delta"
-    assert opt["marketed_as"] == "Delta Air Lines"
-    assert opt["price"] == 450
-    assert opt["baggage_prices"] == {"carry_on": 0, "checked": 35}
-    assert opt["url"] == "https://delta.com/booking/abc123"
-    assert opt["local_prices"] == {"base": 400, "taxes": 50}
-
-
-def test_parse_booking_options_no_baggage_prices():
-    """Missing baggage_prices → key omitted, no crash."""
-    raw = [
-        {
-            "book_with": "Google Flights",
-            "marketed_as": "United Airlines",
-            "price": 380,
-            "booking_request": {"url": "https://example.com/book"},
-        }
+    assert [(o["seller"], o["sold_as"]) for o in result] == [
+        ("Delta", "departing"),
+        ("United", "returning"),
     ]
-    result = _parse_booking_options(raw)
-    assert "baggage_prices" not in result[0]
-    assert "local_prices" not in result[0]
 
 
-def test_parse_booking_options_no_booking_request():
-    """Missing booking_request → url omitted, no crash."""
-    raw = [{"book_with": "Kiwi", "marketed_as": "Lufthansa", "price": 520}]
-    result = _parse_booking_options(raw)
-    assert "url" not in result[0]
+def test_parse_booking_options_optional_fields_omitted():
+    """Absent optional fields are omitted, not emitted as empty."""
+    raw = [{"together": {"book_with": "Kiwi", "price": 520}}]
+    opt = _parse_booking_options(raw)[0]
+    for absent in ("baggage_prices", "local_prices", "url", "fare", "fare_conditions"):
+        assert absent not in opt
+    assert opt["seller"] == "Kiwi"
 
 
 def test_parse_booking_options_empty_list():
@@ -1315,18 +1346,25 @@ async def test_booking_token_request_includes_token_and_original_params(respx_mo
         ],
         "booking_options": [
             {
-                "book_with": "Delta",
-                "marketed_as": "Delta Air Lines",
-                "price": 420,
-                "booking_request": {"url": "https://delta.com/book"},
+                "together": {
+                    "book_with": "Delta",
+                    "marketed_as": ["DL 100"],
+                    "option_title": "Main Cabin",
+                    "price": 420,
+                    "baggage_prices": ["1 free carry-on", "1st checked bag: 35"],
+                    "booking_request": {"url": "https://delta.com/book"},
+                }
             },
             {
-                "book_with": "Expedia",
-                "marketed_as": "Delta Air Lines",
-                "price": 450,
-                "booking_request": {"url": "https://expedia.com/book"},
+                "together": {
+                    "book_with": "Expedia",
+                    "marketed_as": ["DL 100"],
+                    "price": 450,
+                    "booking_request": {"url": "https://expedia.com/book"},
+                }
             },
         ],
+        "baggage_prices": {"together": ["1 free carry-on", "1st checked bag: 35"]},
     }
 
     route = respx_mock.get(f"{SERPAPI_BASE}").mock(
@@ -1370,10 +1408,12 @@ async def test_booking_token_one_way(respx_mock):
         ],
         "booking_options": [
             {
-                "book_with": "United",
-                "marketed_as": "United Airlines",
-                "price": 300,
-                "booking_request": {"url": "https://united.com/book"},
+                "together": {
+                    "book_with": "United",
+                    "marketed_as": ["UA 200"],
+                    "price": 300,
+                    "booking_request": {"url": "https://united.com/book"},
+                }
             },
         ],
     }

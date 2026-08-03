@@ -228,6 +228,10 @@ async def search_accommodations(
         "results": parsed,
         "vacation_rentals": vacation_rentals,
         "total_results": len(parsed),
+        # Echoed so a caller comparing these prices against flight prices can
+        # see the party size each side was quoted for. search_flights defaults
+        # to 1 adult and this tool to 2 — mixing them silently doubles one side.
+        "adults": adults,
     }
     if from_cache:
         result["cached"] = True

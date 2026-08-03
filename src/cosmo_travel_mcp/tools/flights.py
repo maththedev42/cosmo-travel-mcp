@@ -594,33 +594,57 @@ def _parse_flights_response(
     return parsed
 
 
+# SerpAPI nests each booking option one level down, under a key that says how
+# the ticket is sold: "together" for a single booking, or "departing"/"returning"
+# when the two directions are sold as separate tickets.  Reading book_with/price
+# off the outer dict yields an entry with a blank seller and a null price.
+_BOOKING_SLOTS = ("together", "departing", "returning")
+
+
 def _parse_booking_options(
     raw_options: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Parse SerpAPI ``booking_options`` array into normalized seller entries.
 
     The engine returns ``booking_options`` when a ``booking_token`` is sent.
-    Each option carries a seller, price, baggage info, and a booking URL.
+    Each option carries a seller, fare name, price, baggage prices, fare
+    conditions, and a booking URL — all nested under a slot key naming how the
+    ticket is sold (see ``_BOOKING_SLOTS``).
     """
     result: list[dict[str, Any]] = []
     for opt in raw_options:
-        entry: dict[str, Any] = {
-            "seller": opt.get("book_with", ""),
-            "marketed_as": opt.get("marketed_as", ""),
-            "price": opt.get("price"),
-        }
-        booking_request = opt.get("booking_request", {})
-        if isinstance(booking_request, dict) and booking_request.get("url"):
-            entry["url"] = booking_request["url"]
-        # baggage_prices is optional — omit the key entirely when absent
-        bp = opt.get("baggage_prices")
-        if bp is not None:
-            entry["baggage_prices"] = bp
-        # local_prices (price breakdown) — optional
-        lp = opt.get("local_prices")
-        if lp is not None:
-            entry["local_prices"] = lp
-        result.append(entry)
+        for slot in _BOOKING_SLOTS:
+            node = opt.get(slot)
+            if not isinstance(node, dict):
+                continue
+            entry: dict[str, Any] = {
+                "seller": node.get("book_with", ""),
+                "marketed_as": node.get("marketed_as", ""),
+                "price": node.get("price"),
+                # How this ticket is sold: one booking, or one per direction.
+                "sold_as": slot,
+            }
+            # Fare tier ("Basic Economy", "Main Cabin", ...) — the field that
+            # explains why two rows for the same flight differ in price.
+            title = node.get("option_title")
+            if title:
+                entry["fare"] = title
+            # Fare conditions: seat selection, change rules, mileage.
+            ext = node.get("extensions")
+            if ext:
+                entry["fare_conditions"] = ext
+            booking_request = node.get("booking_request", {})
+            if isinstance(booking_request, dict) and booking_request.get("url"):
+                entry["url"] = booking_request["url"]
+            # baggage_prices is optional — omit the key entirely when absent
+            bp = node.get("baggage_prices")
+            if bp is not None:
+                entry["baggage_prices"] = bp
+            # local_prices (price breakdown) — optional
+            lp = node.get("local_prices")
+            if lp is not None:
+                entry["local_prices"] = lp
+            result.append(entry)
     return result
 
 
@@ -690,7 +714,10 @@ async def search_flights(
         Comma-separated IATA airline codes to exclude.
         Mutually exclusive with ``include_airlines``.
     bags : int, optional
-        Number of carry-on bags the fare must include (≥ 0).
+        Number of **carry-on** bags the fare must include (≥ 0).
+        This does not filter or price checked baggage - for hold
+        luggage, run the booking phase (``booking_token``), whose
+        response carries ``baggage_prices``.
     max_duration : int, optional
         Maximum total itinerary duration in minutes.
     outbound_times : str, optional
@@ -795,18 +822,27 @@ async def search_flights(
         booking_result: dict[str, Any] = {
             "selected_flights": selected,
             "booking_options": booking_options,
+            "adults": adults,
             "phase": (
-                "booking options — each entry is a seller that has "
-                "this exact ticket, with its price, baggage fees, and a "
-                "booking link."
+                "booking options — each entry is a seller/fare that has this "
+                "exact ticket, with its price, baggage prices, fare conditions "
+                "and a booking link. Prices cover all "
+                f"{adults} passenger(s); baggage prices are per passenger."
             ),
         }
+        # Checked-bag prices for the itinerary as a whole. This is the only
+        # place the engine reports hold luggage — the `bags` search parameter
+        # filters on carry-on only.
+        baggage = data.get("baggage_prices")
+        if baggage:
+            booking_result["baggage_prices"] = baggage
         if from_cache:
             booking_result["cached"] = True
         _inject_quota_warning(booking_result)
         return booking_result
 
     result = _parse_flights_response(data, requested_currency=currency)
+    result["adults"] = adults
     if from_cache:
         result["cached"] = True
 
@@ -857,7 +893,10 @@ async def search_multi_city(
         Comma-separated IATA airline codes to exclude.
         Mutually exclusive with ``include_airlines``.
     bags : int, optional
-        Number of carry-on bags the fare must include (≥ 0).
+        Number of **carry-on** bags the fare must include (≥ 0).
+        This does not filter or price checked baggage - for hold
+        luggage, run the booking phase (``booking_token``), whose
+        response carries ``baggage_prices``.
     max_duration : int, optional
         Maximum total itinerary duration in minutes.
     deep_search : bool, default False
@@ -918,6 +957,7 @@ async def search_multi_city(
 
     data, from_cache = await _call_serpapi(params)
     result = _parse_flights_response(data, requested_currency=currency)
+    result["adults"] = adults
     if from_cache:
         result["cached"] = True
     _inject_quota_warning(result)
