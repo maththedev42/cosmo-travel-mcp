@@ -191,11 +191,30 @@ It carries ten method rules, each one a mistake made while planning a real
 - An undated event query returns what is *near*, not what *exists* — name the
   month and year, and treat "there is nothing on" as a claim needing a control.
 
-It also ships **`watch.py`**, a standard-library entry point a scheduler can
-run to re-price everything not yet bought and alert when a fare enters its low
-band — saying which signal fired, since "below the route's normal band" and
-"below what this date has cost" are different claims. Point `launchd` or `cron`
-at it; it is deliberately not something the MCP server starts on its own.
+It ships two standard-library scripts alongside it.
+
+**`render.py`** turns the researched trip into one self-contained HTML page —
+inline CSS and JS, no assets, no server — where the candidate itineraries are
+buttons that re-filter the whole document:
+
+```bash
+python3 skills/plan-a-trip/render.py trip.json -o dossier.html
+```
+
+It reads a single JSON document (`example-trip.json` is a filled-in schema from
+a real session) and **derives** what can be derived rather than accepting it
+typed: nights from the dates, and which candidates can attend each event from
+the lodging windows. It also **asserts** the totals — a candidate whose
+`flights_total` disagrees with the sum of its legs fails the render rather than
+publishing a page whose header contradicts its own table. Softer mismatches
+render *and* print on the page, because a correction the reader cannot see is
+not a correction.
+
+**`watch.py`** is an entry point a scheduler can run to re-price everything not
+yet bought and alert when a fare enters its low band — saying which signal
+fired, since "below the route's normal band" and "below what this date has
+cost" are different claims. Point `launchd` or `cron` at it; it is deliberately
+not something the MCP server starts on its own.
 
 ## Command line
 

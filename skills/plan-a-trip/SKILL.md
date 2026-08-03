@@ -13,7 +13,7 @@ Read **Method** before spending a single search. Then follow **Protocol**.
 
 ---
 
-## Method — eight rules, each one a scar
+## Method — ten rules, each one a scar
 
 ### 1. Never compare entry doors on a single date
 Comparing three arrival cities on one date picked the wrong city. Three doors
@@ -176,7 +176,45 @@ opening hours will not say so.
 One item per flight leg in each airport's own local time, plus check-ins and
 booked shows. Do not dump forty events on anyone.
 
-### 8. Offer the price watch — see below
+### 8. Render the dossier — `render.py` (free)
+Chat is a bad container for a decision worth thousands. Write everything
+gathered so far into one JSON document and render it:
+
+```bash
+python3 skills/plan-a-trip/render.py trip.json -o dossier.html
+```
+
+Out comes a single self-contained HTML file — inline CSS and JS, no assets, no
+server — with the candidates as buttons that re-filter the whole page.
+`example-trip.json` in the same directory is a filled-in schema from a real
+session; copy its shape.
+
+**Do not write the HTML yourself.** The first time this page was built by hand
+it carried two hand-typed copies of the same event titles, they drifted by three
+characters, and the build died on a `KeyError`. Duplicated hand-typed data is a
+correctness problem, not a formatting one. Put the data in the JSON once and let
+the renderer derive the rest:
+
+| derived, never typed | asserted, never trusted |
+|---|---|
+| nights, from `check_out - check_in` | `flights_total` against the sum of that candidate's legs |
+| each candidate's night count | `lodging_total` against the sum of its windows |
+| which candidates can attend each event | nightly rate × nights against the stated total |
+
+A total that disagrees with its parts **fails the render** — better a missing
+page than a page whose header contradicts its own table. Softer disagreements
+(a nightly rate that does not multiply out, an event whose typed candidates
+differ from what the windows say) render *and* print on the page, because a
+correction the reader cannot see is not a correction.
+
+Two things the schema forces you to fill in, and should:
+
+- `unmeasured` — everything no tool returned, each with **why**. Per rule 10, a
+  stated gap is worth more than a decorative estimate.
+- `provenance` — tool, source, what it produced, searches spent. If a figure
+  cannot name the tool that returned it, it does not belong on the page.
+
+### 9. Offer the price watch — see below
 
 ---
 

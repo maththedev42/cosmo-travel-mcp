@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`skills/plan-a-trip/render.py`** — turns a researched trip into one
+  self-contained HTML page (inline CSS/JS, no assets, no server) where the
+  candidate itineraries are buttons that re-filter the whole document. Reads a
+  single JSON document; `example-trip.json` is a filled-in schema from a real
+  session.
+
+  It exists because the first such page was written by hand and carried two
+  hand-typed copies of the same event titles, which drifted and killed the build
+  with a `KeyError`. So the renderer **derives** what can be derived — window
+  nights from the dates, each event's audience from the lodging windows — and
+  **asserts** the rest: a candidate whose `flights_total` disagrees with the sum
+  of its own legs fails the render rather than publishing a page whose header
+  contradicts its own table. Softer mismatches render *and* print on the page,
+  because a correction the reader cannot see is not a correction.
+
+- Protocol step 8 in `SKILL.md` covering the above, and a README section.
+
+### Fixed
+
+- `SKILL.md` announced "eight rules" while carrying ten; rules 9 and 10 were
+  added without updating the heading.
+
 ## [1.1.0] - 2026-08-03
 
 ### Added
