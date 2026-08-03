@@ -167,6 +167,36 @@ includes the file path for your platform.
 `--register` stays Claude-Code-only — for other clients we print config, we do
 not attempt to edit their config files.
 
+## The `plan-a-trip` skill
+
+The tools tell you *what* is available; `skills/plan-a-trip/SKILL.md` tells an
+agent *how to be right* with them. It is a Claude Code skill — clone the repo
+and link it, or copy the directory:
+
+```bash
+ln -s "$PWD/skills/plan-a-trip" ~/.claude/skills/plan-a-trip
+```
+
+It carries ten method rules, each one a mistake made while planning a real
+15-day, three-city trip:
+
+- Never compare entry doors on a single date — three doors × three dates found
+  a fare R$ 1.300 cheaper and inverted the ranking.
+- `price_level` is not `price_history`. Only the 60-day series supports "wait",
+  and it is usually absent: 1 of 14 queries returned one.
+- Quote every candidate itinerary on the same day. A R$ 2.842 gap between two
+  itineraries collapsed to R$ 1.417 once all four were re-quoted in one batch.
+- Derive nights from the flights instead of typing them. An overnight arrival
+  means the first night is on the plane.
+- An undated event query returns what is *near*, not what *exists* — name the
+  month and year, and treat "there is nothing on" as a claim needing a control.
+
+It also ships **`watch.py`**, a standard-library entry point a scheduler can
+run to re-price everything not yet bought and alert when a fare enters its low
+band — saying which signal fired, since "below the route's normal band" and
+"below what this date has cost" are different claims. Point `launchd` or `cron`
+at it; it is deliberately not something the MCP server starts on its own.
+
 ## Command line
 
 | Command | Effect |

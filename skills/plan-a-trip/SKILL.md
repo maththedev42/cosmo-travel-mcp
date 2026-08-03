@@ -237,8 +237,10 @@ months. A weekly sample draws that curve completely; a daily one spends six
 times the quota to redraw it.
 
 Required at install time:
-1. Compute `legs × runs_per_month` and show it against `total_searches_left`
-   **before** creating anything.
+1. Compute `(unpurchased_legs + event_sweeps) × runs_per_month` and show it
+   against `total_searches_left` **before** creating anything. Worked example:
+   4 legs + 4 sweeps weekly = 8 per run ≈ 35/month, which fits the free tier
+   and shrinks as legs are marked purchased.
 2. Take an explicit cadence choice.
 3. Stop watching a leg the moment it is marked `purchased` — that is what
    makes an 8-leg watch shrink instead of grow.
@@ -246,6 +248,36 @@ Required at install time:
    (default 20). A watch must never starve an interactive search.
 5. The same command that installs it must be able to show, re-pace and remove
    it.
+
+### Also watched: shows and events
+Different question, different mechanism. A fare oscillates and you ask *is it
+low*; a show is **published** and then **sells out**, and you ask *is there
+something new in my window*. So event watches report **arrivals, never
+prices**, and they never say "buy now" — they say "this did not exist last
+week".
+
+An `event_watches` entry is one query, one page, per city window:
+
+```json
+{ "city": "", "query": "... <Month> <Year> events",
+  "window": { "from": "check-in", "to": "check-out" },
+  "seen": ["title|start_date", ...], "done": false }
+```
+
+Two things to be honest about:
+
+- **A one-query weekly probe is a change detector, not a discovery sweep.**
+  It costs 1 search where the initial sweep costs 6+, and it will miss what a
+  different phrasing would have found (rule 9 still holds). Say that in the
+  output rather than letting a quiet week read as "nothing is on".
+- **Match the window on the provider's own tokens.** `google_events` returns
+  `start_date: "Dec 30"` with **no year**, so build the set of `"Mon D"`
+  strings for the stay and match those. Do not parse a year out of a string
+  that does not carry one.
+
+Point one probe at whatever date came back empty in the initial sweep — that
+is where new listings matter most, and an empty result there is a hole, not an
+answer.
 
 ### Not in scope: hotels
 Hotel rates move daily and mean-revert — measured: the same room, same query,

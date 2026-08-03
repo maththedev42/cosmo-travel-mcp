@@ -406,23 +406,30 @@ async def build_calendar(
 
     Times are treated as **floating local wall-clock** — "14:00" means 14:00
     where the event happens, which is what a traveller means and what keeps a
-    museum visit correct regardless of the device's timezone. Pass
-    ``timezone_name`` (IANA, e.g. ``"America/Sao_Paulo"``) only when you know
-    it; it is attached to the Google links so they resolve unambiguously.
+    museum visit correct regardless of the device's timezone.
+
+    **A trip crosses timezones, so the zone belongs on the item, not the
+    file.** Set ``timezone_name`` per item (IANA, e.g.
+    ``"America/Sao_Paulo"``) and a Porto Alegre departure, an Orlando show and
+    a New York flight each render in their own zone inside one calendar. The
+    call-level ``timezone_name`` is only the default for items that omit it;
+    using it alone on a multi-city trip anchors every event to one city and
+    shows the others at the wrong hour.
 
     For flights, whose departure and arrival are in *different* zones, create
-    one item per leg using each airport's local time.
+    one item per leg with that airport's local time **and** that airport's zone.
 
     Args:
         items: Each ``{"title", "start", "end"}`` with times as
-            ``"YYYY-MM-DDTHH:MM"``, plus optional ``location`` and
-            ``description``.
+            ``"YYYY-MM-DDTHH:MM"``, plus optional ``location``,
+            ``description`` and ``timezone_name`` (IANA; overrides the
+            call-level default for that item).
         calendar_name: Name embedded in the .ics.
-        timezone_name: Optional IANA timezone for the Google Calendar links.
+        timezone_name: Default IANA timezone for items that do not carry one.
 
     Returns:
-        ``{"ics", "filename", "events": [{title, start, end, google_calendar_url}],
-        "event_count", "note"}``.
+        ``{"ics", "filename", "events": [{title, start, end, timezone_name,
+        google_calendar_url}], "event_count", "note"}``.
     """
     if not isinstance(items, list) or not items:
         raise ValueError("items must be a non-empty list of calendar entries")
@@ -455,6 +462,12 @@ async def build_calendar(
         location = str(item.get("location") or "")
         description = str(item.get("description") or "")
 
+        # A trip crosses timezones; a calendar anchored to one of them is wrong
+        # everywhere else. The per-item zone wins, so a Porto Alegre departure
+        # and a New York show can sit in the same file, each in its own zone.
+        item_tz = item.get("timezone_name") or timezone_name
+        item_tz = str(item_tz) if item_tz else None
+
         local_fmt = "%Y%m%dT%H%M%S"
         dtstart, dtend = start_dt.strftime(local_fmt), end_dt.strftime(local_fmt)
 
@@ -465,9 +478,9 @@ async def build_calendar(
         ).hexdigest()[:16]
 
         lines += ["BEGIN:VEVENT", f"UID:{digest}@cosmo-travel-mcp", f"DTSTAMP:{stamp}"]
-        if timezone_name:
-            lines += [f"DTSTART;TZID={timezone_name}:{dtstart}",
-                      f"DTEND;TZID={timezone_name}:{dtend}"]
+        if item_tz:
+            lines += [f"DTSTART;TZID={item_tz}:{dtstart}",
+                      f"DTEND;TZID={item_tz}:{dtend}"]
         else:
             # No TZID and no Z = floating: renders at this wall-clock time in
             # whatever zone the device is in, which is what a traveller wants.
@@ -488,13 +501,14 @@ async def build_calendar(
             query["location"] = location
         if description:
             query["details"] = description
-        if timezone_name:
-            query["ctz"] = timezone_name
+        if item_tz:
+            query["ctz"] = item_tz
 
         events.append({
             "title": title,
             "start": start_dt.isoformat(timespec="minutes"),
             "end": end_dt.isoformat(timespec="minutes"),
+            "timezone_name": item_tz,
             "google_calendar_url": f"{_GCAL_BASE}?{urlencode(query)}",
         })
 
@@ -502,12 +516,20 @@ async def build_calendar(
 
     safe_name = re.sub(r"[^A-Za-z0-9_-]+", "-", calendar_name).strip("-").lower() or "trip"
 
-    note = (
-        "Times are floating local wall-clock (no timezone attached), so each "
-        "event shows at the stated time. "
-        if not timezone_name
-        else f"Times are anchored to {timezone_name}. "
-    )
+    # Report the zones actually used, not the argument that was passed — on a
+    # multi-city trip those differ, and the traveller needs to know which is
+    # which before importing.
+    zones = sorted({e["timezone_name"] for e in events if e["timezone_name"]})
+    floating = sum(1 for e in events if not e["timezone_name"])
+    if not zones:
+        note = ("Times are floating local wall-clock (no timezone attached), so each "
+                "event shows at the stated time. ")
+    elif len(zones) == 1 and not floating:
+        note = f"Times are anchored to {zones[0]}. "
+    else:
+        note = (f"Times span {len(zones)} timezones ({', '.join(zones)})"
+                + (f", plus {floating} floating item(s)" if floating else "")
+                + ". Each event carries its own zone. ")
     note += (
         "If a calendar tool is connected in this session, offer to add these "
         "events with it and confirm before writing. Otherwise share the .ics "

@@ -129,6 +129,56 @@ def brl(v) -> str:
     return f"R$ {v:,.0f}".replace(",", ".") if isinstance(v, (int, float)) else "—"
 
 
+# ------------------------------------------------------------------------ events
+# Shows are watched for a different reason than fares. A fare oscillates and the
+# question is "is it low"; a show is *published* and then *sells out*, and the
+# question is "is there something new in my window". So this half of the watch
+# reports arrivals, never prices — and it exists because the first sweep found
+# nothing at all on 31 December, the one night of this trip that cannot move.
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def window_tokens(start: str, end: str) -> set[str]:
+    """Every "Mon D" the provider could emit for a stay, matching its own format.
+
+    The engine returns ``start_date: "Dec 30"`` with no year, so the window is
+    matched on the provider's own tokens rather than on a date parsed out of a
+    string that does not carry one.
+    """
+    d0, d1 = date.fromisoformat(start), date.fromisoformat(end)
+    out, cur = set(), d0
+    while cur < d1:                       # check-out night is spent in the air
+        out.add(f"{_MONTHS[cur.month - 1]} {cur.day}")
+        cur = date.fromordinal(cur.toordinal() + 1)
+    return out
+
+
+def event_id(ev: dict) -> str:
+    title = " ".join(str(ev.get("title", "")).split()).casefold()
+    when = (ev.get("date") or {})
+    return f"{title}|{when.get('start_date', '')}"
+
+
+def sweep_events(key: str, watch: dict) -> list[dict]:
+    """One query, one page — deliberately cheap, run every week rather than deep."""
+    data = get("https://serpapi.com/search", {
+        "engine": "google_events",
+        "q": watch["query"],
+        "hl": "en", "gl": "us",
+        "api_key": key,
+    })
+    if data.get("error"):
+        return []
+    tokens = window_tokens(watch["window"]["from"], watch["window"]["to"])
+    hits = []
+    for ev in data.get("events_results") or []:
+        start = (ev.get("date") or {}).get("start_date", "")
+        if start in tokens:
+            hits.append(ev)
+    return hits
+
+
 def judge(leg: dict, today: float) -> tuple[str, str]:
     """Return (severity, message). Severity is strong | soft | unmeasured | quiet."""
     b = leg.get("baseline") or {}
@@ -175,14 +225,16 @@ def main() -> int:
     today_iso = date.today().isoformat()
 
     pending = [l for l in wl["legs"] if not l.get("purchased")]
-    if not pending:
-        log(f"{stamp}  nothing to watch — every leg is marked purchased")
+    sweeps = [w for w in wl.get("event_watches", []) if not w.get("done")]
+    cost = len(pending) + len(sweeps)     # one search each: 1 leg, 1 event query
+    if not cost:
+        log(f"{stamp}  nothing to watch — every leg is bought and every sweep is done")
         return 0
 
     reserve = wl.get("quota_reserve", 20)
     left = searches_left(key)
-    if left is not None and left - len(pending) < reserve:
-        log(f"{stamp}  SKIPPED: {left} searches left, {len(pending)} needed, "
+    if left is not None and left - cost < reserve:
+        log(f"{stamp}  SKIPPED: {left} searches left, {cost} needed, "
             f"reserve is {reserve}. A watch must never starve an interactive search.")
         return 0
 
@@ -219,6 +271,39 @@ def main() -> int:
         log(f"{stamp}  {leg.get('label')}: {brl(res['price'])} [{severity}]")
         if msg:
             alerts.append(msg)
+
+    # ── shows and events ──────────────────────────────────────────────
+    for watch in wl.get("event_watches", []):
+        if watch.get("done"):
+            continue
+        try:
+            hits = sweep_events(key, watch)
+        except Exception as exc:                       # noqa: BLE001
+            log(f"{stamp}  eventos {watch['city']}: request failed — {exc}")
+            continue
+
+        seen = set(watch.setdefault("seen", []))
+        fresh = [e for e in hits if event_id(e) not in seen]
+        watch["seen"] = sorted(seen | {event_id(e) for e in hits})
+        log(f"{stamp}  eventos {watch['city']}: {len(hits)} na janela, "
+            f"{len(fresh)} novo(s)")
+        if not fresh:
+            continue
+
+        linhas = []
+        for e in fresh:
+            when = (e.get("date") or {})
+            venue = (e.get("venue") or {}).get("name") or e.get("address") or ""
+            venue = venue[0] if isinstance(venue, list) else venue
+            linhas.append(f"- **{e.get('title')}** — {when.get('start_date','?')}"
+                          f"{', ' + when['when'] if when.get('when') else ''}"
+                          f"{' · ' + str(venue) if venue else ''}")
+        alerts.append(
+            f"**{watch['city']} — {len(fresh)} evento(s) novo(s) na sua janela**\n"
+            + "\n".join(linhas)
+            + "\n\nPublicado desde a última varredura. Ingressos de fim de ano "
+              "esgotam antes do resto da temporada."
+        )
 
     wl["last_run"] = today_iso
     path.write_text(json.dumps(wl, indent=2, ensure_ascii=False), encoding="utf-8")

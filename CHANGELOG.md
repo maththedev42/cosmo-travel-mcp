@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-03
+
+### Added
+
+- **A `plan-a-trip` skill** (`skills/plan-a-trip/`). The `plan_trip` prompt
+  says which tool to call; nothing said how to be right. The skill carries ten
+  method rules, each one a mistake made while planning a real 15-day, 3-city
+  trip: never compare entry doors on a single date, quote every candidate on
+  the same day, derive nights from flights rather than typing them, and so on.
+
+- **A price watch** (`skills/plan-a-trip/watch.py`). Standard library only, so
+  a scheduler runs it with the system Python. It re-prices every unpurchased
+  leg against a stored baseline and says which signal fired: `price_history`
+  is the floor that exact date has had, `typical_price_range` is the route
+  across the year, and the two are worded differently because they are not the
+  same claim. A leg with neither is reported *unmeasured*, never *fine*. It
+  skips its own run when the remaining quota would fall under a reserve.
+
+  It also watches shows: a fare oscillates and you ask *is it low*, but a show
+  is published and then sells out, so event watches report arrivals and never
+  prices.
+
+- **Per-item timezones in `build_calendar`.** Set `timezone_name` on an item
+  and a Porto Alegre departure, an Orlando show and a New York flight each
+  render in their own zone inside one file. The call-level argument is now
+  only the default for items that omit one.
+
+### Fixed
+
+- **`check_itinerary` passed stops nobody had checked.** A scheduled stop with
+  no `operating_hours` skipped every check and was counted as clean, while the
+  docstring promised the opposite: "an empty findings list means every stop was
+  verifiable". It bit hardest on the stops an itinerary is built around, since
+  `search_events` returns a date and a venue but no hours — a New Year's Eve
+  street party, a concert and a theatre show all came back verified when
+  nothing had looked at them. Such a stop is now an `unchecked` finding with
+  reason `hours_missing`. An entry with no start time stays quiet: it is a
+  note, not a claim about opening.
+
+  Seven tests were encoding the old behaviour by passing coordinates without
+  hours. They now supply an always-open map, so each still tests the one thing
+  it names.
+
+- **Anchoring a whole calendar to one timezone.** `build_calendar` took a
+  single `timezone_name` for the file, so a multi-city trip showed every event
+  in one city's clock — a 01:35 departure from Porto Alegre rendered as 01:35
+  in New York. See the per-item zone above.
+
 ### Fixed
 
 - **The booking phase returned nothing usable.** `_parse_booking_options` read

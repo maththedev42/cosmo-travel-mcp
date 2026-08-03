@@ -409,3 +409,54 @@ async def test_unscheduled_note_without_hours_stays_quiet():
 
     assert result["findings"] == []
     assert result["stops_checked"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Per-item timezones — a trip crosses zones, a calendar file does not
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_each_item_can_carry_its_own_timezone():
+    """A Porto Alegre departure and a New York show in one file, each correct.
+
+    Anchoring the whole calendar to one zone showed the 01:35 POA departure as
+    01:35 in New York — four hours off, on the item a traveller most needs right.
+    """
+    result = await build_calendar([
+        {"title": "POA → Panamá", "start": "2026-12-20T01:35", "end": "2026-12-20T06:45",
+         "timezone_name": "America/Sao_Paulo"},
+        {"title": "Réveillon na Times Square", "start": "2026-12-31T18:00",
+         "end": "2027-01-01T00:30", "timezone_name": "America/New_York"},
+    ])
+
+    assert "DTSTART;TZID=America/Sao_Paulo:20261220T013500" in result["ics"]
+    assert "DTSTART;TZID=America/New_York:20261231T180000" in result["ics"]
+    assert "ctz=America%2FSao_Paulo" in result["events"][0]["google_calendar_url"]
+    assert "ctz=America%2FNew_York" in result["events"][1]["google_calendar_url"]
+    assert "2 timezones" in result["note"]
+
+
+@pytest.mark.asyncio
+async def test_item_timezone_overrides_the_call_level_default():
+    result = await build_calendar(
+        [
+            {"title": "Voo de casa", "start": "2026-12-20T01:35",
+             "timezone_name": "America/Sao_Paulo"},
+            {"title": "Show", "start": "2026-12-31T18:00"},
+        ],
+        timezone_name="America/New_York",
+    )
+
+    assert result["events"][0]["timezone_name"] == "America/Sao_Paulo"
+    assert result["events"][1]["timezone_name"] == "America/New_York"
+
+
+@pytest.mark.asyncio
+async def test_no_timezone_anywhere_stays_floating():
+    result = await build_calendar([{"title": "Almoço", "start": "2026-12-20T12:00"}])
+
+    assert "TZID" not in result["ics"]
+    assert "DTSTART:20261220T120000" in result["ics"]
+    assert result["events"][0]["timezone_name"] is None
+    assert "floating" in result["note"]
