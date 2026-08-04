@@ -303,6 +303,11 @@ the walk-through for adding a new tool.
 
 See [CHANGELOG.md](./CHANGELOG.md) for the release history.
 
+## More of what I build
+
+This is one of several. The apps and tools I work on live at
+**[cosmohq.org](https://cosmohq.org)** — have a look if you want the rest.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE). Copyright (c) 2026 Matheus Weber.
