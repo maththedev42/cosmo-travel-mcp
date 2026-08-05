@@ -318,10 +318,17 @@ def render(data: dict, notes: list[str]) -> str:
                     f'60-day low {m(leg["history_low"])}</span>'
                     if leg.get("history_low") else '')
             bought = ' <span class="pill ok">bought</span>' if leg.get("purchased") else ''
+            # A leg's price is only actionable next to the place you buy it.
+            # `links` is a list of {label, url}; absent means no link, never a
+            # guessed one — a fabricated booking URL is worse than none.
+            buy = "".join(
+                f' · <a href="{escape(lk["url"])}">{escape(lk["label"])}</a>'
+                for lk in leg.get("links", []))
+            buy = (f'<br><span style="font-size:.8rem">{buy[3:]}</span>') if buy else ''
             a(f'<tr data-dim="{owners}"><td><strong>{escape(leg["label"])}</strong>{bought}'
               f'<br><span class="mono" style="font-size:.78rem;color:var(--muted)">'
               f'{sd(leg["date"])} · candidate{"s" if len(leg["candidates"]) > 1 else ""} '
-              f'{", ".join(str(c) for c in leg["candidates"])}</span></td>'
+              f'{", ".join(str(c) for c in leg["candidates"])}</span>{buy}</td>'
               f'<td class="num">{m(leg["price"])}</td>'
               f'<td class="num">{rng_txt}{hist}</td>'
               f'<td>{signal_pill(leg)}</td>'
