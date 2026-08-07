@@ -2,9 +2,9 @@
 
 # cosmo-travel-mcp
 
-One MCP server with eleven travel tools — flight search, multi-city itineraries,
-accommodations, things to do, events, drive-vs-fly comparisons, itinerary checking
-and calendar export — all backed
+One MCP server with twelve travel tools — flight search, multi-city itineraries,
+accommodations, things to do, events, car rental offices, drive-vs-fly comparisons,
+itinerary checking and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
 API for driving). Both providers offer a free tier that is sufficient for personal
 use: SerpAPI gives 100 searches/month and Google Maps Routes API includes a monthly
@@ -57,9 +57,10 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks seven of the eleven tools: `search_flights`,
+This one key unlocks eight of the twelve tools: `search_flights`,
 `search_multi_city`, `search_accommodations`, `get_accommodation_details`,
-`search_cheapest_dates`, `search_events`, and `search_things_to_do`.
+`search_cheapest_dates`, `search_events`, `search_things_to_do`, and
+`search_car_rentals`.
 `check_itinerary` and `build_calendar` need no key at all — they are pure
 computation and cost nothing.
 
@@ -236,6 +237,7 @@ not something the MCP server starts on its own.
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?`, `sort_by?`, `min_rating?`, `hotel_class?`, `free_cancellation?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. Filters: `sort_by` (lowest_price/highest_rating/most_reviewed), `min_rating` (3.5/4.0/4.5), `hotel_class` (2–5), `free_cancellation`. |
 | `search_events` | `query`, `when?`, `also_search?`, `pages?`, `country?`, `language?` | Events (concerts, shows, sports, festivals) at a destination via SerpAPI. One query returns one slice of the corpus, so `pages` (1–5) and `also_search` (up to 6 extra query angles) sweep wider and deduplicate — on Porto Alegre a default call found 9 events where a sweep found 20. **Costs up to `pages × (1 + len(also_search))` searches** — fewer when a page is cached or an angle runs dry — with the actual figure reported as `searches_used`. |
 | `search_things_to_do` | `location`, `category?`, `min_rating?`, `limit?`, `country?`, `language?` | What to do in a city, via SerpAPI Google Maps engine. `category` is one of attractions, museums, parks, landmarks, shopping, nightlife, restaurants, cafes, bars (default `attractions`). Each result carries `operating_hours` (per weekday) and `coordinates`, which is what a day-by-day itinerary is built from; food categories add price range, description and a reservation link. Costs 1 search per call. |
+| `search_car_rentals` | `location`, `min_rating?`, `limit?`, `country?`, `language?` | Car rental **offices** near a place, via SerpAPI Google Maps engine — locations, per-weekday `operating_hours`, `website` and `phone`. **Returns no rates:** no free provider exposes car rental pricing, so hand the traveller the `website` and treat the rate as unmeasured until they report one back. Its value is choosing *where* to collect: an airport counter typically runs 24 hours while a neighbourhood branch closes on Sundays. Hours are the regular weekly schedule and do not cover holidays — confirm a 25 December pickup on the phone. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration + toll estimates via Google Maps Routes API. Tolls are fetched from ``computeRoutes`` with ``extraComputations: ["TOLLS"]`` and degrade gracefully when unavailable. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
 | `search_cheapest_dates` | `origin`, `destination`, `earliest_departure`, `latest_return`, `trip_duration_days`, `max_calls?` (default 6, max 15), `adults?`, `children?`, `cabin_class?`, `currency?` | Samples candidate dates across a flexible window and returns cheapest round-trip per date. **Costs up to `max_calls` SerpAPI searches per call.** |
 | `check_itinerary` | `days` ([{date, stops:[{name, start, end, operating_hours?, coordinates?}]}]) | Checks a drafted itinerary for conflicts: stops on a closing day, visits outside opening hours, overlapping stops, and gaps too short to cross the distance. Returns findings (`blocker` / `warning` / `unchecked`), not prose. **Costs nothing — no API calls.** |
@@ -268,6 +270,7 @@ time if you need a different TTL — the default is 600 (10 minutes).
 | `get_accommodation_details` | 1 | 0 | Drill into a single property from `search_accommodations`. |
 | `search_events` | `(1 + len(also_search)) × pages` | 0 | Default call is 1. A coverage sweep (`pages=2`, two extra angles) is 6 — the response reports `searches_used`. |
 | `search_things_to_do` | 1 | 0 | One per city, per category. A 3-city trip asking for attractions and food is 6 searches. |
+| `search_car_rentals` | 1 | 0 | One per pickup area. Comparing an airport against a downtown branch is 2. |
 | `check_itinerary` | 0 | 0 | Pure computation. |
 | `build_calendar` | 0 | 0 | Pure computation. |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |

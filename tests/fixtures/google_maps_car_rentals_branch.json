@@ -1,0 +1,472 @@
+{
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Super Nice Rent a Car",
+      "place_id": "ChIJ0d0s6_-52YgRgQkBVuH1oYs",
+      "data_id": "0x88d9b9ffeb2cddd1:0x8ba1f5e156010981",
+      "data_cid": "10061593390681753985",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b9ffeb2cddd1%3A0x8ba1f5e156010981&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b9ffeb2cddd1%3A0x8ba1f5e156010981&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7999397,
+        "longitude": -80.2598026
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJ0d0s6_-52YgRgQkBVuH1oYs",
+      "provider_id": "/g/11cssv7c70",
+      "rating": 4.6,
+      "reviews": 1408,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency"
+      ],
+      "address": "2607 NW 39th Ave, Miami, FL 33142",
+      "country": "United States",
+      "open_state": "Open 24 hours",
+      "hours": "Open 24 hours",
+      "operating_hours": {
+        "friday": "Open 24 hours",
+        "saturday": "Open 24 hours",
+        "sunday": "Open 24 hours",
+        "monday": "Open 24 hours",
+        "tuesday": "Open 24 hours",
+        "wednesday": "Open 24 hours",
+        "thursday": "Open 24 hours"
+      },
+      "phone": "(786) 832-6723",
+      "website": "https://supernicerentacar.com/",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Good service, good prices, good vehicles\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmfZW2h1MCKcROw8kq8zFnuLiBLDX9f5Msyi9NH_TFW_10Emvarvn6MM4_Ai3FJmjAiNmN9-qiDh6Kz85NSIY3jkF9rzppSCmV5-dVMroNBBczm964EqlkBbd1m-laSkjvQc73sRQ=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/xQjDwHicHcRJDoIwAADAF1VAFqmJB1CJW6uCEfVCtCIt0BYoYuSHPsHfmDiH-X5o21ZqrGklNQeZlFmZPlXaECnaVLQDIrmWVQoQBZTmLcLdIeaPSzykBpquSbh9uUXt9oF4bpi_mZ3gw0bqzSBeJIcgTgx9zrtr0wkHISvxmBmseO4xzDEENZtRZ927No6WZzMvAtj0VRVN-dEG9yNqJPZ90nPoWPO6LPzb3eCgvEZF3u3JyFThfvIydF0H9D8B4gettkSq"
+    },
+    {
+      "position": 2,
+      "title": "Enterprise Rent-A-Car",
+      "place_id": "ChIJjThBnku32YgROQAiWK8JLvM",
+      "data_id": "0x88d9b74b9e41388d:0xf32e09af58220039",
+      "data_cid": "17522953848847728697",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b74b9e41388d%3A0xf32e09af58220039&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b74b9e41388d%3A0xf32e09af58220039&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.796916099999997,
+        "longitude": -80.259794
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJjThBnku32YgROQAiWK8JLvM",
+      "provider_id": "/g/1thky1j7",
+      "rating": 4.4,
+      "reviews": 7287,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency",
+        "Van rental agency"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency",
+        "van_rental_agency"
+      ],
+      "address": "3900 NW 25th St, Miami, FL 33142",
+      "country": "United States",
+      "open_state": "Open · Closes 1 AM",
+      "hours": "Open · Closes 1 AM",
+      "operating_hours": {
+        "friday": "5 AM–1 AM",
+        "saturday": "5 AM–1 AM",
+        "sunday": "5 AM–1 AM",
+        "monday": "5 AM–1 AM",
+        "tuesday": "5 AM–1 AM",
+        "wednesday": "5 AM–1 AM",
+        "thursday": "5 AM–1 AM"
+      },
+      "phone": "(833) 479-1096",
+      "website": "https://www.enterprise.com/en/car-rental-locations/us/fl/miami-international-airport-41am.html?mcid=yext:245709",
+      "extensions": [
+        {
+          "from_the_business": [
+            "Identifies as women-owned"
+          ]
+        },
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking lot"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"I rented a car without a reservation, and the process was quick and smooth.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnLUOUERf9xVnOfmZYVj70JZck-SmaFMrmEsiul5gX0U0HRd4aeCBoaXbzAYfnNoO33j02MJUrS5xgay91x8-z6PS19asjDPnZM8ZYdnuvfbeXCADtzD39_tvfVPG40kpTIaZHcdw=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/qgiQHnicHcRRboIwAADQE1XKUCdL9oGgopFBQBD6Y2ppyxBaQosiN_QI3mbJ3sd7vyqtO_VlGE1lzbiUvKGDoj2RQlOhZ0S2Bu8UIAoow_Hj6HQWxzRMNzGzx0yErEVFVn_CAyI3kLR4G_TtRv0OzYLnMIV-XM4xddcS59fJKZj4kaFl1fAjOKR9shg5ftrmuALTMkpMG6vaiwQKVqgoxXBnV5q7jqcnz7Iv-s6yaDeHt-60x8gn5eP7YUIIQfU_AeIP6qhFXw"
+    },
+    {
+      "position": 3,
+      "title": "SIXT Car Rental - Miami International Airport (MIA)",
+      "place_id": "ChIJu6lryki32YgRK5EG4VECJhg",
+      "data_id": "0x88d9b748ca6ba9bb:0x18260251e106912b",
+      "data_cid": "1740080856716185899",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b748ca6ba9bb%3A0x18260251e106912b&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b748ca6ba9bb%3A0x18260251e106912b&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7969552,
+        "longitude": -80.260881
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJu6lryki32YgRK5EG4VECJhg",
+      "provider_id": "/g/1hc1429m2",
+      "rating": 4.2,
+      "reviews": 11964,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency",
+        "Van rental agency"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency",
+        "van_rental_agency"
+      ],
+      "address": "Rental Car Center, 3900 NW 25th St #414, Miami, FL 33142",
+      "country": "United States",
+      "open_state": "Open 24 hours",
+      "hours": "Open 24 hours",
+      "operating_hours": {
+        "friday": "Open 24 hours",
+        "saturday": "Open 24 hours",
+        "sunday": "Open 24 hours",
+        "monday": "Open 24 hours",
+        "tuesday": "Open 24 hours",
+        "wednesday": "Open 24 hours",
+        "thursday": "Open 24 hours"
+      },
+      "phone": "(888) 749-8227",
+      "website": "https://www.sixt.com/car-rental/usa/miami-fl/miami-international-airport/?utm_source=google_business&utm_medium=organic&utm_campaign=Listings&c1=US&c2=miami-fl&c3=miami-international-airport",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "parking": [
+            "Free parking lot",
+            "Paid parking garage",
+            "Paid parking lot"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Good service, got the exact car I reserved, friendly staff\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkO4pqdnRoRKV1qGDbwzTYQipW4un7tc2Ro4ATEbK3Cznoq8SGFPuDPZQR26ly1ynPPai8yTcY3AgiqyDgoGVLmm0GUxn_iWLsPolQ0CffX9Elpr_SAfN1iiu9A9lcRQttUnznR=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/u1ezfnicHcTRboIwFADQL0KKECcme2hEWaLRUlHGXoxWKI3l3mJLHPyg3-DfLNl5OO9X45yxC9_XTTiRiFJXva0eAsFV4CYCW18a6wnrWZ9-cZYX931kuhtw5JtT0KXJ9TnmZaZMEfXw4cSUY0Tz1XUTLkfAbn5I16xP2E_GpzM9BAMwdlHzIRdlSKXqhkRietq2LUmPv3BWxdYy1BlZ1vV3vNLmcT7Qehco1cc01oJnzh1hBP75DAghXvO_8OAPv_pGEQ"
+    },
+    {
+      "position": 4,
+      "title": "Hertz Car Rental",
+      "place_id": "ChIJKwGL6cyw2YgRiGpg5CRqBBU",
+      "data_id": "0x88d9b0cce98b012b:0x15046a24e4606a88",
+      "data_cid": "1514452081386220168",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b0cce98b012b%3A0x15046a24e4606a88&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b0cce98b012b%3A0x15046a24e4606a88&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7965321,
+        "longitude": -80.2595662
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJKwGL6cyw2YgRiGpg5CRqBBU",
+      "provider_id": "/g/1pp2vbpj8",
+      "rating": 3.5,
+      "reviews": 4578,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency"
+      ],
+      "address": "3900 NW 25th St Suite 410, Miami, FL 33142",
+      "country": "United States",
+      "open_state": "Open · Closes 3 AM",
+      "hours": "Open · Closes 3 AM",
+      "operating_hours": {
+        "friday": "5 AM–3 AM",
+        "saturday": "5 AM–3 AM",
+        "sunday": "5 AM–3 AM",
+        "monday": "5 AM–3 AM",
+        "tuesday": "5 AM–3 AM",
+        "wednesday": "5 AM–3 AM",
+        "thursday": "5 AM–3 AM"
+      },
+      "phone": "(305) 871-0300",
+      "website": "https://www.hertz.com/us/en/location/unitedstates/florida/miami/miat15?utm_campaign=gmb-Hertz-Car-Rental---Miami-International-Airport-&utm_medium=gmb-websitelink&utm_source=Google",
+      "extensions": [
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "parking": [
+            "Free parking lot",
+            "Paid parking lot"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Renting process was quite fast, the car was easily upgraded.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlE4nHmRzl5cMFuoyrPf9tw1AXG2zhe4Nq1rgbBdNKNgRTxTvrpIlJepTnGXER1VMkPaipd4fPCrb1VA6YVGV0O5bcT1sOzn910086xwYWAksT7PPRZtv-P237PeodNZCa7bypI1w=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/LC-XA3icHcrbDoIgAADQLyIlLautB3Nll2WMMbu8KRK2CAgo0z_sE_qbWi_n6XzetXPaTjxP1EGPK8UFe1hmqJKOSdej6uZxbQG1wHrxEiOyF_NQLm-4EwO6XTxUa9B57BoYH9J-V7Mwu0PDy1mVbTKOyYs8jV6JNdNEpoc5hvn2ioqLrsIzSkwJ83h4zNPc3w1KSqDddXIMfX80fDXHfXy1JEIIn9wToH4QIaaq7JQUUdnqFWymzW_6oP5LgfwCGI5FHA"
+    },
+    {
+      "position": 5,
+      "title": "Rent Smart Car Rental",
+      "place_id": "ChIJ5f1u2k632YgRKVQryrd-oLU",
+      "data_id": "0x88d9b74eda6efde5:0xb5a07eb7ca2b5429",
+      "data_cid": "13087599844974613545",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b74eda6efde5%3A0xb5a07eb7ca2b5429&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b74eda6efde5%3A0xb5a07eb7ca2b5429&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.8001471,
+        "longitude": -80.2607209
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJ5f1u2k632YgRKVQryrd-oLU",
+      "provider_id": "/g/11f2b54l2m",
+      "rating": 4.9,
+      "reviews": 3225,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency",
+        "Car dealer",
+        "Carpooling location"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency",
+        "car_dealer",
+        "carpool"
+      ],
+      "address": "3930 NW 27th St, Miami, FL 33142",
+      "country": "United States",
+      "open_state": "Open · Closes 10 PM",
+      "hours": "Open · Closes 10 PM",
+      "operating_hours": {
+        "friday": "7 AM–10 PM",
+        "saturday": "7 AM–10 PM",
+        "sunday": "7 AM–10 PM",
+        "monday": "7 AM–10 PM",
+        "tuesday": "7 AM–10 PM",
+        "wednesday": "7 AM–10 PM",
+        "thursday": "7 AM–10 PM"
+      },
+      "phone": "(786) 272-5447",
+      "website": "https://www.rentsmartrac.com/?utm_source=gmb&utm_medium=organic&utm_campaign=gmb_website",
+      "extensions": [
+        {
+          "from_the_business": [
+            "Identifies as Latino-owned"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot",
+            "Wheelchair accessible seating"
+          ]
+        },
+        {
+          "crowd": [
+            "LGBTQ+ friendly",
+            "Transgender safespace"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking lot"
+          ]
+        }
+      ],
+      "user_review": "\"Great price, easy to pay, great car and great service.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnfam7yFBh7XTfwtQ5EHVzfb1n0odUQOoqxxxW7YJBvpSqm5QX9HBK6VHU-aTRydtnSfoMzdwPySrTRGC5s8Tw-sNspXYScYIjfwFY5VudLE7szm6Og0O-nKpC7Gavr0oBNCAKHow=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/FbsXyXicHcTRboIwFADQL6rULFi3ZA9C1Do2EagIj6xQyCK9lVst8If7hP2Nyc7D-fvtrDX45nnX7mXRArTX5o7NIEHbRtuFhN5rDRKJBL0NT0_iolXVs2kXdKwQytnE3_J8Vt9LTaE-JzHcxnG8sPIjeJjs1vtJ8cqDaJXzM6lEOtVWZwq-5tqdpmwQ6T70cS0cwSOaosxkefhRblf6-b3-3DKc-1Xc0pjoyIRsXz0GCsEx3EQc3LtbUkpJ978k-glq-EZg"
+    },
+    {
+      "position": 6,
+      "title": "Enterprise Rent-A-Car",
+      "place_id": "ChIJPVgx7Ri32YgRbFzi3VuRjwg",
+      "data_id": "0x88d9b718ed31583d:0x88f915bdde25c6c",
+      "data_cid": "616871497723698284",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x88d9b718ed31583d%3A0x88f915bdde25c6c&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x88d9b718ed31583d%3A0x88f915bdde25c6c&engine=google_maps_photos&hl=en",
+      "gps_coordinates": {
+        "latitude": 25.7820984,
+        "longitude": -80.2396682
+      },
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJPVgx7Ri32YgRbFzi3VuRjwg",
+      "provider_id": "/g/1tfk9tw4",
+      "rating": 3.8,
+      "reviews": 379,
+      "type": "Car rental agency",
+      "types": [
+        "Car rental agency",
+        "Van rental agency"
+      ],
+      "type_id": "car_rental_agency",
+      "type_ids": [
+        "car_rental_agency",
+        "van_rental_agency"
+      ],
+      "address": "940 NW 27th Ave, Miami, FL 33125",
+      "country": "United States",
+      "open_state": "Open · Closes 6 PM",
+      "hours": "Open · Closes 6 PM",
+      "operating_hours": {
+        "friday": "7:30 AM–6 PM",
+        "saturday": "9 AM–1 PM",
+        "sunday": "Closed",
+        "monday": "7:30 AM–6 PM",
+        "tuesday": "7:30 AM–6 PM",
+        "wednesday": "7:30 AM–6 PM",
+        "thursday": "7:30 AM–6 PM"
+      },
+      "phone": "(305) 644-6161",
+      "website": "https://www.enterprise.com/en/car-rental-locations/us/fl/miami-little-havana-41j1.html?mcid=yext:245709",
+      "extensions": [
+        {
+          "from_the_business": [
+            "Identifies as women-owned"
+          ]
+        },
+        {
+          "service_options": [
+            "Onsite services"
+          ]
+        },
+        {
+          "highlights": [
+            "Active military discounts"
+          ]
+        },
+        {
+          "accessibility": [
+            "Wheelchair accessible entrance",
+            "Wheelchair accessible parking lot"
+          ]
+        },
+        {
+          "payments": [
+            "Credit cards",
+            "Debit cards",
+            "NFC mobile payments"
+          ]
+        },
+        {
+          "parking": [
+            "Paid parking lot"
+          ]
+        }
+      ],
+      "service_options": {
+        "onsite_services": true
+      },
+      "user_review": "\"Great experience, very professional, good and clean car.\"",
+      "thumbnail": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWn1FWhbJKmZ_AM_zfF4q-FHI27vllfDImiWJo-1dx-DGfb0ji4QNYNHsRn_p9l6sbI4MNBh4nWPYXf9IG0VJQwuenLqhUPUSQiArBwrXY3VxqJBJgmhGQlz1AYb3O-2pdHvUO1G9r9q31nF=w1000-h1000-c-n",
+      "serpapi_thumbnail": "https://serpapi.com/images/url/zZ7YFXicHcRJDoIwAADAFxVaIRpMPEAIS5VNZfNCwlpMaYGiGD_p2d-YOIf5fsiyjGIvy5QoUsd5R5uHaOaKs6Vhi1TxQe5GASoBhKw75_CaMmSlpMTH4VboXvFuLXUCluNudk9KW9Md-hRzgOoXMO22hPdejfzcd8SZFaNGt6J0Vc83iMrSMM9azbVhgqP10bDTROIwvkS9PhvrnOVK8pqwgbuB2BF9Iz0vlQBsxtp5xgGytVmbFMSsw4oghID8rwD7AVADRlM"
+    }
+  ]
+}

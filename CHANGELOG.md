@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`search_car_rentals`** — car rental offices near a place: locations,
+  per-weekday `operating_hours`, `website` and `phone`, via the SerpAPI
+  `google_maps` engine. 1 search per call.
+
+  It returns **no rates**, deliberately. No free provider exposes car rental
+  pricing: SerpAPI has no car rental engine at all, Amadeus' Self-Service
+  "Cars and Transfers" is chauffeured transfers rather than self-drive, and the
+  Booking.com Demand and Expedia Rapid car APIs are gated behind vetted partner
+  programmes. Rates are contracted per partner, so the gap is structural. The
+  tool hands over the office's `website` instead and leaves the quote to the
+  traveller — a `notes.pricing` field says so in the response, because a client
+  model that only sees results will otherwise estimate one.
+
+  What it is actually for is choosing *where* to collect the car. An airport
+  counter commonly runs 24 hours while a neighbourhood branch closes on Sundays,
+  and a pickup booked at a branch that is shut fails on the one day nothing can
+  be done about it. `notes.holiday_hours` states the matching limit: these are
+  regular weekly hours, Google does not report holiday exceptions here, so a
+  25 December pickup has to be confirmed on the phone that sits beside them.
+
+  The shared place normalizer maps Google's price *level* (`"$$"`) to
+  `price_range`/`price_from`; on a rental office that is a vague expensiveness
+  hint one step away from being read as a daily rate, so both keys are stripped
+  and a test guards it.
+
 - **`skills/plan-a-trip/render.py`** — turns a researched trip into one
   self-contained HTML page (inline CSS/JS, no assets, no server) where the
   candidate itineraries are buttons that re-filter the whole document. Reads a
