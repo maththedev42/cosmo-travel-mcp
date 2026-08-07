@@ -39,11 +39,32 @@ Only the PyPI project owner (`maththedev42`) needs to do this once.
    ```
 5. Watch the **Publish to PyPI** workflow at
    https://github.com/maththedev42/cosmo-travel-mcp/actions/workflows/publish.yml.
-   It runs the full test suite first, then builds and publishes.
+   Three jobs run in order: the full test suite, then build + publish, then the
+   GitHub Release.
 6. Once published, users can install with:
    ```bash
    uv tool install cosmo-travel-mcp
    ```
+
+### The GitHub Release is automatic
+
+The `github_release` job creates it from the tag, with the body taken from
+this version's `CHANGELOG.md` section — so step 2 above is what the release
+page ends up saying, and there is nothing to write twice.
+
+It runs **after** `publish` deliberately. A release page for a version that
+never reached PyPI would point people at an install command that fails.
+
+`scripts/release_notes.py` does the extraction and **exits non-zero when the
+section is missing or empty**, which fails the job rather than publishing a
+release with a blank body. To see what a release will say before tagging:
+
+```bash
+python3 scripts/release_notes.py v1.2.0
+```
+
+Releases for `v1.0.0` … `v1.2.0` were created retroactively with the same
+script, so every tag has one.
 
 ## Manual publish (fallback)
 
