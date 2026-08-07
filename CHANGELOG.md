@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-07
+
 ### Added
 
 - **`search_car_rentals`** — car rental offices near a place: locations,
@@ -263,5 +265,7 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.2.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.0
+[1.1.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.1.0
 [1.0.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.0
