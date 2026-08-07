@@ -52,3 +52,32 @@ jobs:
       - run: uv build
 
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # A GitHub Release is an announcement, so it waits on `publish`: a release
+  # page for a version that never reached PyPI would send people to an install
+  # command that fails.
+  github_release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag name reaches the shell through the environment rather than
+      # `${{ }}` interpolation. Interpolating it would splice whatever the tag
+      # is named straight into the command line.
+      - name: Build the release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: python3 scripts/release_notes.py "$TAG" > release-notes.md
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            --verify-tag
