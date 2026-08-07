@@ -47,6 +47,25 @@ every PR must preserve the dual-state guarantee.
   (see `git log --oneline` for the house style).
 - The full suite must be green before committing. Run both env states.
 
+## Getting a change onto `main`
+
+`main` is covered by a ruleset. It cannot be pushed to directly, force-pushed,
+or deleted — by anyone, maintainer included. Every change arrives through a
+pull request that has both `test (3.11)` and `test (3.12)` green.
+
+Pull requests require **one approving review**. GitHub refuses to let an author
+approve their own pull request, so for a solo maintainer that rule would be a
+deadlock; the repository-admin role is therefore a bypass actor in
+`bypass_mode: pull_request`. Read plainly, that means:
+
+- an outside contributor's PR needs a real approval, and
+- the maintainer can merge their own PR without one, but still cannot push to
+  `main` directly.
+
+So the approval requirement is genuine for contributions and is, honestly, a
+formality on the maintainer's own work. The gate that actually holds on every
+change regardless of author is CI plus the no-direct-push rule.
+
 ## Adding a new tool
 
 The internal architecture is deliberately flat — every tool is a module in
@@ -71,8 +90,14 @@ takes about six touch-points, all predictable:
 
 3. **Gate it in `onboarding.py`** — add the tool name to either
    `SERPAPI_TOOLS` or `MAPS_TOOLS` (or neither, if it needs no API key).
-   This keeps the `missing_key_message`, `check_setup`, and the CLI setup
-   walk-through in sync.
+
+   This step used to be documented and nothing more, so it drifted:
+   `search_things_to_do` was absent from `SERPAPI_TOOLS` for three releases
+   and `search_car_rentals` was added the same way. It is now enforced by
+   `test_serpapi_tools_lists_every_serpapi_gated_tool`, which compares the
+   constant against what `check_setup` actually gates rather than naming
+   tools one at a time — the per-tool drift tests below it only ever caught
+   the tools somebody remembered to write a test for.
 
 4. **Gate it in `tools/setup.py`** — add a status dict to `check_setup()`
    and wire it into the `search_parameters` or driving-status block so the
@@ -95,7 +120,11 @@ Each module is self-contained and the wiring is explicit.
 | `src/cosmo_travel_mcp/server.py` | `FastMCP` instance, tool registration, server instructions |
 | `src/cosmo_travel_mcp/onboarding.py` | Single source of truth for URLs, env-var names, key-acquisition steps, registration commands, and setup-guide text |
 | `src/cosmo_travel_mcp/tools/flights.py` | `search_flights`, `search_multi_city`, `search_cheapest_dates`, shared `_call_serpapi` (+ retry), `_build_base_params`, and all flight response parsers |
-| `src/cosmo_travel_mcp/tools/hotels.py` | `search_accommodations` (google_hotels engine) |
+| `src/cosmo_travel_mcp/tools/hotels.py` | `search_accommodations`, `get_accommodation_details` (google_hotels engine) |
+| `src/cosmo_travel_mcp/tools/places.py` | `search_things_to_do` (google_maps engine) + `_parse_place`, shared with car rentals |
+| `src/cosmo_travel_mcp/tools/car_rentals.py` | `search_car_rentals` — offices, hours and contacts; never rates |
+| `src/cosmo_travel_mcp/tools/events.py` | `search_events` (google_events engine) |
+| `src/cosmo_travel_mcp/tools/itinerary.py` | `check_itinerary`, `build_calendar` — no API calls |
 | `src/cosmo_travel_mcp/tools/driving.py` | `compare_drive_or_fly` (Routes API `computeRouteMatrix`) |
 | `src/cosmo_travel_mcp/tools/setup.py` | `check_setup` tool, `probe_serpapi`, `probe_maps` |
 | `src/cosmo_travel_mcp/tools/prompts.py` | `plan_trip` MCP prompt |
