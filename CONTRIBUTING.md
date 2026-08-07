@@ -88,37 +88,40 @@ takes about six touch-points, all predictable:
    `register(mcp)` inside `main()`, keeping the existing alphabetical-ish
    ordering.
 
-3. **Gate it in `onboarding.py`** — add the tool name to either
-   `SERPAPI_TOOLS` or `MAPS_TOOLS` (or neither, if it needs no API key).
+3. **Add it to the registry in `onboarding.py`** — put the tool name in
+   `SERPAPI_TOOLS`, `MAPS_TOOLS` or `KEYLESS_TOOLS`, whichever gates it.
 
-   This step used to be documented and nothing more, so it drifted:
-   `search_things_to_do` was absent from `SERPAPI_TOOLS` for three releases
-   and `search_car_rentals` was added the same way. It is now enforced by
-   `test_serpapi_tools_lists_every_serpapi_gated_tool`, which compares the
-   constant against what `check_setup` actually gates rather than naming
-   tools one at a time — the per-tool drift tests below it only ever caught
-   the tools somebody remembered to write a test for.
+   `check_setup` builds its per-tool readiness report straight from these
+   tuples, so this one edit is what makes the tool appear in the "what can I
+   use right now" surface. There is no second list to keep in step.
 
-4. **Gate it in `tools/setup.py`** — add a status dict to `check_setup()`
-   and wire it into the `search_parameters` or driving-status block so the
-   health check reports whether the tool is ready.
+   It did not always work that way. The tuples were documentation shaped like
+   code until 1.2.1 — nothing in `src/` read them, while `check_setup` wrote
+   the same mapping out by hand beside them. They drifted:
+   `search_things_to_do` was absent for three releases and `search_car_rentals`
+   went the same way, with no surface noticing.
+   `test_every_registered_tool_belongs_to_exactly_one_key_group` now compares
+   the registry against what actually gets registered on the server.
 
-5. **Add a README row** in the tools table (name, parameters, one-line
+4. **Add a README row** in the tools table (name, parameters, one-line
    description).
 
-6. **Docstring quota cost** — if the tool calls SerpAPI or Maps, document
+5. **Docstring quota cost** — if the tool calls SerpAPI or Maps, document
    in the docstring exactly how many searches/API calls it spends per
    invocation, so callers can budget against the free tiers.
 
 That's it. No DI container, no plugin registry, no adapter interfaces.
 Each module is self-contained and the wiring is explicit.
 
+(There used to be a sixth touch-point: hand-writing a status dict inside
+`check_setup`. Wiring the registry up removed it.)
+
 ## Code map
 
 | File | What lives there |
 |---|---|
 | `src/cosmo_travel_mcp/server.py` | `FastMCP` instance, tool registration, server instructions |
-| `src/cosmo_travel_mcp/onboarding.py` | Single source of truth for URLs, env-var names, key-acquisition steps, registration commands, and setup-guide text |
+| `src/cosmo_travel_mcp/onboarding.py` | Single source of truth for URLs, env-var names, key-acquisition steps, registration commands, setup-guide text, and the tool registry (`SERPAPI_TOOLS` / `MAPS_TOOLS` / `KEYLESS_TOOLS`) that `check_setup` reports from |
 | `src/cosmo_travel_mcp/tools/flights.py` | `search_flights`, `search_multi_city`, `search_cheapest_dates`, shared `_call_serpapi` (+ retry), `_build_base_params`, and all flight response parsers |
 | `src/cosmo_travel_mcp/tools/hotels.py` | `search_accommodations`, `get_accommodation_details` (google_hotels engine) |
 | `src/cosmo_travel_mcp/tools/places.py` | `search_things_to_do` (google_maps engine) + `_parse_place`, shared with car rentals |
