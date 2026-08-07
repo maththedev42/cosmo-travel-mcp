@@ -32,6 +32,7 @@ from cosmo_travel_mcp.onboarding import (
 )
 from cosmo_travel_mcp.tools.setup import (
     ROUTES_API_BASE,
+    check_setup,
     SERPAPI_ACCOUNT_URL,
     probe_maps,
     probe_serpapi,
@@ -399,6 +400,35 @@ def test_getting_keys_doc_exists_and_covers_both_providers():
     assert SERPAPI_SIGNUP_URL in doc
     assert "console.cloud.google.com" in doc
     assert "Routes API" in doc
+
+
+@pytest.mark.asyncio
+async def test_serpapi_tools_lists_every_serpapi_gated_tool(monkeypatch):
+    """The whole set at once, derived from `check_setup` rather than transcribed.
+
+    The per-tool drift tests below only catch a tool somebody remembered to
+    write one for. `search_things_to_do` shipped without one and was missing
+    from `SERPAPI_TOOLS` across three releases; `search_car_rentals` was added
+    the same way. Naming each tool by hand is the thing that failed, so this
+    compares the constant against what `check_setup` actually gates.
+
+    With neither key set, `check_setup` returns its reasons without touching
+    the network, so the SerpAPI-gated group is readable straight off the
+    result.
+    """
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+
+    result = await check_setup()
+    gated = {
+        t["tool"] for t in result["tools"] if SERPAPI_ENV in t.get("reason", "")
+    }
+
+    assert gated == set(SERPAPI_TOOLS), (
+        "SERPAPI_TOOLS and check_setup disagree about which tools need a "
+        f"SerpAPI key — only in check_setup: {sorted(gated - set(SERPAPI_TOOLS))}, "
+        f"only in SERPAPI_TOOLS: {sorted(set(SERPAPI_TOOLS) - gated)}"
+    )
 
 
 def test_onboarding_and_readme_drift_new_get_accommodation_details():

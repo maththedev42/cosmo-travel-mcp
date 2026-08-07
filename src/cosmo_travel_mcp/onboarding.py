@@ -36,6 +36,8 @@ SERPAPI_TOOLS = (
     "get_accommodation_details",
     "search_cheapest_dates",
     "search_events",
+    "search_things_to_do",
+    "search_car_rentals",
 )
 MAPS_TOOLS = ("compare_drive_or_fly",)
 
