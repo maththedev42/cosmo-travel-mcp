@@ -13,9 +13,11 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      # setup-uv publishes no floating major tag since v8 — pinning the
+      # exact version is what upstream requires, not a style choice.
+      - uses: astral-sh/setup-uv@v9.0.0
 
       - name: Install Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
