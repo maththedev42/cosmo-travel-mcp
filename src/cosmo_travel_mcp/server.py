@@ -10,7 +10,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles eleven travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles twelve travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
 for driving).
 
@@ -25,7 +25,7 @@ count against the monthly search quota).
 Env vars and which tools they gate:
 - SERPAPI_API_KEY → search_flights, search_multi_city, search_accommodations,
   get_accommodation_details, search_cheapest_dates, search_events,
-  search_things_to_do.
+  search_things_to_do, search_car_rentals.
   Free key (100 searches/month):
   https://serpapi.com/users/sign_up
 - GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
@@ -42,7 +42,12 @@ in a window.
 
 Round-trip flights are two-phase: phase-1 results are outbound options whose
 prices are already round-trip totals. Pass a `departure_token` from one of
-them back as a parameter to get the return legs for that outbound."""
+them back as a parameter to get the return legs for that outbound.
+
+`search_car_rentals` returns offices, hours and contacts — never rates. No
+free provider exposes car rental pricing, so hand the traveller the office's
+`website` to quote it and treat the rate as unmeasured until they report one
+back. Do not estimate a daily rate from this tool's output."""
 
 mcp = FastMCP(
     "cosmo-travel-mcp",
@@ -55,6 +60,7 @@ def main() -> None:
     """Run the MCP server over stdio."""
     # Import and register tool modules.
     from .tools import (
+        car_rentals,
         cheapest_dates,
         driving,
         events,
@@ -67,6 +73,7 @@ def main() -> None:
     )
 
     flights.register(mcp)
+    car_rentals.register(mcp)
     cheapest_dates.register(mcp)
     driving.register(mcp)
     events.register(mcp)

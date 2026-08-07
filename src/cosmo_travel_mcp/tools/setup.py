@@ -186,6 +186,10 @@ async def check_setup() -> dict[str, Any]:
         "tool": "search_things_to_do",
         "ready": False,
     }
+    car_rentals_status: dict[str, Any] = {
+        "tool": "search_car_rentals",
+        "ready": False,
+    }
     driving_status: dict[str, Any] = {
         "tool": "compare_drive_or_fly",
         "ready": False,
@@ -207,6 +211,7 @@ async def check_setup() -> dict[str, Any]:
         cheapest_dates_status,
         events_status,
         things_to_do_status,
+        car_rentals_status,
     ]
 
     # --- SerpAPI check (free --- does not count against monthly quota) ---
@@ -260,6 +265,7 @@ async def check_setup() -> dict[str, Any]:
         cheapest_dates_status,
         events_status,
         things_to_do_status,
+        car_rentals_status,
         driving_status,
         *keyless_statuses,
     ]

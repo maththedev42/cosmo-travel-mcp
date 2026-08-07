@@ -11,12 +11,23 @@ reading fields the API never returns.
 | `google_hotels_search.json` | `google_hotels` | `q=Miami Beach, FL`, `check_in_date=2026-12-28`, `check_out_date=2026-12-30`, `adults=2`, `currency=USD`, `vacation_rentals=false` | 2026-08-01 |
 | `google_maps_things_to_do.json` | `google_maps` | `q=things to do in Miami`, `type=search`, `hl=en` | 2026-08-01 |
 | `google_maps_restaurants.json` | `google_maps` | `q=restaurants in Miami`, `type=search`, `hl=en` | 2026-08-01 |
+| `google_maps_car_rentals.json` | `google_maps` | `q=car rental in Miami International Airport`, `type=search`, `hl=en` | 2026-08-07 |
+| `google_maps_car_rentals_branch.json` | `google_maps` | `q=car rental`, `ll=@25.7959,-80.2870,14z`, `type=search`, `hl=en` | 2026-08-07 |
 
 The two `google_maps` fixtures are both kept because attractions and food
 return **different field sets** from the same engine: food adds `price`,
 `extracted_price`, `description`, `reserve_a_table` and `service_options`,
 and attractions omit them entirely. One fixture would have made half the
 normalizer untestable.
+
+The two `google_maps_car_rentals*` fixtures are both kept for the same reason,
+on the field that tool exists for. Every counter in the airport capture runs
+24 hours; the branch capture contains an Enterprise at 940 NW 27th Ave that is
+**`"sunday": "Closed"`**. Two area queries (`in Miami International Airport`,
+`in Miami, FL`) returned no closed-day office at all, which is why the second
+fixture is the `ll=` capture rather than a third phrasing — a live body with
+the case beats a tidier request that lacks it. Neither carries a `price` field:
+that absence is the evidence behind the tool's no-rates promise.
 
 Two details in these bodies are load-bearing and must not be "tidied":
 
