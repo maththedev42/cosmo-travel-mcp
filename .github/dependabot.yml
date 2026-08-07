@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  # setup-uv stopped publishing floating major tags at v8, on purpose — their
+  # reasoning is the tj-actions supply-chain attack. Exact pins are therefore
+  # required rather than preferred, and an exact pin with nobody watching it
+  # is a version that rots quietly: this repo sat on a Node 20 action until a
+  # deprecation warning surfaced during a release. Dependabot is what makes
+  # the pinning sustainable.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - dependencies

@@ -12,9 +12,11 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      # setup-uv publishes no floating major tag since v8 — pinning the
+      # exact version is what upstream requires, not a style choice.
+      - uses: astral-sh/setup-uv@v9.0.0
 
       - name: Install Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
@@ -40,9 +42,9 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v9.0.0
 
       - name: Install Python
         run: uv python install 3.11
@@ -62,7 +64,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The tag name reaches the shell through the environment rather than
       # `${{ }}` interpolation. Interpolating it would splice whatever the tag
