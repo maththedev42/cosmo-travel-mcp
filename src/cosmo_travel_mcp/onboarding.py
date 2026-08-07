@@ -29,6 +29,15 @@ MAPS_PLACEHOLDER = "<your-google-maps-key>"
 #: Searches included in SerpAPI's free tier, per month.
 FREE_TIER_SEARCHES = 100
 
+# The tool registry, grouped by what gates each tool. `check_setup` builds its
+# per-tool report straight from these, so adding a name here is what makes a
+# tool appear in the "what can I use right now" surface — there is no second
+# list to keep in step.
+#
+# That wiring is newer than the tuples. Until 1.2.1 these were read by nothing
+# in `src/`: CONTRIBUTING called them the registry while `check_setup` wrote the
+# same mapping out by hand beside them, and the copies drifted — two tools were
+# missing here for three releases without any surface noticing.
 SERPAPI_TOOLS = (
     "search_flights",
     "search_multi_city",
@@ -40,6 +49,10 @@ SERPAPI_TOOLS = (
     "search_car_rentals",
 )
 MAPS_TOOLS = ("compare_drive_or_fly",)
+
+#: No key, no network, no quota. Listed rather than inferred, because a tool
+#: absent from the readiness report reads as a tool that does not exist.
+KEYLESS_TOOLS = ("check_itinerary", "build_calendar")
 
 
 def install_command() -> str:

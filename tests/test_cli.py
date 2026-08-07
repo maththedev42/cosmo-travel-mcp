@@ -18,6 +18,8 @@ from cosmo_travel_mcp.onboarding import (
     MAPS_ENV,
     PACKAGE_NAME,
     REPO_URL,
+    KEYLESS_TOOLS,
+    MAPS_TOOLS,
     SERPAPI_ENV,
     SERPAPI_SIGNUP_URL,
     SERPAPI_TOOLS,
@@ -402,33 +404,79 @@ def test_getting_keys_doc_exists_and_covers_both_providers():
     assert "Routes API" in doc
 
 
-@pytest.mark.asyncio
-async def test_serpapi_tools_lists_every_serpapi_gated_tool(monkeypatch):
-    """The whole set at once, derived from `check_setup` rather than transcribed.
+class _Registry:
+    """Stands in for a FastMCP instance and records what gets registered.
 
-    The per-tool drift tests below only catch a tool somebody remembered to
-    write one for. `search_things_to_do` shipped without one and was missing
-    from `SERPAPI_TOOLS` across three releases; `search_car_rentals` was added
-    the same way. Naming each tool by hand is the thing that failed, so this
-    compares the constant against what `check_setup` actually gates.
-
-    With neither key set, `check_setup` returns its reasons without touching
-    the network, so the SerpAPI-gated group is readable straight off the
-    result.
+    Using the real server singleton would mutate process-wide state that other
+    tests share; the register functions only ever call `.tool()` / `.prompt()`,
+    so a collector is enough.
     """
-    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
 
-    result = await check_setup()
-    gated = {
-        t["tool"] for t in result["tools"] if SERPAPI_ENV in t.get("reason", "")
-    }
+    def __init__(self) -> None:
+        self.tools: list[str] = []
+        self.prompts: list[str] = []
 
-    assert gated == set(SERPAPI_TOOLS), (
-        "SERPAPI_TOOLS and check_setup disagree about which tools need a "
-        f"SerpAPI key — only in check_setup: {sorted(gated - set(SERPAPI_TOOLS))}, "
-        f"only in SERPAPI_TOOLS: {sorted(set(SERPAPI_TOOLS) - gated)}"
+    def tool(self):
+        def decorate(fn):
+            self.tools.append(fn.__name__)
+            return fn
+
+        return decorate
+
+    def prompt(self):
+        def decorate(fn):
+            self.prompts.append(fn.__name__)
+            return fn
+
+        return decorate
+
+
+def test_every_registered_tool_belongs_to_exactly_one_key_group():
+    """The registry must cover the server, with nothing on either side alone.
+
+    This replaces a test that compared `SERPAPI_TOOLS` against `check_setup`.
+    That comparison was real while `check_setup` kept its own hand-written
+    copy of the mapping, and went vacuous the moment `check_setup` started
+    building its report *from* these tuples — it could no longer disagree with
+    its own source. A test that cannot fail is worse than no test, because it
+    reads as cover.
+
+    The drift that remains possible is a tool registered on the server and
+    never added to a group, which is exactly how `search_things_to_do` and
+    `search_car_rentals` went missing. So compare against registration.
+    """
+    from cosmo_travel_mcp.tools import (
+        car_rentals,
+        cheapest_dates,
+        driving,
+        events,
+        flights,
+        hotels,
+        itinerary,
+        places,
+        prompts,
     )
+    from cosmo_travel_mcp.tools import setup as setup_tool
+
+    registry = _Registry()
+    for module in (
+        flights, car_rentals, cheapest_dates, driving, events,
+        hotels, itinerary, places, setup_tool, prompts,
+    ):
+        module.register(registry)
+
+    grouped = set(SERPAPI_TOOLS) | set(MAPS_TOOLS) | set(KEYLESS_TOOLS)
+    # `check_setup` is the reporter and does not report on itself.
+    registered = set(registry.tools) - {"check_setup"}
+
+    assert registered == grouped, (
+        "the onboarding registry and the registered tools disagree — "
+        f"registered but ungrouped: {sorted(registered - grouped)}, "
+        f"grouped but never registered: {sorted(grouped - registered)}"
+    )
+
+    total = len(SERPAPI_TOOLS) + len(MAPS_TOOLS) + len(KEYLESS_TOOLS)
+    assert total == len(grouped), "a tool appears in more than one key group"
 
 
 def test_onboarding_and_readme_drift_new_get_accommodation_details():

@@ -19,7 +19,10 @@ import httpx
 
 from ..onboarding import (
     GOOGLE_CONSOLE_URL,
+    KEYLESS_TOOLS,
+    MAPS_TOOLS,
     SERPAPI_SIGNUP_URL,
+    SERPAPI_TOOLS,
     setup_guide,
 )
 from .driving import FIELD_MASK, ROUTES_API_BASE
@@ -164,54 +167,19 @@ async def check_setup() -> dict[str, Any]:
     ``search_cheapest_dates`` costs up to *n* SerpAPI searches per call
     (where *n* is the number of candidate dates sampled).
     """
-    flights_status: dict[str, Any] = {"tool": "search_flights", "ready": False}
-    multi_city_status: dict[str, Any] = {"tool": "search_multi_city", "ready": False}
-    accommodations_status: dict[str, Any] = {
-        "tool": "search_accommodations",
-        "ready": False,
-    }
-    cheapest_dates_status: dict[str, Any] = {
-        "tool": "search_cheapest_dates",
-        "ready": False,
-    }
-    accommodation_details_status: dict[str, Any] = {
-        "tool": "get_accommodation_details",
-        "ready": False,
-    }
-    events_status: dict[str, Any] = {
-        "tool": "search_events",
-        "ready": False,
-    }
-    things_to_do_status: dict[str, Any] = {
-        "tool": "search_things_to_do",
-        "ready": False,
-    }
-    car_rentals_status: dict[str, Any] = {
-        "tool": "search_car_rentals",
-        "ready": False,
-    }
-    driving_status: dict[str, Any] = {
-        "tool": "compare_drive_or_fly",
-        "ready": False,
-    }
-
-    # No key, no network, no quota — these are always usable, and saying so
-    # matters: this is the "what can I use right now" surface, and a tool
-    # missing from it reads as a tool that does not exist.
-    keyless_statuses: list[dict[str, Any]] = [
-        {"tool": "check_itinerary", "ready": True, "reason": "no API key required"},
-        {"tool": "build_calendar", "ready": True, "reason": "no API key required"},
+    # Built from the onboarding registry rather than written out here. The two
+    # used to be separate lists saying the same thing, and they drifted: two
+    # tools were absent from `SERPAPI_TOOLS` for three releases while this
+    # function reported them correctly, so nothing surfaced the disagreement.
+    serpapi_statuses: list[dict[str, Any]] = [
+        {"tool": name, "ready": False} for name in SERPAPI_TOOLS
     ]
-
-    serpapi_statuses = [
-        flights_status,
-        multi_city_status,
-        accommodations_status,
-        accommodation_details_status,
-        cheapest_dates_status,
-        events_status,
-        things_to_do_status,
-        car_rentals_status,
+    maps_statuses: list[dict[str, Any]] = [
+        {"tool": name, "ready": False} for name in MAPS_TOOLS
+    ]
+    keyless_statuses: list[dict[str, Any]] = [
+        {"tool": name, "ready": True, "reason": "no API key required"}
+        for name in KEYLESS_TOOLS
     ]
 
     # --- SerpAPI check (free --- does not count against monthly quota) ---
@@ -245,36 +213,29 @@ async def check_setup() -> dict[str, Any]:
     maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
     if not maps_key:
-        driving_status["reason"] = (
-            "GOOGLE_MAPS_API_KEY is not set — create a key at "
-            f"{GOOGLE_CONSOLE_URL} with the Routes API enabled (not the legacy "
-            "Distance Matrix API); see the `setup` field for the exact command "
-            "to register it"
-        )
+        for s in maps_statuses:
+            s["reason"] = (
+                "GOOGLE_MAPS_API_KEY is not set — create a key at "
+                f"{GOOGLE_CONSOLE_URL} with the Routes API enabled (not the legacy "
+                "Distance Matrix API); see the `setup` field for the exact command "
+                "to register it"
+            )
     else:
+        # One probe for the group, not one per tool: the check spends a real
+        # Routes API call.
         probe = await probe_maps(maps_key)
-        driving_status["ready"] = probe["ok"]
-        if not probe["ok"]:
-            driving_status["reason"] = probe["reason"]
+        for s in maps_statuses:
+            s["ready"] = probe["ok"]
+            if not probe["ok"]:
+                s["reason"] = probe["reason"]
 
-    result_tools = [
-        flights_status,
-        multi_city_status,
-        accommodations_status,
-        accommodation_details_status,
-        cheapest_dates_status,
-        events_status,
-        things_to_do_status,
-        car_rentals_status,
-        driving_status,
-        *keyless_statuses,
-    ]
+    result_tools = [*serpapi_statuses, *maps_statuses, *keyless_statuses]
 
     # Build a human-readable summary, one line per tool.
     summary_lines: list[str] = []
     for t in result_tools:
         if t["ready"]:
-            if t["tool"] == "compare_drive_or_fly":
+            if t["tool"] in MAPS_TOOLS:
                 summary_lines.append(f"{t['tool']}: ready (Maps key valid)")
             elif "plan_searches_left" not in t:
                 summary_lines.append(f"{t['tool']}: ready (no API key needed, costs nothing)")

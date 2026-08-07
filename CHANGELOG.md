@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-07
+
+### Fixed
+
+- **The tool registry in `onboarding.py` now drives `check_setup`.**
+  `SERPAPI_TOOLS` and `MAPS_TOOLS` were read by nothing in `src/` —
+  `CONTRIBUTING` called them the registry while `check_setup` wrote the same
+  mapping out by hand beside them. Two lists saying the same thing drifted, as
+  they do: `search_things_to_do` was missing from `SERPAPI_TOOLS` for three
+  releases and `search_car_rentals` was added the same way in 1.2.0.
+
+  `check_setup` now builds its readiness report from the tuples, so adding a
+  tool is one edit instead of two. Its output is unchanged — same tools, same
+  order, same fields. A new `KEYLESS_TOOLS` puts the no-key tools in the same
+  place as the rest.
+
+  This removes a documented touch-point: adding a tool no longer means
+  hand-writing a status dict inside `check_setup`.
+
+### Changed
+
+- **Replaced a test that could no longer fail.** 1.2.0 shipped a guard
+  comparing `SERPAPI_TOOLS` against `check_setup`. That was a real comparison
+  while `check_setup` kept its own copy of the mapping, and went vacuous the
+  moment it started deriving from the tuples — it could not disagree with its
+  own source. A test that cannot fail is worse than no test, because it reads
+  as cover.
+
+  `test_every_registered_tool_belongs_to_exactly_one_key_group` replaces it,
+  comparing the registry against what actually registers on the server. That
+  is the drift that remains possible, and it is exactly how both tools went
+  missing. Verified by mutation in both directions: a registered-but-ungrouped
+  tool and a grouped-but-never-registered name each fail it by name.
+
 ## [1.2.0] - 2026-08-07
 
 ### Added
@@ -265,6 +299,7 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.2.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.1
 [1.2.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.0
 [1.1.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.1.0
 [1.0.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.0.1
