@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-08-08
+
+### Changed
+
+- **The `pricing` note no longer promises that a one-way drop fee exists.**
+  It said the fee "is usually the number that decides" — true often enough,
+  but a client model reads that as an instruction to go find one, and then
+  reports a number it inferred rather than measured.
+
+  On a fleet-rebalancing direction there is no fee at all: the carrier wants
+  the car moved. Measured on MIA -> MCO, where the itemisation carries
+  facility, state surcharge, licence, concession and sales-tax lines and no
+  drop fee — the whole one-way rental came in under the threshold that was
+  supposed to decide it. The note now says to read the itemisation instead of
+  inferring, and that the reverse direction is a separate question, because
+  Orlando -> Miami does not inherit the answer.
+
+  A test asserts the hedge, so the wording cannot quietly slide back.
+
 ## [1.2.1] - 2026-08-07
 
 ### Fixed
@@ -299,6 +318,7 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.2.2]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.2
 [1.2.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.1
 [1.2.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.0
 [1.1.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.1.0

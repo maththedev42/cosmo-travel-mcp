@@ -48,7 +48,11 @@ _NOTES = {
         "No rates. No licensed provider exposes car rental pricing without a "
         "commercial agreement, so this tool returns offices, hours and contact "
         "details only. Quote on the office's own `website`. When comparing "
-        "pickup points, the one-way drop fee is usually the number that decides."
+        "pickup points the one-way drop fee is usually the number that decides, "
+        "but do not assume it is charged: on a fleet-rebalancing direction the "
+        "carrier wants the car moved and there is no fee at all. Read the "
+        "quote's itemisation rather than inferring one, and quote the reverse "
+        "direction separately — it does not inherit the answer."
     ),
     "holiday_hours": (
         "`operating_hours` are the regular weekly hours. Google does not report "
