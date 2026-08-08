@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A watchlist run that skipped for quota was indistinguishable from a quiet
+  week.** `watch.py` returned `0` both when nothing had moved and when it had
+  refused to run, and a skip leaves `alerts.md` untouched — so a scheduler
+  checking the exit code and the file size saw success either way.
+
+  Found live: a reserve of 20 with 20 searches left makes `left - cost <
+  reserve` true on every run, so the watch would have been dead for three
+  weeks with nothing in its output looking wrong. It now returns
+  `EXIT_SKIPPED_QUOTA` (3), and the log line says the reserve is too close to
+  the remaining quota when it repeats.
+
+### Added
+
+- **`watch: false` takes a leg out of the rotation.** `purchased` was the only
+  exit, so a leg settled *without* a ticket kept costing a search every week —
+  the Miami → Orlando hop decided by renting a car, whose flight stays in the
+  file as the fallback. Absent means watch it: a leg must not drop out by
+  omission.
+
+  `tests/test_watch.py` covers both, loading the script by path since
+  `skills/` is not part of the installed package.
+
 ## [1.2.2] - 2026-08-08
 
 ### Changed
