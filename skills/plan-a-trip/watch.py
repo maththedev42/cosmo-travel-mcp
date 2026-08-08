@@ -214,6 +214,33 @@ def judge(leg: dict, today: float) -> tuple[str, str]:
 
 
 # --------------------------------------------------------------------------- main
+EXIT_SKIPPED_QUOTA = 3
+"""Exit code for "did not run, the reserve would have been breached".
+
+Distinct from 0 on purpose. A skip and a quiet week leave exactly the same
+trace — `alerts.md` untouched — so a scheduler reading only the exit code
+cannot tell "nothing moved" from "nothing was measured". That matters most
+when the reserve is set at or above the quota that is left: then *every* run
+is a skip, and the watch is dead for weeks while nothing in its output looks
+wrong.
+"""
+
+
+def legs_to_watch(legs: list[dict]) -> list[dict]:
+    """The legs a run should re-price.
+
+    A leg leaves the rotation two ways. `purchased` is the obvious one. The
+    other is `watch: false`, for a leg that is settled without a ticket — the
+    Miami → Orlando hop decided by renting a car, say. Its flight stays in the
+    file because it is still the fallback, but re-pricing it every week buys
+    nothing and costs a search each time.
+
+    Absent `watch` means watch it: a leg must never fall out of the rotation
+    by omission.
+    """
+    return [l for l in legs if not l.get("purchased") and l.get("watch", True)]
+
+
 def main() -> int:
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_WATCHLIST
     if not path.exists():
@@ -224,19 +251,20 @@ def main() -> int:
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     today_iso = date.today().isoformat()
 
-    pending = [l for l in wl["legs"] if not l.get("purchased")]
+    pending = legs_to_watch(wl["legs"])
     sweeps = [w for w in wl.get("event_watches", []) if not w.get("done")]
     cost = len(pending) + len(sweeps)     # one search each: 1 leg, 1 event query
     if not cost:
-        log(f"{stamp}  nothing to watch — every leg is bought and every sweep is done")
+        log(f"{stamp}  nothing to watch — every leg is settled and every sweep is done")
         return 0
 
     reserve = wl.get("quota_reserve", 20)
     left = searches_left(key)
     if left is not None and left - cost < reserve:
         log(f"{stamp}  SKIPPED: {left} searches left, {cost} needed, "
-            f"reserve is {reserve}. A watch must never starve an interactive search.")
-        return 0
+            f"reserve is {reserve}. A watch must never starve an interactive search. "
+            f"If this repeats, the reserve is too close to the quota that is left.")
+        return EXIT_SKIPPED_QUOTA
 
     alerts: list[str] = []
     for leg in pending:
