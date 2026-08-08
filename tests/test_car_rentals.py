@@ -235,6 +235,27 @@ async def test_notes_explain_the_two_gaps():
     assert "holiday" in result["notes"]["holiday_hours"].lower()
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_pricing_note_does_not_promise_a_one_way_fee():
+    """The drop fee is a maybe, not a given.
+
+    An earlier wording said it "is usually the number that decides", which a
+    client model can read as an instruction to go find one. On a
+    fleet-rebalancing direction there is none — measured on MIA -> MCO, whose
+    itemisation carries facility, surcharge, licence, concession and tax lines
+    and no drop fee. Asserting the hedge keeps the note from sliding back.
+    """
+    respx.get(SERPAPI_BASE).mock(return_value=httpx.Response(200, json=AIRPORT))
+
+    note = (await search_car_rentals(location="Miami"))["notes"]["pricing"]
+
+    assert "do not assume" in note
+    assert "rebalancing" in note
+    # The reverse direction is a separate question, and the note must say so.
+    assert "reverse direction" in note
+
+
 # ---------------------------------------------------------------------------
 # Filtering
 # ---------------------------------------------------------------------------
