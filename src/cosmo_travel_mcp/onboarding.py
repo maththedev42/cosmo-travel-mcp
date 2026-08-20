@@ -44,6 +44,7 @@ SERPAPI_TOOLS = (
     "search_accommodations",
     "get_accommodation_details",
     "search_cheapest_dates",
+    "compare_trip_windows",
     "search_events",
     "search_things_to_do",
     "search_car_rentals",
