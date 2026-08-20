@@ -24,8 +24,8 @@ count against the monthly search quota).
 
 Env vars and which tools they gate:
 - SERPAPI_API_KEY → search_flights, search_multi_city, search_accommodations,
-  get_accommodation_details, search_cheapest_dates, search_events,
-  search_things_to_do, search_car_rentals.
+  get_accommodation_details, search_cheapest_dates, compare_trip_windows,
+  search_events, search_things_to_do, search_car_rentals.
   Free key (100 searches/month):
   https://serpapi.com/users/sign_up
 - GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
@@ -39,6 +39,12 @@ Cost warning: search_cheapest_dates spends up to `max_calls` SerpAPI searches
 per invocation (default 6, hard cap 15) against a 100/month free tier. Never
 call it casually or in a loop — sample a small number of dates, not every day
 in a window.
+
+Cost warning: compare_trip_windows costs exactly 2 SerpAPI searches per window
+priced — one flight, one hotel. `max_windows` defaults to 3 and hard-caps at 5,
+so one call can spend up to 10 searches. Use it to answer whether a different
+departure date is cheaper once the extra nights are paid for, not to explore
+the whole fare matrix.
 
 Round-trip flights are two-phase: phase-1 results are outbound options whose
 prices are already round-trip totals. Pass a `departure_token` from one of
@@ -70,6 +76,7 @@ def main() -> None:
         places,
         prompts,
         setup,
+        trip_windows,
     )
 
     flights.register(mcp)
@@ -82,5 +89,6 @@ def main() -> None:
     places.register(mcp)
     setup.register(mcp)
     prompts.register(mcp)
+    trip_windows.register(mcp)
 
     mcp.run()

@@ -455,13 +455,14 @@ def test_every_registered_tool_belongs_to_exactly_one_key_group():
         itinerary,
         places,
         prompts,
+        trip_windows,
     )
     from cosmo_travel_mcp.tools import setup as setup_tool
 
     registry = _Registry()
     for module in (
         flights, car_rentals, cheapest_dates, driving, events,
-        hotels, itinerary, places, setup_tool, prompts,
+        hotels, itinerary, places, setup_tool, prompts, trip_windows,
     ):
         module.register(registry)
 

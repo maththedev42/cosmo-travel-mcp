@@ -190,7 +190,8 @@ async def test_check_setup_neither_key_set(monkeypatch):
 
     serpapi_tools = [
         "search_flights", "search_multi_city", "search_accommodations",
-        "get_accommodation_details", "search_cheapest_dates", "search_events",
+        "get_accommodation_details", "search_cheapest_dates",
+        "compare_trip_windows", "search_events",
         "search_things_to_do", "search_car_rentals",
     ]
     # These need no key at all, so "neither key set" leaves them usable —

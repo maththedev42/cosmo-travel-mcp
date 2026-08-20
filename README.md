@@ -57,16 +57,22 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks eight of the twelve tools: `search_flights`,
+This one key unlocks nine of the thirteen tools: `search_flights`,
 `search_multi_city`, `search_accommodations`, `get_accommodation_details`,
-`search_cheapest_dates`, `search_events`, `search_things_to_do`, and
-`search_car_rentals`.
+`search_cheapest_dates`, `compare_trip_windows`, `search_events`,
+`search_things_to_do`, and `search_car_rentals`.
 `check_itinerary` and `build_calendar` need no key at all — they are pure
 computation and cost nothing.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
 > can burn 6-15 of your 100 free monthly searches.
+
+> **Important:** `compare_trip_windows` costs **2 searches per window priced** (one
+> flight, one hotel; `max_windows` default 3, hard cap 5). One call can spend up to
+> 10 of your 100 free monthly searches — use it to answer whether a different
+> departure date is cheaper *once the extra nights are paid for*, not to explore the
+> whole fare matrix.
 
 ### 2. Google Maps API key (driving comparison)
 
@@ -119,6 +125,7 @@ search_flights: ready (87 searches left this month)
 search_multi_city: ready (87 searches left this month)
 search_accommodations: ready (87 searches left this month)
 search_cheapest_dates: ready (87 searches left; each call costs up to max_calls searches (default 6, hard cap 15))
+compare_trip_windows: ready (87 searches left this month)
 compare_drive_or_fly: ready (Maps key valid)
 ```
 
@@ -240,6 +247,7 @@ not something the MCP server starts on its own.
 | `search_car_rentals` | `location`, `min_rating?`, `limit?`, `country?`, `language?` | Car rental **offices** near a place, via SerpAPI Google Maps engine — locations, per-weekday `operating_hours`, `website` and `phone`. **Returns no rates:** no free provider exposes car rental pricing, so hand the traveller the `website` and treat the rate as unmeasured until they report one back. Its value is choosing *where* to collect: an airport counter typically runs 24 hours while a neighbourhood branch closes on Sundays. Hours are the regular weekly schedule and do not cover holidays — confirm a 25 December pickup on the phone. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration + toll estimates via Google Maps Routes API. Tolls are fetched from ``computeRoutes`` with ``extraComputations: ["TOLLS"]`` and degrade gracefully when unavailable. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
 | `search_cheapest_dates` | `origin`, `destination`, `earliest_departure`, `latest_return`, `trip_duration_days`, `max_calls?` (default 6, max 15), `adults?`, `children?`, `cabin_class?`, `currency?` | Samples candidate dates across a flexible window and returns cheapest round-trip per date. **Costs up to `max_calls` SerpAPI searches per call.** |
+| `compare_trip_windows` | `origin`, `destination`, `anchor_date`, `lodging_location`, `adults` (required), `min_nights?`, `max_nights?`, `max_windows?` (default 3, max 5), `currency?`, `country?`, `language?`, `max_stops?`, `min_rating?`, `hotel_class?`, `vacation_rentals?` | Prices the trip windows closest to a fixed night (e.g. a concert) — one flight search and one hotel search per window — and ranks them by **combined** total, so a date window is only cheaper once the extra nights are paid for. Reports `break_even_nightly` where a longer window saves on airfare. **Costs exactly 2 SerpAPI searches per window priced.** |
 | `check_itinerary` | `days` ([{date, stops:[{name, start, end, operating_hours?, coordinates?}]}]) | Checks a drafted itinerary for conflicts: stops on a closing day, visits outside opening hours, overlapping stops, and gaps too short to cross the distance. Returns findings (`blocker` / `warning` / `unchecked`), not prose. **Costs nothing — no API calls.** |
 | `build_calendar` | `items` ([{title, start, end?, location?, description?}]), `calendar_name?`, `timezone_name?` | Generates an RFC 5545 `.ics` plus a Google Calendar link per event. Times are floating local wall-clock. Cannot write to a calendar itself — if a calendar MCP is connected, the AI uses that (with your approval); otherwise it shows the links. **Costs nothing — no API calls.** |
 | `check_setup` | _(none)_ | Validates both API keys and reports which tools are ready. The SerpAPI check is free; the Maps check makes one real API call. |
@@ -274,6 +282,7 @@ time if you need a different TTL — the default is 600 (10 minutes).
 | `check_itinerary` | 0 | 0 | Pure computation. |
 | `build_calendar` | 0 | 0 | Pure computation. |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
+| `compare_trip_windows` | 2 × windows priced (default 3, cap 5) | 0 | One flight + one hotel per window; reports the real `searches_spent`. |
 | `compare_drive_or_fly` | 0 | 1 | |
 | `check_setup` | 0 (free account check) | 1 | The Maps check is a minimal `computeRouteMatrix` call. |
 
