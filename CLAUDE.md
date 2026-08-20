@@ -1,6 +1,6 @@
 # cosmo-travel-mcp
 
-Python MCP server — twelve travel tools over SerpAPI (flights, lodging, events, places)
+Python MCP server — thirteen travel tools over SerpAPI (flights, lodging, events, places)
 and the Google Maps Routes API (driving). Published to PyPI as `cosmo-travel-mcp`.
 
 ## Commands
@@ -11,7 +11,9 @@ set — on **Python 3.11 and 3.12**. All four jobs must be green before a merge 
 ## Landmines
 
 - **Every SerpAPI call spends real quota.** 100 searches/month on the free tier, shared
-  with the live trip watch that runs weekly. Tests mock HTTP with `respx`; a test that
+  with the live trip watches that run weekly. **`compare_trip_windows` is the most
+  expensive tool here** — 2 searches per window, hard cap 5, so one call can spend 10.
+  Never invoke it to answer a question a single `search_flights` would settle. Tests mock HTTP with `respx`; a test that
   reaches the network is a bug even when it passes. `search_cheapest_dates` burns up to
   `max_calls` searches per invocation — never loop it.
 - **`skills/` is not packaged.** `[tool.setuptools.packages.find]` is `where = ["src"]`,
