@@ -84,6 +84,11 @@ Airfare fell R$ 1.200; the seven added nights cost R$ 3.285. And check the
 span: "20 Dec to 11 Jan" is 22 days, not the 15 the traveller asked for. A
 cheaper column in a fare matrix can describe a trip that was never on offer.
 
+`compare_trip_windows` automates the arithmetic — it prices the flights *and*
+the nights for the windows closest to a fixed date and reports the per-night
+break-even. It does not remove the obligation to decide whether a window is a
+trip the traveller actually wants.
+
 ### 8. Bags are not in the headline fare
 `bags` in `search_flights` is **carry-on only**. Hold luggage lives in the
 booking phase (`baggage_prices`) — pass a `booking_token` back to get it.

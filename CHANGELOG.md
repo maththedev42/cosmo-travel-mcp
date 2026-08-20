@@ -31,6 +31,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_watch.py` covers both, loading the script by path since
   `skills/` is not part of the installed package.
 
+## [1.3.0] - 2026-08-20
+
+### Added
+
+- **`compare_trip_windows` answers whether a different departure date is
+  cheaper once the extra nights are paid for.** Measured on a fixed-date
+  concert (System of a Down at Maracanã, night of 15 Jan 2027, from POA): the
+  window with an extra night was R$ 320 cheaper on airfare for 2 passengers,
+  but whether the trip was cheaper overall depended on a hotel rate (real
+  Botafogo rooms ran R$ 231–447 for that night), not on the date. The tool
+  generates the windows closest to the anchor night, prices each with one
+  flight and one hotel search (2 SerpAPI searches per window, `max_windows`
+  default 3, hard cap 5), and ranks them by combined total with the per-night
+  break-even where a longer window saves on airfare.
+
+- **`adults` is required on `compare_trip_windows`, and that is deliberate.**
+  Measured on the same route and date: at one passenger all three candidate
+  windows returned R$ 798 each; at two, two of them rose to R$ 957,50 per
+  person because the cheap LATAM bucket held one seat on those dates and two
+  on the third. A per-person price for one traveller is not the price for two,
+  and quoting it as such reverses the recommendation — so the tool refuses to
+  guess and threads the same passenger count into both the flight and the
+  hotel search.
+
 ## [1.2.2] - 2026-08-08
 
 ### Changed

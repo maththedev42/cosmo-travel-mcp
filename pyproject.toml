@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cosmo-travel-mcp"
-version = "1.2.2"
+version = "1.3.0"
 description = "MCP server for planning a whole trip: flights, hotels, events, things to do, driving costs, itinerary checking and calendar export"
 readme = "README.md"
 license = {text = "MIT"}
