@@ -109,6 +109,18 @@ avoid embedding exact dates (like `December 31 2026`) or using `things to do in 
 which suppress Google's `events_results` SERP block. And: *absence of results is a claim*.
 Before writing "there is nothing on", run the control and say what it was.
 
+When the destination is in a country Ticketmaster covers — live-tested
+2026-09-01: US, CA, MX, GB, PE, CL, BR (Argentina confirmed at zero) — and
+the traveller needs to know if ticket sales or presales have opened,
+supplement `search_events` with `search_ticketmaster_events`. `search_events`
+provides universal coverage, while `search_ticketmaster_events` exposes
+public sale dates (`sales.public.startDateTime`/`startTBA`), presales, and
+direct ticket URLs. Its `city` filter is an exact match against
+Ticketmaster's own registry, not fuzzy — a known city can return zero;
+retry with `city` omitted before concluding there's no coverage. Note: in NYC
+Broadway, Ticketmaster covers Nederlander and ATG venues, but not Shubert
+Organization venues (Telecharge).
+
 ### 10. Some things no tool returns — say so, don't estimate
 Verified 2026-08-03: no free API returns Disney or Universal admission
 pricing (themeparks.wiki exposes only Lightning Lane, 31-day horizon). Car

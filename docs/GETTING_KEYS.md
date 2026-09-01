@@ -1,15 +1,16 @@
 # Getting the API keys
 
-`cosmo-travel-mcp` talks to two paid-but-free-tier providers. You can set up
-either one on its own — the server reports each tool as ready or not ready
+`cosmo-travel-mcp` talks to three paid-but-free-tier providers. You can set up
+any of them on its own — the server reports each tool as ready or not ready
 independently.
 
 | Key | Env var | Unlocks | Cost |
 |---|---|---|---|
 | SerpAPI | `SERPAPI_API_KEY` | `search_flights`, `search_multi_city`, `search_accommodations`, `search_cheapest_dates` | Free: 100 searches/month |
 | Google Maps | `GOOGLE_MAPS_API_KEY` | `compare_drive_or_fly` | Free monthly credit (~$200); billing account required |
+| Ticketmaster | `TICKETMASTER_API_KEY` | `search_ticketmaster_events` | Free: 5,000 requests/day |
 
-**In a hurry?** Run this and it will walk you through both, check the keys, and
+**In a hurry?** Run this and it will walk you through all three, check the keys, and
 register the server:
 
 ```bash
@@ -86,7 +87,50 @@ it costs a fraction of a cent.
 
 ---
 
-## 3. Attaching the keys
+## 3. Ticketmaster key
+
+Only needed for `search_ticketmaster_events` — the tool that answers "have
+tickets gone on sale yet," which `search_events` structurally cannot: the
+Google-backed tool has no `sales` field at all.
+
+1. Sign up at **<https://developer.ticketmaster.com/>** — free, no approval
+   wait, no credit card.
+2. Create an app in your dashboard and copy its **Consumer Key**; that is
+   what this server calls the API key. You do not need the Consumer Secret —
+   the Discovery API's `GET` endpoints only take `apikey` on the query
+   string.
+3. Free tier: **5,000 requests/day**, 5 requests/second. It does not share
+   quota with SerpAPI — a Ticketmaster call never touches your 100/month.
+
+### Coverage — verified live, not assumed
+
+Live-tested 2026-09-01 with `countryCode` alone (no city filter): **US, CA,
+MX, GB, PE, CL, and BR** all returned events. **Argentina returned zero** —
+confirmed, not a filter artifact. Ticketmaster's own docs list more countries
+than this; treat any country not in that list as unverified rather than
+covered.
+
+**`city` is an exact match against Ticketmaster's own registry — it does not
+fuzzy-match and does not tolerate diacritics.** Live-tested: `city=São Paulo`
+and `city=Sao Paulo` (unaccented) both returned zero for a country
+(`countryCode=BR`) that has 141 real events, while `city=Rio de Janeiro`
+worked. If a call with `city` set returns zero, retry with `city` omitted and
+`country_code`/`keyword` instead before concluding there's no coverage.
+
+### Verifying
+
+```bash
+curl -s "https://app.ticketmaster.com/discovery/v2/events.json?apikey=YOUR_KEY&size=1"
+```
+
+A valid key returns a `page` object. An invalid one returns HTTP 401 with a
+body shaped `{"fault": {"faultstring": "Invalid ApiKey", ...}}` — a different
+error envelope from SerpAPI's `{"error": "..."}`, so don't reuse that parsing
+logic here.
+
+---
+
+## 4. Attaching the keys
 
 Environment variables are fixed at **registration** time, not read from your
 shell when a tool runs. That means adding a key later requires re-registering
@@ -109,6 +153,7 @@ registers the server.
 claude mcp add cosmo-travel --scope user \
   -e SERPAPI_API_KEY=<your-serpapi-key> \
   -e GOOGLE_MAPS_API_KEY=<your-google-maps-key> \
+  -e TICKETMASTER_API_KEY=<your-ticketmaster-key> \
   -- "$(which cosmo-travel-mcp)"
 ```
 
@@ -152,6 +197,18 @@ on `claude mcp add`, not from your shell — re-register with the flags, or run
 Either the Routes API is not enabled on the project, billing is not enabled, or
 a key restriction excludes the Routes API. Check all three at
 <https://console.cloud.google.com/>.
+
+**Ticketmaster returns HTTP 401 / `Invalid ApiKey`.**
+Use the **Consumer Key** from your app's dashboard, not the Consumer Secret —
+the Discovery API's `GET` endpoints only accept the key. A freshly created app
+can take a minute or two to activate; retry once before assuming the key is
+wrong.
+
+**`search_ticketmaster_events` returns zero results for a city I know is
+covered.** `city` is an exact match against Ticketmaster's own registry, not a
+fuzzy search — verified live: `São Paulo` and `Sao Paulo` both returned zero
+for a country with 141 real events. Drop `city` and search with
+`country_code` and/or `keyword` instead.
 
 **SerpAPI says "Invalid API key".**
 You may have copied a *secret* key from a different service, or the account's

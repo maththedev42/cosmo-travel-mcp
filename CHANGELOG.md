@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-01
+
+### Added
+
+- **`search_ticketmaster_events`** — a second events tool, layered on top of
+  `search_events` rather than replacing it, for the one thing the Google-backed
+  tool structurally cannot answer: **has this event gone on sale yet.**
+  `search_events`'s `events_results` block has no sales field at all;
+  Ticketmaster's Discovery API v2 carries `sales.public.startDateTime`,
+  `startTBA`, and a `presales[]` list, plus a direct booking `url` and
+  (on a minority of events) `priceRanges`.
+
+  New env var `TICKETMASTER_API_KEY`, wired through the same registry
+  `onboarding.py`/`check_setup` already use for the other two providers — a
+  new tool is one entry in a tuple, not a hand-written status block. Free
+  tier: 5,000 requests/day, 5 req/s, no shared quota with SerpAPI.
+  `check_setup` validates it with one minimal live call
+  (`probe_ticketmaster`) rather than trusting the key alone.
+
+  **Country and city coverage were live-tested before being documented, not
+  copied from Ticketmaster's own docs.** `countryCode` alone, no city filter,
+  2026-09-01: US, CA, MX, GB, PE, CL, and BR all returned real events;
+  Argentina returned zero, confirmed rather than assumed — this is exactly
+  why the tool supplements `search_events` instead of replacing it, since
+  `search_events` is what found real Buenos Aires events during the trip that
+  motivated this work.
+
+  A second, sharper finding from the same live testing: **`city` is an exact
+  match against Ticketmaster's own city registry, not a fuzzy search, and
+  does not tolerate diacritics.** `countryCode=BR` alone returns 141 events,
+  but `city=São Paulo` *and* the unaccented `city=Sao Paulo` both returned
+  zero, while `city=Rio de Janeiro` worked. `city` was originally a required
+  parameter — reasonable-looking in isolation, but it made the documented
+  workaround ("if a known city returns zero, retry without it") impossible to
+  follow. `city` is now optional; at least one of `city`, `country_code`,
+  `keyword`, or `classification_name` is required instead.
+
+  The parser was written against Ticketmaster's public schema docs before any
+  fixture existed. Two gaps only live data exposed:
+  - **`startTBA` is a separate flag from `startTBD`, and the parser only read
+    the latter.** A real captured event (New York Knicks vs. Boston Celtics)
+    has `sales.public = {"startTBD": false, "startTBA": true}` with no
+    `startDateTime` at all — reading only `startTBD` would have reported
+    `start_tbd: false` for a sale date that is genuinely unannounced, the one
+    distinction this tool exists to get right. Both flags are now captured.
+  - **Venue addresses can carry a `line2` the parser was dropping.** A real
+    NYC venue ("Berlin") needs both lines — `line1` alone is an incomplete
+    address for it.
+
+  `tests/fixtures/ticketmaster_discovery_events.json` is a live capture
+  (2026-09-01), trimmed only of unused image arrays and venue policy prose —
+  every field the parser reads is untouched real data. It replaces an earlier
+  version of this fixture that was hand-written (an invented event titled
+  "Broadway NYE Vigil Special") and so could not have caught either gap
+  above — the same failure mode this project's own rule ("shape assertions
+  use real recorded bodies rather than invented ones," stated in the 1.0.0
+  entry below) exists to prevent, and the same one that cost the
+  booking-options parser three releases that same year.
+
+  The `apikey` query parameter is redacted from every propagated exception —
+  applied from this tool's first commit, not bolted on afterward the way the
+  SerpAPI key leak in 1.4.0 was.
+
 ## [1.4.0] - 2026-09-01
 
 ### Fixed
@@ -446,6 +509,7 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.5.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.5.0
 [1.4.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.4.0
 [1.3.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.3.0
 [1.2.2]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.2

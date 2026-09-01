@@ -25,6 +25,7 @@ def _set_fake_keys(monkeypatch):
     """Set fake API keys so tests never hit the real guard."""
     monkeypatch.setenv("SERPAPI_API_KEY", "fake-serpapi-key")
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "fake-maps-key")
+    monkeypatch.setenv("TICKETMASTER_API_KEY", "fake-tm-key")
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +59,8 @@ _ROUTES_DENIED = {
     }
 }
 
+_TICKETMASTER_OK = {"page": {"totalElements": 0}}
+
 
 # ---------------------------------------------------------------------------
 # Both keys valid
@@ -69,6 +72,7 @@ async def test_check_setup_both_keys_valid():
     with respx.mock as mock:
         mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
         mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        mock.get("https://app.ticketmaster.com/discovery/v2/events.json").respond(json=_TICKETMASTER_OK)
         result = await check_setup()
 
     tools = {t["tool"]: t for t in result["tools"]}
@@ -79,6 +83,7 @@ async def test_check_setup_both_keys_valid():
     assert tools["search_accommodations"]["ready"] is True
     assert tools["search_cheapest_dates"]["ready"] is True
     assert tools["search_events"]["ready"] is True
+    assert tools["search_ticketmaster_events"]["ready"] is True
     assert tools["get_accommodation_details"]["ready"] is True
     assert tools["compare_drive_or_fly"]["ready"] is True
 
@@ -186,6 +191,7 @@ async def test_check_setup_maps_key_invalid():
 async def test_check_setup_neither_key_set(monkeypatch):
     monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+    monkeypatch.delenv("TICKETMASTER_API_KEY", raising=False)
     result = await check_setup()
 
     serpapi_tools = [
@@ -206,6 +212,8 @@ async def test_check_setup_neither_key_set(monkeypatch):
         assert "not set" in tool["reason"]
         if tool["tool"] in serpapi_tools:
             assert "serpapi.com" in tool["reason"]
+        elif tool["tool"] == "search_ticketmaster_events":
+            assert "developer.ticketmaster.com" in tool["reason"]
         else:
             assert "console.cloud.google.com" in tool["reason"]
 
@@ -478,16 +486,18 @@ async def test_check_setup_reports_every_registered_tool(monkeypatch):
     from cosmo_travel_mcp.server import mcp
     from cosmo_travel_mcp.tools import (
         cheapest_dates, driving, events, flights, hotels, itinerary, places,
+        ticketmaster_events,
     )
     from cosmo_travel_mcp.tools import setup as setup_mod
 
     for module in (flights, cheapest_dates, driving, events, hotels,
-                   itinerary, places, setup_mod):
+                   itinerary, places, ticketmaster_events, setup_mod):
         module.register(mcp)
     registered = {t.name for t in (await mcp.list_tools())}
 
     monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
+    monkeypatch.delenv("TICKETMASTER_API_KEY", raising=False)
     result = await check_setup()
     reported = {t["tool"] for t in result["tools"]}
 
