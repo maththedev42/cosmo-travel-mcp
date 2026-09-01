@@ -355,3 +355,8 @@ It reads the key from `$SERPAPI_API_KEY`, then `~/.cosmo-travel/env`
 appends to `watch.log`, writes human-readable alerts to `alerts.md`, upgrades
 a weak baseline in place the first time `price_history` appears, and skips the
 whole run when the quota reserve would be breached.
+
+Exit code contract for consumers (e.g. `semanal.sh`):
+- `0`: All scheduled probes succeeded cleanly.
+- `3` (`EXIT_SKIPPED_QUOTA`): Run skipped because quota reserve would be breached.
+- `4` (`EXIT_PROBE_FAILED`): Partial run — one or more probes failed. Valid alerts from successful probes are written to `alerts.md` and MUST be processed/displayed by the consumer alongside a warning that the run was partial.

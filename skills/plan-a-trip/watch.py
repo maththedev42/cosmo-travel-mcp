@@ -226,8 +226,13 @@ EXIT_SKIPPED_QUOTA = 3
 EXIT_PROBE_FAILED = 4
 """Exit codes for non-standard outcomes.
 
+A skip, a failed probe, and a quiet week leave indistinguishable traces —
+`alerts.md` untouched or missing measurements — so a scheduler reading only
+the exit code cannot tell "nothing moved" from "nothing was measured". That
+matters most when a watch sits dead for weeks while the scheduler reports 0 (success).
+
 EXIT_SKIPPED_QUOTA (3): did not run, reserve would have been breached.
-EXIT_PROBE_FAILED (4): one or more searches failed upstream.
+EXIT_PROBE_FAILED (4): one or more searches failed upstream (partial run; consumer should use measured alerts).
 """
 
 

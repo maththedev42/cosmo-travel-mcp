@@ -141,25 +141,19 @@ def _dedupe_key(event: dict[str, Any]) -> tuple[str, str]:
 async def _fetch_page(
     query: str,
     *,
-    when: str | None,
     country: str | None,
     language: str | None,
-    start: int,
 ) -> tuple[list[dict[str, Any]], bool, bool]:
-    """Fetch one page. Returns ``(raw_events, from_cache, spent_a_search)``.
+    """Fetch events for *query*. Returns ``(raw_events, from_cache, spent_a_search)``.
 
     A "no results" body is a valid empty page, not a failure — one barren
     angle of a sweep must not sink the other angles.
     """
     params: dict[str, Any] = {"q": _events_shaped_query(query)}
-    if when is not None:
-        params["htichips"] = f"date:{when}"
     if country:
         params["gl"] = country
     if language:
         params["hl"] = language
-    if start:
-        params["start"] = start
 
     try:
         data, from_cache = await _call_serpapi(params, engine="google")
@@ -183,34 +177,32 @@ async def search_events(
     country: str | None = None,
     language: str | None = None,
 ) -> dict[str, Any]:
-    """Search for events (concerts, shows, sports, festivals) via SerpAPI.
+    """Search for events (concerts, shows, sports, festivals) via SerpAPI's google engine.
 
-    **Costs one SerpAPI search per query per page** — that is
-    ``(1 + len(also_search)) * pages`` searches. A default call costs 1.
+    **Costs one SerpAPI search per query angle** — that is
+    ``1 + len(also_search)`` searches. A default call costs 1.
 
-    One query returns about ten results and one slice of Google's event
-    corpus, so a default call *will* miss things. To actually cover a city:
+    One query returns about ten results from Google's event SERP block.
+    Different phrasings reach different corpora — this is how niche events
+    surface at all: a local sports fixture or a free street party rarely
+    appears under a generic "events in <city>" query, but does under
+    "esportes em <city>" or "festival de rua <city>". Use ``also_search`` to
+    surface more events.
 
-    * **``pages=3``** — measured as the single biggest win: page 2 alone
-      returned eight events that four different phrasings had all missed.
-    * **``also_search``** — different phrasings reach different corpora. This
-      is how niche events surface at all: a local sports fixture or a free
-      street party rarely appears under a generic "events in <city>" query,
-      but does under "esportes em <city>" or "festival de rua <city>".
-      Write the angles in the local language of the destination.
-
-    A barren angle is not an error — it contributes nothing and the sweep
-    continues.
+    Note on deprecated parameters (retained for contract compatibility):
+    * ``pages``: Treated as an unbilled no-op. Google's SERP returns all
+      ``events_results`` on the first page. Extra pages are not requested and
+      do not consume quota.
+    * ``when``: Treated as a no-op. Google's SERP ``events_results`` block
+      does not apply date filters.
 
     Args:
         query: Free-text search (e.g. "New York" or "jazz concerts in New
                Orleans"). A bare city/location name is prefixed automatically.
-        when: Optional date filter — one of today, tomorrow, week, weekend,
-              next_week, month, next_month. Omit it to see everything
-              scheduled, which is what a trip weeks away needs.
+        when: Deprecated no-op date filter.
         also_search: Up to 6 additional query angles, deduplicated against the
                main query's results.
-        pages: Result pages per query, 1–5 (about 10 results per page).
+        pages: Deprecated no-op (1 search spent per query angle).
         country: Country code (``gl`` parameter).
         language: Language code (``hl`` parameter).
 
@@ -228,7 +220,7 @@ async def search_events(
     if also_search is not None and len(also_search) > _MAX_EXTRA_QUERIES:
         raise ValueError(
             f"also_search accepts at most {_MAX_EXTRA_QUERIES} extra angles "
-            f"(each costs {pages} search(es)), got {len(also_search)}"
+            f"(each costs 1 search), got {len(also_search)}"
         )
 
     queries = [query] + [q for q in (also_search or []) if q and q.strip()]
@@ -239,38 +231,21 @@ async def search_events(
     any_cached = False
 
     for q in queries:
-        # Advance the offset by what the page actually returned, not by a
-        # fixed page size. The engine returns 9 or 10 per page depending on
-        # the query, so stepping by a constant 10 silently skips an event
-        # every time a page comes back short.
-        offset = 0
-        for _page in range(pages):
-            raw, from_cache, spent = await _fetch_page(
-                q,
-                when=when,
-                country=country,
-                language=language,
-                start=offset,
-            )
-            searches_used += int(spent)
-            any_cached = any_cached or from_cache
+        raw, from_cache, spent = await _fetch_page(
+            q,
+            country=country,
+            language=language,
+        )
+        searches_used += int(spent)
+        any_cached = any_cached or from_cache
 
-            for item in raw:
-                parsed = _parse_event(item)
-                key = _dedupe_key(parsed)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(parsed)
-
-            # Only an EMPTY page means the end. A short page does not: the
-            # live engine returned 9 results for "Events in Porto Alegre" and
-            # a further 9 at start=10, eight of which appeared nowhere else.
-            # Treating "fewer than a full page" as the end threw away the
-            # single biggest source of missed events.
-            if not raw:
-                break
-            offset += len(raw)
+        for item in raw:
+            parsed = _parse_event(item)
+            key = _dedupe_key(parsed)
+            if key in seen:
+                continue
+            seen.add(key)
+            collected.append(parsed)
 
     result: dict[str, Any] = {
         "events": collected,

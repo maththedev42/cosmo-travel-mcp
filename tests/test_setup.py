@@ -253,6 +253,47 @@ async def test_check_setup_reports_recorded_engine_failure():
         _reset_engine_errors()
 
 
+@pytest.mark.asyncio
+async def test_check_setup_cold_session_declares_key_only_verification():
+    """In a cold session (no errors recorded), check_setup declares key validation explicitly."""
+    from cosmo_travel_mcp.tools.flights import _reset_engine_errors
+    _reset_engine_errors()
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+        mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+        result = await check_setup()
+
+    summary_lines = result["summary"].split("\n")
+    events_line = [l for l in summary_lines if l.startswith("search_events:")][0]
+    assert "key valid, engine verified on call" in events_line
+
+    events_tool = [t for t in result["tools"] if t["tool"] == "search_events"][0]
+    assert "engine availability verified on call" in events_tool["reason"]
+
+
+@pytest.mark.asyncio
+async def test_compare_trip_windows_fails_when_hotels_engine_fails():
+    """compare_trip_windows uses both google_flights and google_hotels; failure in either flags NOT ready."""
+    from cosmo_travel_mcp.tools.flights import _record_engine_error, _reset_engine_errors
+
+    _reset_engine_errors()
+    try:
+        _record_engine_error("google_hotels", "Hotels engine error")
+
+        with respx.mock as mock:
+            mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+            mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+            result = await check_setup()
+
+        compare_tool = [t for t in result["tools"] if t["tool"] == "compare_trip_windows"][0]
+        assert compare_tool["ready"] is False
+        assert "google_hotels" in compare_tool["reason"]
+        assert "Hotels engine error" in compare_tool["reason"]
+    finally:
+        _reset_engine_errors()
+
+
 # ---------------------------------------------------------------------------
 # Server instructions (prompt 06)
 # ---------------------------------------------------------------------------

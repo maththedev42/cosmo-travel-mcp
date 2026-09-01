@@ -8,6 +8,8 @@ path rather than imported.
 from __future__ import annotations
 
 import importlib.util
+import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -117,3 +119,133 @@ def test_sweep_events_raises_on_api_error(watch, monkeypatch):
             "query": "New York events",
             "window": {"from": "2026-12-30", "to": "2027-01-02"},
         })
+
+
+# ---------------------------------------------------------------------------
+# Integration tests for watch.main() exit codes and alert generation
+# ---------------------------------------------------------------------------
+
+
+def _setup_watchlist(tmp_path: Path, legs: list[dict] | None = None, event_watches: list[dict] | None = None) -> Path:
+    wl = {
+        "quota_reserve": 10,
+        "legs": legs or [
+            {
+                "origin": "POA", "destination": "MIA",
+                "outbound_date": "2026-12-20",
+                "label": "POA → MIA",
+                "baseline": {
+                    "min": 5000, "max": 6000, "source": "price_history",
+                    "low_band_ceiling": 5500, "captured_on": "2026-08-01",
+                },
+            }
+        ],
+        "event_watches": event_watches or [
+            {
+                "city": "New York", "query": "New York events",
+                "window": {"from": "2026-12-30", "to": "2027-01-02"},
+                "seen": [],
+            }
+        ],
+    }
+    wl_file = tmp_path / "watchlist.json"
+    wl_file.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+    return wl_file
+
+
+def test_main_all_probes_failed(watch, monkeypatch, tmp_path):
+    """Scenario 1: All probes fail, no flight alerts -> exit code 4, failures recorded in alerts.md."""
+    wl_file = _setup_watchlist(tmp_path)
+    alerts_file = tmp_path / "alerts.md"
+    log_file = tmp_path / "watch.log"
+
+    monkeypatch.setattr(sys, "argv", ["watch.py", str(wl_file)])
+    monkeypatch.setenv("SERPAPI_API_KEY", "fake-key")
+    monkeypatch.setattr(watch, "searches_left", lambda key: 100)
+    monkeypatch.setattr(watch, "ALERTS", alerts_file)
+    monkeypatch.setattr(watch, "LOG", log_file)
+
+    def failing_price_leg(key, leg):
+        raise RuntimeError("Flight pricing failed upstream")
+
+    def failing_sweep_events(key, watch_item):
+        raise RuntimeError("Event sweep failed upstream")
+
+    monkeypatch.setattr(watch, "price_leg", failing_price_leg)
+    monkeypatch.setattr(watch, "sweep_events", failing_sweep_events)
+
+    rc = watch.main()
+    assert rc == 4, "All probes failing must return exit code 4 (EXIT_PROBE_FAILED)"
+
+    assert alerts_file.exists(), "alerts.md must be written on failure"
+    alerts_content = alerts_file.read_text(encoding="utf-8")
+    assert "Sondagens com falha nesta rodada:" in alerts_content
+    assert "Flight pricing failed upstream" in alerts_content
+    assert "Event sweep failed upstream" in alerts_content
+
+
+def test_main_clean_round(watch, monkeypatch, tmp_path):
+    """Scenario 2: Clean round, no failures, price above ceiling -> exit code 0."""
+    wl_file = _setup_watchlist(tmp_path)
+    alerts_file = tmp_path / "alerts.md"
+    log_file = tmp_path / "watch.log"
+
+    monkeypatch.setattr(sys, "argv", ["watch.py", str(wl_file)])
+    monkeypatch.setenv("SERPAPI_API_KEY", "fake-key")
+    monkeypatch.setattr(watch, "searches_left", lambda key: 100)
+    monkeypatch.setattr(watch, "ALERTS", alerts_file)
+    monkeypatch.setattr(watch, "LOG", log_file)
+
+    def quiet_price_leg(key, leg):
+        return {
+            "price": 5800,  # Above ceiling 5500 -> quiet
+            "price_level": "NORMAL",
+            "typical_price_range": [5000, 6000],
+            "price_history": None,
+        }
+
+    def quiet_sweep_events(key, watch_item):
+        return []  # No events found
+
+    monkeypatch.setattr(watch, "price_leg", quiet_price_leg)
+    monkeypatch.setattr(watch, "sweep_events", quiet_sweep_events)
+
+    rc = watch.main()
+    assert rc == 0, "Clean round with no alerts must return exit code 0"
+    assert not alerts_file.exists(), "Clean round with no alerts must leave alerts.md untouched"
+
+
+def test_main_partial_failure(watch, monkeypatch, tmp_path):
+    """Scenario 3: Partial failure — one flight leg triggers strong alert, event sweep fails -> exit code 4 AND alert recorded."""
+    wl_file = _setup_watchlist(tmp_path)
+    alerts_file = tmp_path / "alerts.md"
+    log_file = tmp_path / "watch.log"
+
+    monkeypatch.setattr(sys, "argv", ["watch.py", str(wl_file)])
+    monkeypatch.setenv("SERPAPI_API_KEY", "fake-key")
+    monkeypatch.setattr(watch, "searches_left", lambda key: 100)
+    monkeypatch.setattr(watch, "ALERTS", alerts_file)
+    monkeypatch.setattr(watch, "LOG", log_file)
+
+    def cheap_price_leg(key, leg):
+        return {
+            "price": 4800,  # Below min 5000 -> strong alert!
+            "price_level": "LOW",
+            "typical_price_range": [5000, 6000],
+            "price_history": [[0, 5000]],
+        }
+
+    def failing_sweep_events(key, watch_item):
+        raise RuntimeError("Event sweep 500 server error")
+
+    monkeypatch.setattr(watch, "price_leg", cheap_price_leg)
+    monkeypatch.setattr(watch, "sweep_events", failing_sweep_events)
+
+    rc = watch.main()
+    assert rc == 4, "Partial failure must return exit code 4"
+    assert alerts_file.exists()
+
+    content = alerts_file.read_text(encoding="utf-8")
+    assert "Sondagens com falha nesta rodada:" in content
+    assert "Event sweep 500 server error" in content
+    assert "abaixo do piso medido" in content, "Purchase alert MUST be present in alerts.md even on partial failure"

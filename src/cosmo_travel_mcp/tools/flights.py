@@ -9,6 +9,7 @@ import re
 import time
 from collections import OrderedDict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -56,27 +57,71 @@ _QUOTA_DISABLED = object()
 
 _QUOTA_SEARCHES_LEFT: int | None | object = None
 
-_ENGINE_ERRORS: dict[str, tuple[str, str]] = {}
+_ENGINE_ERRORS_FILE = Path.home() / ".cosmo-travel" / "engine_errors.json"
+_ENGINE_ERRORS: dict[str, tuple[str, str]] | None = None
+
+
+def _load_engine_errors() -> dict[str, tuple[str, str]]:
+    global _ENGINE_ERRORS
+    if _ENGINE_ERRORS is not None:
+        return _ENGINE_ERRORS
+
+    _ENGINE_ERRORS = {}
+    if _ENGINE_ERRORS_FILE.exists():
+        try:
+            data = json.loads(_ENGINE_ERRORS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    if isinstance(v, list) and len(v) == 2:
+                        _ENGINE_ERRORS[k] = (str(v[0]), str(v[1]))
+        except Exception:
+            pass
+    return _ENGINE_ERRORS
+
+
+def _save_engine_errors() -> None:
+    try:
+        _ENGINE_ERRORS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if _ENGINE_ERRORS:
+            _ENGINE_ERRORS_FILE.write_text(
+                json.dumps(_ENGINE_ERRORS, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        elif _ENGINE_ERRORS_FILE.exists():
+            _ENGINE_ERRORS_FILE.unlink()
+    except Exception:
+        pass
 
 
 def _record_engine_error(engine: str, error_msg: str) -> None:
+    errors = _load_engine_errors()
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    _ENGINE_ERRORS[engine] = (error_msg, now_iso)
+    errors[engine] = (error_msg, now_iso)
+    _save_engine_errors()
 
 
 def _clear_engine_error(engine: str) -> None:
-    _ENGINE_ERRORS.pop(engine, None)
+    errors = _load_engine_errors()
+    if engine in errors:
+        errors.pop(engine)
+        _save_engine_errors()
 
 
 def get_engine_error(engine: str) -> tuple[str, str] | None:
-    """Return (error_msg, timestamp_iso) if engine failed in last call in this session."""
-    return _ENGINE_ERRORS.get(engine)
+    """Return (error_msg, timestamp_iso) if engine failed in last call."""
+    errors = _load_engine_errors()
+    return errors.get(engine)
 
 
 def _reset_engine_errors() -> None:
     """Reset tracked engine errors (for tests)."""
     global _ENGINE_ERRORS
     _ENGINE_ERRORS = {}
+    try:
+        if _ENGINE_ERRORS_FILE.exists():
+            _ENGINE_ERRORS_FILE.unlink()
+    except Exception:
+        pass
 
 # ---------------------------------------------------------------------------
 # Session-scoped SerpAPI response cache
