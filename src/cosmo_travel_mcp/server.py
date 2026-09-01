@@ -10,7 +10,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles twelve travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles thirteen travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
 for driving).
 

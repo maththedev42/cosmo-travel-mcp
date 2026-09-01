@@ -2,7 +2,7 @@
 
 # cosmo-travel-mcp
 
-One MCP server with twelve travel tools — flight search, multi-city itineraries,
+One MCP server with thirteen travel tools — flight search, multi-city itineraries,
 accommodations, things to do, events, car rental offices, drive-vs-fly comparisons,
 itinerary checking and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
@@ -269,6 +269,12 @@ successful SerpAPI responses in memory. A cache hit is marked `cached: true`
 on the tool response and costs zero searches.  Set the environment variable
 `COSMO_TRAVEL_CACHE_TTL` (seconds; `0` disables the cache) at registration
 time if you need a different TTL — the default is 600 (10 minutes).
+
+`check_setup` remembers which SerpAPI engine last failed a call, across
+sessions, in `~/.cosmo-travel/engine_errors.json` — so a tool whose engine
+died an hour ago is reported not-ready even in a fresh session, rather than
+`ready` on the strength of a valid key alone. Set `COSMO_TRAVEL_STATE_DIR` to
+relocate that directory.
 
 | Tool | SerpAPI searches per call | Maps calls per call | Notes |
 |---|---|---|---|

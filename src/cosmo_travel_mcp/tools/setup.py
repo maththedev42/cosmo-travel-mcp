@@ -26,9 +26,21 @@ from ..onboarding import (
     setup_guide,
 )
 from .driving import FIELD_MASK, ROUTES_API_BASE
-from .flights import _refresh_quota_from_account
+from .flights import _refresh_quota_from_account, get_engine_error
 
 SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
+
+TOOL_ENGINES: dict[str, tuple[str, ...]] = {
+    "search_flights": ("google_flights",),
+    "search_multi_city": ("google_flights",),
+    "search_cheapest_dates": ("google_flights",),
+    "compare_trip_windows": ("google_flights", "google_hotels"),
+    "search_accommodations": ("google_hotels",),
+    "get_accommodation_details": ("google_hotels",),
+    "search_events": ("google",),
+    "search_things_to_do": ("google_maps",),
+    "search_car_rentals": ("google_maps",),
+}
 
 # Re-exported so callers (and tests) can import every onboarding anchor from
 # one place alongside check_setup itself.
@@ -200,10 +212,26 @@ async def check_setup() -> dict[str, Any]:
         else:
             account = probe["account"]
             for s in serpapi_statuses:
-                s["ready"] = True
+                tool_name = s["tool"]
+                engines = TOOL_ENGINES.get(tool_name, ())
+                failed_engine_err: tuple[str, str, str] | None = None
+                for engine in engines:
+                    err = get_engine_error(engine)
+                    if err:
+                        failed_engine_err = (engine, err[0], err[1])
+                        break
+
                 s["plan_searches_left"] = account.get("plan_searches_left", "?")
                 s["this_month_usage"] = account.get("this_month_usage", "?")
                 s["total_searches_left"] = account.get("total_searches_left", "?")
+
+                if failed_engine_err:
+                    engine, err_msg, ts = failed_engine_err
+                    s["ready"] = False
+                    s["reason"] = f"Engine '{engine}' failed in last search call ({ts}): {err_msg}"
+                else:
+                    s["ready"] = True
+                    s["reason"] = "SerpAPI key valid (quota checked; engine availability verified on call)"
 
             # Re-anchor the local quota estimate so tool warnings
             # use the latest real number.
@@ -242,13 +270,13 @@ async def check_setup() -> dict[str, Any]:
             elif t["tool"] == "search_cheapest_dates":
                 left = t.get("plan_searches_left", "?")
                 summary_lines.append(
-                    f"{t['tool']}: ready ({left} searches left; "
+                    f"{t['tool']}: ready ({left} searches left; key valid, engine verified on call; "
                     "each call costs up to max_calls searches (default 6, hard cap 15))"
                 )
             else:
                 left = t.get("plan_searches_left", "?")
                 summary_lines.append(
-                    f"{t['tool']}: ready ({left} searches left this month)"
+                    f"{t['tool']}: ready ({left} searches left this month; key valid, engine verified on call)"
                 )
         else:
             reason = t.get("reason", "unknown")

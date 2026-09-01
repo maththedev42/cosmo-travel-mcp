@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import time
 from collections import OrderedDict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -54,6 +56,95 @@ _LOW_QUOTA_THRESHOLD: int = 10
 _QUOTA_DISABLED = object()
 
 _QUOTA_SEARCHES_LEFT: int | None | object = None
+
+# Resolved fresh on every call rather than cached as a module constant, so a
+# test fixture can point it at ``tmp_path`` with a plain ``monkeypatch.setattr``.
+# It was a fixed ``Path.home() / ".cosmo-travel"`` constant once — the live
+# watch's own state directory — and running the test suite overwrote a real
+# file there with a mock's fabricated error, then deleted it on the next
+# ``_reset_engine_errors()``. ``COSMO_TRAVEL_STATE_DIR`` lets a deployment move
+# the directory without an env var meant only for tests.
+def _engine_errors_path() -> Path:
+    override = os.environ.get("COSMO_TRAVEL_STATE_DIR")
+    base = Path(override) if override else Path.home() / ".cosmo-travel"
+    return base / "engine_errors.json"
+
+
+_ENGINE_ERRORS: dict[str, tuple[str, str]] | None = None
+
+
+def _load_engine_errors() -> dict[str, tuple[str, str]]:
+    global _ENGINE_ERRORS
+    if _ENGINE_ERRORS is not None:
+        return _ENGINE_ERRORS
+
+    _ENGINE_ERRORS = {}
+    path = _engine_errors_path()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    if isinstance(v, list) and len(v) == 2:
+                        _ENGINE_ERRORS[k] = (str(v[0]), str(v[1]))
+        except Exception:
+            pass
+    return _ENGINE_ERRORS
+
+
+def _save_engine_errors() -> None:
+    path = _engine_errors_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if _ENGINE_ERRORS:
+            path.write_text(
+                json.dumps(_ENGINE_ERRORS, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        elif path.exists():
+            path.unlink()
+    except Exception:
+        pass
+
+
+def _record_engine_error(engine: str, error_msg: str) -> None:
+    errors = _load_engine_errors()
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    errors[engine] = (error_msg, now_iso)
+    _save_engine_errors()
+
+
+def _clear_engine_error(engine: str) -> None:
+    errors = _load_engine_errors()
+    if engine in errors:
+        errors.pop(engine)
+        _save_engine_errors()
+
+
+def get_engine_error(engine: str) -> tuple[str, str] | None:
+    """Return (error_msg, timestamp_iso) if engine failed in last call.
+
+    The timestamp is the only staleness signal on purpose: a failure does not
+    expire on a timer, but the caller-facing reason states when it happened,
+    so "failed three weeks ago" and "failed thirty seconds ago" do not read
+    the same. Concurrent writers (two MCP server processes) last-write-wins on
+    this file; it is best-effort diagnostic state, not a source of truth
+    anything spends money on, so no lock was added for it.
+    """
+    errors = _load_engine_errors()
+    return errors.get(engine)
+
+
+def _reset_engine_errors() -> None:
+    """Reset tracked engine errors (for tests)."""
+    global _ENGINE_ERRORS
+    _ENGINE_ERRORS = {}
+    path = _engine_errors_path()
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
 
 # ---------------------------------------------------------------------------
 # Session-scoped SerpAPI response cache
@@ -319,7 +410,9 @@ async def _call_serpapi(
             resp.raise_for_status()
             data: dict[str, Any] = resp.json()
             if "error" in data:
+                _record_engine_error(engine, data["error"])
                 raise ValueError(data["error"])
+            _clear_engine_error(engine)
             # --- cache the successful response ---
             if _CACHE_TTL_SECONDS > 0:
                 now_mono = time.monotonic()
@@ -333,11 +426,22 @@ async def _call_serpapi(
             if isinstance(_QUOTA_SEARCHES_LEFT, int):
                 _QUOTA_SEARCHES_LEFT -= 1
             return data, False
-        except httpx.TransportError:
+        except httpx.HTTPStatusError as exc:
+            sanitized_url = re.sub(r"api_key=[^&]+", "api_key=***", str(exc.request.url)) if exc.request else ""
+            req = httpx.Request(exc.request.method, sanitized_url, headers=exc.request.headers) if exc.request else None
+            msg = re.sub(r"api_key=[^&]+", "api_key=***", str(exc))
+            _record_engine_error(engine, msg)
+            raise httpx.HTTPStatusError(msg, request=req, response=exc.response) from None
+        except httpx.RequestError as exc:
             if attempt == 1:
                 await asyncio.sleep(_RETRY_BACKOFF_SECONDS)
                 continue
-            raise
+            sanitized_url = re.sub(r"api_key=[^&]+", "api_key=***", str(exc.request.url)) if exc.request else ""
+            req = httpx.Request(exc.request.method, sanitized_url, headers=exc.request.headers) if exc.request else None
+            msg = re.sub(r"api_key=[^&]+", "api_key=***", str(exc))
+            _record_engine_error(engine, msg)
+            cls = type(exc)
+            raise cls(msg, request=req) from None
 
 
 def _build_base_params(

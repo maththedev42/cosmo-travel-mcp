@@ -101,3 +101,23 @@ def test_engine_discriminates_the_cache_key():
 
     rotated_key = _cache_key({**base, "engine": "google_events", "api_key": "k2"})
     assert rotated_key == events_key, "the API key must not be part of the cache key"
+
+
+@pytest.mark.asyncio
+async def test_call_serpapi_redacts_api_key_on_http_error(monkeypatch):
+    """HTTP errors must never leak the raw API key in exception strings or request URLs."""
+    from cosmo_travel_mcp.tools.flights import _call_serpapi
+
+    secret_key = "super-secret-api-key-12345"
+    monkeypatch.setenv("SERPAPI_API_KEY", secret_key)
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(status_code=400, text="Bad request")
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await _call_serpapi({"q": "test"}, engine="google")
+
+    err_str = str(exc_info.value)
+    url_str = str(exc_info.value.request.url)
+    assert secret_key not in err_str, "API key must be redacted from exception message"
+    assert secret_key not in url_str, "API key must be redacted from exception request URL"
+    assert "api_key=***" in err_str
+    assert "api_key=***" in url_str

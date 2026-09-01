@@ -118,11 +118,62 @@ async def test_multi_word_cities_still_get_the_events_prefix(query, expected_q):
 
 @pytest.mark.asyncio
 async def test_search_events_uses_the_events_engine():
-    """Guards the historical bug where the engine was clobbered to google_flights."""
+    """Guards the engine choice for search_events (google engine returning events_results)."""
     with respx.mock as mock:
         mock.get(SERPAPI_BASE).respond(json={"events_results": []})
         await search_events("Lisbon")
-        assert mock.calls.last.request.url.params["engine"] == "google_events"
+        assert mock.calls.last.request.url.params["engine"] == "google"
+
+
+@pytest.mark.asyncio
+async def test_search_events_new_google_engine_item_shape():
+    """Item from google engine (flat date string, time, implicit venue in address[0])."""
+    mock_response = {
+        "events_results": [
+            {
+                "title": "Birdland Big Band",
+                "type": "Live big band jazz",
+                "date": "Dec 31",
+                "time": "7:00 PM",
+                "address": ["Birdland Jazz Club", "Midtown South"],
+            },
+        ],
+    }
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=mock_response)
+        result = await search_events("New York")
+
+    assert len(result["events"]) == 1
+    ev = result["events"][0]
+    assert ev["title"] == "Birdland Big Band"
+    assert ev["date"] == "Dec 31 | 7:00 PM"
+    assert ev["venue"] == "Birdland Jazz Club"
+    assert ev["address"] == "Midtown South"
+    assert "link" not in ev
+
+
+@pytest.mark.asyncio
+async def test_search_events_string_date_without_time():
+    """Item with string date and no time -> date string unmodified, no time invented."""
+    mock_response = {
+        "events_results": [
+            {
+                "title": "Times Square NYE",
+                "date": "Dec 31",
+                "address": ["Times Square", "New York, NY"],
+            },
+        ],
+    }
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=mock_response)
+        result = await search_events("New York")
+
+    ev = result["events"][0]
+    assert ev["date"] == "Dec 31"
+    assert ev["venue"] == "Times Square"
+    assert "link" not in ev
 
 
 @pytest.mark.asyncio
@@ -135,7 +186,7 @@ async def test_htichips_absent_when_when_is_omitted():
 
 @pytest.mark.asyncio
 async def test_search_events_when_filter():
-    """when='weekend' -> request params include htichips date filter."""
+    """when='weekend' is accepted for signature compatibility but does not send htichips."""
     mock_response = {
         "events_results": [
             {"title": "Fest", "date": {"when": "This weekend"}},
@@ -144,11 +195,11 @@ async def test_search_events_when_filter():
 
     with respx.mock as mock:
         route = mock.get(SERPAPI_BASE).respond(json=mock_response)
-        await search_events("Chicago", when="weekend")
+        res = await search_events("Chicago", when="weekend")
 
     req = route.calls[0].request
-    assert "htichips" in req.url.params
-    assert req.url.params["htichips"] == "date:weekend"
+    assert "htichips" not in req.url.params
+    assert len(res["events"]) == 1
 
 
 @pytest.mark.asyncio
@@ -384,60 +435,18 @@ async def test_one_barren_angle_does_not_sink_the_sweep():
 
 
 @pytest.mark.asyncio
-async def test_a_short_page_is_not_the_last_page():
-    """The live engine returns 9 results for a page and 9 more at the next offset.
-
-    Treating "fewer than a full page" as the end skipped page 2 entirely,
-    which is where eight otherwise-unseen events came from.
-    """
-    nine = [f"Show {i}" for i in range(9)]
+async def test_pages_and_when_are_unbilled_no_ops():
+    """pages > 1 and when parameters do not perform extra calls, send htichips, or inflate searches_used."""
     with respx.mock as mock:
-        route = mock.get(SERPAPI_BASE).mock(
-            side_effect=[
-                httpx.Response(200, json=_page(*nine)),
-                httpx.Response(200, json=_page("Martinho da Vila")),
-                httpx.Response(200, json={"events_results": []}),
-            ]
+        route = mock.get(SERPAPI_BASE).respond(
+            json=_page("Concert 1", "Concert 2")
         )
 
-        result = await search_events(query="Porto Alegre", pages=3)
+        result = await search_events("Porto Alegre", when="weekend", pages=3)
 
-    assert route.call_count == 3
-    assert "Martinho da Vila" in [e["title"] for e in result["events"]]
-
-
-@pytest.mark.asyncio
-async def test_offset_advances_by_results_received_not_a_fixed_page_size():
-    """A 9-result page must be followed by start=9, or item 9 is never fetched."""
-    nine = [f"Show {i}" for i in range(9)]
-    with respx.mock as mock:
-        route = mock.get(SERPAPI_BASE).mock(
-            side_effect=[
-                httpx.Response(200, json=_page(*nine)),
-                httpx.Response(200, json=_page("Tenth")),
-            ]
-        )
-
-        await search_events(query="Porto Alegre", pages=2)
-
-    assert [c.request.url.params.get("start") for c in route.calls] == [None, "9"]
-
-
-@pytest.mark.asyncio
-async def test_empty_page_stops_paging():
-    """An empty page really is the end — paging on would burn quota."""
-    with respx.mock as mock:
-        route = mock.get(SERPAPI_BASE).mock(
-            side_effect=[
-                httpx.Response(200, json=_page("Only One")),
-                httpx.Response(200, json={"events_results": []}),
-            ]
-        )
-
-        result = await search_events(query="Porto Alegre", pages=5)
-
-    assert route.call_count == 2
-    assert result["searches_used"] == 2
+    assert result["searches_used"] == 1, "pages=3 must spend only 1 search per query angle"
+    assert route.call_count == 1, "pages=3 must execute exactly 1 HTTP call per query angle"
+    assert "htichips" not in route.calls[0].request.url.params, "when parameter must not send htichips"
 
 
 @pytest.mark.asyncio

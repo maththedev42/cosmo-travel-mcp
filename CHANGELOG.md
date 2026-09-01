@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-01
+
+### Fixed
+
+- **`search_events` lives again, on the `google` engine.** SerpAPI
+  discontinued `google_events` — every query answered `"Unsupported
+  \`google_events\` search engine."` The events block still exists on the
+  plain `google` engine, under the same `events_results` key, so the tool
+  needed no new data source, only a translation.
+
+  The item shape changed completely: `date` is now a flat string rather than
+  `{"start_date": ...}`, `venue` is gone (the room name is `address[0]`), and
+  there is no more `link` or `ticket_info`. `_parse_event` used to guard with
+  `isinstance(..., dict)`, so on the new shape it degraded silently into
+  events with no date and no venue; `skills/plan-a-trip/watch.py` crashed
+  outright with `AttributeError: 'str' object has no attribute 'get'`. Both
+  now read either shape, and `watch.py` gained a `_start_date()` helper
+  covering both.
+
+- **`pages` and `when` were measured no-ops on the new engine, and the
+  docstring still recommended spending three searches to get one.** Page 2
+  returns zero events (the block only ever appears on page 1), and
+  `htichips=date:X` comes back with a title-for-title identical list — the
+  filter is silently ignored. Both parameters are now accepted, documented as
+  no-ops, and unbilled: `pages=3` spends one search per query angle, not
+  three. `also_search` is unaffected — different phrasings still reach
+  different corpora.
+
+- **The API key no longer leaks into a failed search's error message.**
+  httpx formats the full request URL into `HTTPStatusError`, so every failed
+  search wrote `api_key=<the key>` into whatever logged the exception —
+  including a Claude Code transcript. Redacted centrally in `_call_serpapi`,
+  on the request URL and not only on `str(exc)`, which would have missed
+  `exc.request.url`.
+
+- **`check_setup` no longer reports a tool `ready` on the strength of its API
+  key alone.** It validated the key and never the engine, so it answered
+  `search_events: ready` on the same day every call to that engine was
+  failing. Engine failures now persist across sessions in
+  `~/.cosmo-travel/engine_errors.json` (relocate with
+  `COSMO_TRAVEL_STATE_DIR`), so a cold session knows about last week's 400
+  instead of asserting a clean bill of health it never checked. Where nothing
+  has failed, the `reason` says what was actually verified — the key, with
+  engine availability confirmed only once a call is made — rather than
+  implying more than that. `TOOL_ENGINES` is now `tuple[str, ...]` per tool,
+  so `compare_trip_windows` is correctly marked not-ready when either
+  `google_flights` or `google_hotels` has failed, not only the first.
+
+  The persistence file's directory was originally a fixed
+  `Path.home() / ".cosmo-travel"` — the live price watch's own state
+  directory, alongside `watchlist-eua-2026.json` and `alerts.md`. Running the
+  test suite overwrote a real file there with a mock's fabricated 400, and the
+  next test's cleanup deleted it — a healthy engine would then report broken
+  in production. `tests/test_engine_errors_state_isolation.py` reproduces this
+  directly against the real path (not the test-isolated one) so a regression
+  fails loudly here rather than surfacing as a missing file weeks later. The
+  fix is a `COSMO_TRAVEL_STATE_DIR` env var, set once for the whole pytest
+  session in `conftest.py` — a per-test `monkeypatch` was tried first and
+  looked correct by the fixture-teardown ordering rules, but instrumenting
+  every fixture boundary showed the real file vanishing between two tests
+  regardless; a session-wide env var sidesteps that question rather than
+  depending on it.
+
+- **A watchlist round with a failed probe read as a quiet week, the same
+  defect `EXIT_SKIPPED_QUOTA` fixed in 1.3.0 for a skipped run, on the
+  request-failure branch instead.**
+  `sweep_events()` returned `[]` on an API error, indistinguishable from
+  "swept and found nothing." It now raises, `main()` collects failed probes
+  separately from alerts, and reports `EXIT_PROBE_FAILED` (4) — but a round
+  that measures a leg, fires a real alert, *and* loses one event sweep must
+  still reach the consumer: `semanal.sh` treated any non-zero exit as "do not
+  touch the page," which would have swallowed a genuine buy signal alongside
+  the partial failure. `SKILL.md` documents the exit code contract —
+  including that 4 is partial and the measured alerts must still be used —
+  for exactly that reason. Proven by mutation: reverting
+  `return EXIT_PROBE_FAILED` to `return 0` turns two tests red.
+
+- **The tool count said twelve in two places and thirteen in a third.**
+  `README.md` and `server.py` both undercounted by one after
+  `compare_trip_windows` shipped in 1.3.0; the MCP server's own startup
+  instructions were among the two wrong copies.
+
+## [1.3.0] - 2026-08-20
+
 ### Fixed
 
 - **A watchlist run that skipped for quota was indistinguishable from a quiet
@@ -30,10 +114,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   `tests/test_watch.py` covers both, loading the script by path since
   `skills/` is not part of the installed package.
-
-## [1.3.0] - 2026-08-20
-
-### Added
 
 - **`compare_trip_windows` answers whether a different departure date is
   cheaper once the extra nights are paid for.** Measured on a fixed-date
@@ -366,6 +446,8 @@ First public release. Eleven tools and one prompt.
 - **Contributor onboarding** — `CONTRIBUTING.md`, `docs/EXAMPLES.md`,
   `docs/RELEASING.md`, issue templates and a PR template.
 
+[1.4.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.4.0
+[1.3.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.3.0
 [1.2.2]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.2
 [1.2.1]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.1
 [1.2.0]: https://github.com/maththedev42/cosmo-travel-mcp/releases/tag/v1.2.0
