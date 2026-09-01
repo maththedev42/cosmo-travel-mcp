@@ -10,9 +10,9 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles thirteen travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles fourteen travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
-for driving).
+for driving, Ticketmaster Discovery API for event sales dates).
 
 For a full trip — flights, lodging, what to do, and a day-by-day itinerary —
 use the `plan_trip` prompt, which sequences the tools and explains how to
@@ -30,6 +30,8 @@ Env vars and which tools they gate:
   https://serpapi.com/users/sign_up
 - GOOGLE_MAPS_API_KEY → compare_drive_or_fly. Create at
   https://console.cloud.google.com/ with the Routes API enabled.
+- TICKETMASTER_API_KEY → search_ticketmaster_events. Free key (5,000 requests/day):
+  https://developer.ticketmaster.com/
 
 If a key is missing, `check_setup` returns a `setup` field with the exact
 commands to register it — relay those steps to the user rather than improvising
@@ -76,6 +78,7 @@ def main() -> None:
         places,
         prompts,
         setup,
+        ticketmaster_events,
         trip_windows,
     )
 
@@ -89,6 +92,7 @@ def main() -> None:
     places.register(mcp)
     setup.register(mcp)
     prompts.register(mcp)
+    ticketmaster_events.register(mcp)
     trip_windows.register(mcp)
 
     mcp.run()

@@ -23,6 +23,9 @@ from ..onboarding import (
     MAPS_TOOLS,
     SERPAPI_SIGNUP_URL,
     SERPAPI_TOOLS,
+    TICKETMASTER_ENV,
+    TICKETMASTER_SIGNUP_URL,
+    TICKETMASTER_TOOLS,
     setup_guide,
 )
 from .driving import FIELD_MASK, ROUTES_API_BASE
@@ -49,9 +52,11 @@ __all__ = [
     "ROUTES_API_BASE",
     "SERPAPI_ACCOUNT_URL",
     "SERPAPI_SIGNUP_URL",
+    "TICKETMASTER_SIGNUP_URL",
     "check_setup",
     "probe_maps",
     "probe_serpapi",
+    "probe_ticketmaster",
     "register",
 ]
 
@@ -164,6 +169,54 @@ async def probe_maps(api_key: str) -> dict[str, Any]:
     return {"ok": True, "reason": ""}
 
 
+async def probe_ticketmaster(api_key: str) -> dict[str, Any]:
+    """Validate a Ticketmaster key with a single minimal Discovery API query.
+
+    Returns ``{"ok": bool, "reason": str}``. Costs 1 request from the daily
+    5,000 allowance.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://app.ticketmaster.com/discovery/v2/events.json",
+                params={"apikey": api_key, "size": 1, "keyword": "probe_check_xyz"},
+            )
+            if resp.status_code == 401:
+                try:
+                    err_json = resp.json()
+                    fault_msg = (
+                        err_json.get("fault", {})
+                        .get("faultstring", "Invalid ApiKey")
+                    )
+                except Exception:
+                    fault_msg = "Invalid ApiKey"
+                return {
+                    "ok": False,
+                    "reason": (
+                        f"Ticketmaster key was rejected ({fault_msg}). Get a free key at "
+                        f"{TICKETMASTER_SIGNUP_URL}"
+                    ),
+                }
+            resp.raise_for_status()
+            return {"ok": True, "reason": ""}
+    except httpx.HTTPStatusError as exc:
+        return {
+            "ok": False,
+            "reason": (
+                f"Ticketmaster API check could not complete (HTTP {exc.response.status_code}). "
+                "The key may be rejected or Ticketmaster servers unreachable."
+            ),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": (
+                f"Ticketmaster API check could not complete: {exc}. The key may be fine — "
+                "Ticketmaster servers may be temporarily unreachable."
+            ),
+        }
+
+
 # ---------------------------------------------------------------------------
 # check_setup
 # ---------------------------------------------------------------------------
@@ -172,9 +225,10 @@ async def probe_maps(api_key: str) -> dict[str, Any]:
 async def check_setup() -> dict[str, Any]:
     """Check which cosmo-travel-mcp capabilities are ready.
 
-    Verifies SERPAPI_API_KEY (free account check) and GOOGLE_MAPS_API_KEY
-    (one real Routes API call). Returns a per-tool status summary so the
-    caller knows what will work before spending quota on real searches.
+    Verifies SERPAPI_API_KEY (free account check), GOOGLE_MAPS_API_KEY
+    (one real Routes API call), and TICKETMASTER_API_KEY (one minimal Discovery API call).
+    Returns a per-tool status summary so the caller knows what will work before
+    spending quota on real searches.
 
     ``search_cheapest_dates`` costs up to *n* SerpAPI searches per call
     (where *n* is the number of candidate dates sampled).
@@ -188,6 +242,9 @@ async def check_setup() -> dict[str, Any]:
     ]
     maps_statuses: list[dict[str, Any]] = [
         {"tool": name, "ready": False} for name in MAPS_TOOLS
+    ]
+    tm_statuses: list[dict[str, Any]] = [
+        {"tool": name, "ready": False} for name in TICKETMASTER_TOOLS
     ]
     keyless_statuses: list[dict[str, Any]] = [
         {"tool": name, "ready": True, "reason": "no API key required"}
@@ -257,7 +314,26 @@ async def check_setup() -> dict[str, Any]:
             if not probe["ok"]:
                 s["reason"] = probe["reason"]
 
-    result_tools = [*serpapi_statuses, *maps_statuses, *keyless_statuses]
+    # --- Ticketmaster check (one minimal API call) ---
+    tm_key = os.environ.get(TICKETMASTER_ENV, "")
+
+    if not tm_key:
+        for s in tm_statuses:
+            s["reason"] = (
+                f"{TICKETMASTER_ENV} is not set — free key (5,000 requests/day) at "
+                f"{TICKETMASTER_SIGNUP_URL}; see the `setup` field for the exact command "
+                "to register it"
+            )
+    else:
+        probe = await probe_ticketmaster(tm_key)
+        for s in tm_statuses:
+            s["ready"] = probe["ok"]
+            if probe["ok"]:
+                s["reason"] = "Ticketmaster key valid (5,000 requests/day free allowance)"
+            else:
+                s["reason"] = probe["reason"]
+
+    result_tools = [*serpapi_statuses, *maps_statuses, *tm_statuses, *keyless_statuses]
 
     # Build a human-readable summary, one line per tool.
     summary_lines: list[str] = []
@@ -265,6 +341,8 @@ async def check_setup() -> dict[str, Any]:
         if t["ready"]:
             if t["tool"] in MAPS_TOOLS:
                 summary_lines.append(f"{t['tool']}: ready (Maps key valid)")
+            elif t["tool"] in TICKETMASTER_TOOLS:
+                summary_lines.append(f"{t['tool']}: ready (Ticketmaster key valid, 5,000 req/day free)")
             elif "plan_searches_left" not in t:
                 summary_lines.append(f"{t['tool']}: ready (no API key needed, costs nothing)")
             elif t["tool"] == "search_cheapest_dates":
@@ -292,8 +370,13 @@ async def check_setup() -> dict[str, Any]:
     # key that is set but rejected needs a different message than a missing one.
     need_serpapi = not os.environ.get("SERPAPI_API_KEY", "")
     need_maps = not os.environ.get("GOOGLE_MAPS_API_KEY", "")
-    if need_serpapi or need_maps:
-        out["setup"] = setup_guide(need_serpapi=need_serpapi, need_maps=need_maps)
+    need_ticketmaster = not os.environ.get(TICKETMASTER_ENV, "")
+    if need_serpapi or need_maps or need_ticketmaster:
+        out["setup"] = setup_guide(
+            need_serpapi=need_serpapi,
+            need_maps=need_maps,
+            need_ticketmaster=need_ticketmaster,
+        )
 
     return out
 

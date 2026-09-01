@@ -1,0 +1,586 @@
+{
+  "_note": "Captured live from the Ticketmaster Discovery API v2 on 2026-09-01 (GET /discovery/v2/events.json, countryCode=US, city=New York). Each event is a REAL recorded response, trimmed of unused image arrays and long venue policy text blocks (box office hours, ADA/parking prose) that the parser never reads -- every field the parser touches is untouched. No API key appears anywhere in this file.",
+  "_embedded": {
+    "events": [
+      {
+        "name": "Lady A: This Winter's Night Tour 2026",
+        "type": "event",
+        "id": "G5diZ_G2ZkgBB",
+        "test": false,
+        "url": "https://www.ticketmaster.com/lady-a-this-winters-night-tour-new-york-new-york-12-17-2026/event/3B0064C3C01B5EBA",
+        "locale": "en-us",
+        "sales": {
+          "public": {
+            "startDateTime": "2026-06-12T14:00:00Z",
+            "startTBD": false,
+            "startTBA": false,
+            "endDateTime": "2026-12-18T01:30:00Z"
+          },
+          "presales": [
+            {
+              "startDateTime": "2026-06-10T14:00:00Z",
+              "endDateTime": "2026-06-12T13:00:00Z",
+              "name": "VIP Packages Presale"
+            },
+            {
+              "startDateTime": "2026-06-12T14:00:00Z",
+              "endDateTime": "2026-12-10T22:00:00Z",
+              "name": "VIP Packages"
+            },
+            {
+              "startDateTime": "2026-06-10T14:00:00Z",
+              "endDateTime": "2026-06-12T02:00:00Z",
+              "name": "Fan Club Presale"
+            },
+            {
+              "startDateTime": "2026-06-10T14:00:00Z",
+              "endDateTime": "2026-06-12T02:00:00Z",
+              "name": "LIVE NATION PRESALE"
+            },
+            {
+              "startDateTime": "2026-06-10T14:00:00Z",
+              "endDateTime": "2026-06-12T02:00:00Z",
+              "name": "Venue Presale"
+            },
+            {
+              "startDateTime": "2026-06-10T14:00:00Z",
+              "endDateTime": "2026-06-12T02:00:00Z",
+              "name": "City National Bank Cardholder Preferred"
+            },
+            {
+              "startDateTime": "2026-06-12T14:00:00Z",
+              "endDateTime": "2026-12-18T01:30:00Z",
+              "name": "City National Bank Cardholder Preferred"
+            },
+            {
+              "startDateTime": "2026-06-12T14:00:00Z",
+              "endDateTime": "2026-07-12T14:00:00Z",
+              "name": "Verizon Access Featured Venues"
+            }
+          ]
+        },
+        "dates": {
+          "start": {
+            "localDate": "2026-12-17",
+            "localTime": "20:00:00",
+            "dateTime": "2026-12-18T01:00:00Z",
+            "dateTBD": false,
+            "dateTBA": false,
+            "timeTBA": false,
+            "noSpecificTime": false
+          },
+          "timezone": "America/New_York",
+          "status": {
+            "code": "onsale"
+          },
+          "spanMultipleDays": false
+        },
+        "classifications": [
+          {
+            "primary": true,
+            "segment": {
+              "id": "KZFzniwnSyZfZ7v7nJ",
+              "name": "Music"
+            },
+            "genre": {
+              "id": "KnvZfZ7vAv6",
+              "name": "Country"
+            },
+            "subGenre": {
+              "id": "KZazBEonSMnZfZ7vAFa",
+              "name": "Country"
+            },
+            "type": {
+              "id": "KZAyXgnZfZ7v7nI",
+              "name": "Undefined"
+            },
+            "subType": {
+              "id": "KZFzBErXgnZfZ7v7lJ",
+              "name": "Undefined"
+            },
+            "family": false
+          }
+        ],
+        "promoter": {
+          "id": "653",
+          "name": "LIVE NATION MUSIC",
+          "description": "LIVE NATION MUSIC / NTL / USA"
+        },
+        "promoters": [
+          {
+            "id": "653",
+            "name": "LIVE NATION MUSIC",
+            "description": "LIVE NATION MUSIC / NTL / USA"
+          }
+        ],
+        "info": "PLEASE NOTE: Pricing is all-in and includes fees (before taxes if applicable). By purchasing tickets to this event, you agree to abide by the health and safety measures in effect at the time of the event. Government mandates, venue protocols, and event requirements are subject to change. For more information, please search your event on www.beacontheatre.com. This event may have immersive elements, which may include flashing or strobe lights, intense lighting, visual effects, loud noises, smoke and/or fog. Such elements may aggravate certain medical or physical conditions, and guests should take this into consideration if they have a history of discomfort or physical symptoms when experiencing these elements.",
+        "pleaseNote": "PLEASE NOTE: Pricing is all-in and includes fees (before taxes if applicable). Tickets are not available at the box office on the first day of the public on sale. ARRIVE EARLY: Please arrive 60-minutes prior to showtime. All packages, including briefcases and pocketbooks, will be inspected prior to entry. By purchasing tickets to this event, you agree to abide by the health and safety measures in effect at the time of the event. Government mandates, venue protocols, and event requirements are subject to change. For more information, please search for your event on www.beacontheatre.com. This event may have immersive elements, which may include flashing or strobe lights, intense lighting, visual effects, loud noises, smoke and/or fog. Such elements may aggravate certain medical or physical conditions, and guests should take this into consideration if they have a history of discomfort or physical symptoms when experiencing these elements.",
+        "products": [
+          {
+            "name": "SPOTHERO BEACON THEATRE",
+            "id": "G5diZ_GxjZdSF",
+            "url": "https://www.ticketmaster.com/spothero-beacon-theatre-new-york-new-york-12-17-2026/event/3B0064C89C003CC8",
+            "type": "Upsell",
+            "classifications": [
+              {
+                "primary": true,
+                "segment": {
+                  "id": "KZFzniwnSyZfZ7v7n1",
+                  "name": "Miscellaneous"
+                },
+                "genre": {
+                  "id": "KnvZfZ7v7ll",
+                  "name": "Undefined"
+                },
+                "subGenre": {
+                  "id": "KZazBEonSMnZfZ7vAv1",
+                  "name": "Undefined"
+                },
+                "type": {
+                  "id": "KZAyXgnZfZ7vAva",
+                  "name": "Parking"
+                },
+                "subType": {
+                  "id": "KZFzBErXgnZfZ7vAFe",
+                  "name": "Regular"
+                },
+                "family": false
+              }
+            ]
+          }
+        ],
+        "seatmap": {
+          "staticUrl": "https://mapsapi.tmol.io/maps/geometry/3/event/3B0064C3C01B5EBA/staticImage?type=png&systemId=HOST"
+        },
+        "accessibility": {
+          "ticketLimit": 4
+        },
+        "ticketLimit": {
+          "info": "There is an eight (8) ticket limit per person."
+        },
+        "ageRestrictions": {
+          "legalAgeEnforced": false
+        },
+        "ticketing": {
+          "safeTix": {
+            "enabled": true
+          },
+          "allInclusivePricing": {
+            "enabled": true
+          }
+        },
+        "nameOrigin": "custom",
+        "ticketTextLines": {
+          "en-us": {
+            "line6": " THU DEC 17, 2026 8:00PM  ",
+            "line5": "   LEXUS CONCERT SERIES   ",
+            "line4": "      BEACON THEATRE      ",
+            "line3": " THIS WINTER'S NIGHT TOUR ",
+            "line2": "          LADY A          ",
+            "line1": "   LIVE NATION PRESENTS   "
+          }
+        },
+        "_links": {
+          "self": {
+            "href": "/discovery/v2/events/G5diZ_G2ZkgBB?locale=en-us"
+          },
+          "attractions": [
+            {
+              "href": "/discovery/v2/attractions/K8vZ917GFIf?locale=en-us"
+            }
+          ],
+          "venues": [
+            {
+              "href": "/discovery/v2/venues/KovZpZAEAd6A?locale=en-us"
+            }
+          ]
+        },
+        "_embedded": {
+          "venues": [
+            {
+              "name": "Beacon Theatre",
+              "id": "KovZpZAEAd6A",
+              "url": "https://www.ticketmaster.com/beacon-theatre-tickets-new-york/venue/483425",
+              "postalCode": "10023",
+              "timezone": "America/New_York",
+              "city": {
+                "name": "New York"
+              },
+              "state": {
+                "name": "New York",
+                "stateCode": "NY"
+              },
+              "country": {
+                "name": "United States Of America",
+                "countryCode": "US"
+              },
+              "address": {
+                "line1": "2124 Broadway @ 74th St"
+              },
+              "location": {
+                "longitude": "-73.98067300",
+                "latitude": "40.77992500"
+              },
+              "markets": [
+                {
+                  "name": "New York/Tri-State Area",
+                  "id": "35"
+                },
+                {
+                  "name": "Northern New Jersey",
+                  "id": "55"
+                },
+                {
+                  "name": "Connecticut",
+                  "id": "124"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "New York Knicks vs. Boston Celtics",
+        "type": "event",
+        "id": "G5diZ_o6tGz_y",
+        "test": false,
+        "url": "https://www.ticketmaster.com/new-york-knicks-vs-boston-celtics-new-york-new-york-03-14-2027/event/3B006511E9338679",
+        "locale": "en-us",
+        "sales": {
+          "public": {
+            "startTBD": false,
+            "startTBA": true
+          }
+        },
+        "dates": {
+          "start": {
+            "localDate": "2027-03-14",
+            "localTime": "12:00:00",
+            "dateTime": "2027-03-14T16:00:00Z",
+            "dateTBD": false,
+            "dateTBA": false,
+            "timeTBA": false,
+            "noSpecificTime": false
+          },
+          "timezone": "America/New_York",
+          "status": {
+            "code": "offsale"
+          },
+          "spanMultipleDays": false
+        },
+        "classifications": [
+          {
+            "primary": true,
+            "segment": {
+              "id": "KZFzniwnSyZfZ7v7nE",
+              "name": "Sports"
+            },
+            "genre": {
+              "id": "KnvZfZ7vAde",
+              "name": "Basketball"
+            },
+            "subGenre": {
+              "id": "KZazBEonSMnZfZ7vFJA",
+              "name": "NBA"
+            },
+            "type": {
+              "id": "KZAyXgnZfZ7v7l1",
+              "name": "Group"
+            },
+            "subType": {
+              "id": "KZFzBErXgnZfZ7vA7d",
+              "name": "Team"
+            },
+            "family": false
+          }
+        ],
+        "promoter": {
+          "id": "695",
+          "name": "NBA REGULAR SEASON",
+          "description": "NBA REGULAR SEASON / NTL / USA"
+        },
+        "promoters": [
+          {
+            "id": "695",
+            "name": "NBA REGULAR SEASON",
+            "description": "NBA REGULAR SEASON / NTL / USA"
+          }
+        ],
+        "info": "Pre-sale codes may not be purchased or transferred. Purchases must be made using the pre-sale code during the applicable pre-sale period; service charges apply. Limit four (4) tickets per customer per game. All tickets are subject to availability. All sales final; no refunds or exchanges. Offer may be revoked or modified at any time without notice and is subject to availability. Other restrictions may apply. Contact the Disabled Services Department at 888-609-7599 regarding accessible and companion seats. See the nba.com/knicks/tickets/fan-first for more details. For Chase Offers: Must use an eligible Chase Credit or Debit card to purchase tickets. Deposit & credit card products provided by JPMorgan Chase Bank, N.A. Member FDIC.",
+        "products": [
+          {
+            "name": "SPOTHERO MADISON SQUARE GARDEN",
+            "id": "G5diZ_opVfJw4",
+            "url": "https://www.ticketmaster.com/spothero-madison-square-garden-new-york-new-york-03-14-2027/event/3B006515B4526C95",
+            "type": "Upsell",
+            "classifications": [
+              {
+                "primary": true,
+                "segment": {
+                  "id": "KZFzniwnSyZfZ7v7n1",
+                  "name": "Miscellaneous"
+                },
+                "genre": {
+                  "id": "KnvZfZ7v7ll",
+                  "name": "Undefined"
+                },
+                "subGenre": {
+                  "id": "KZazBEonSMnZfZ7vAv1",
+                  "name": "Undefined"
+                },
+                "type": {
+                  "id": "KZAyXgnZfZ7vAva",
+                  "name": "Parking"
+                },
+                "subType": {
+                  "id": "KZFzBErXgnZfZ7vAFe",
+                  "name": "Regular"
+                },
+                "family": false
+              }
+            ]
+          }
+        ],
+        "seatmap": {
+          "staticUrl": "https://mapsapi.tmol.io/maps/geometry/3/event/3B006511E9338679/staticImage?type=png&systemId=HOST"
+        },
+        "accessibility": {
+          "ticketLimit": 2
+        },
+        "ticketLimit": {
+          "info": "There is a four (4) ticket limit per person."
+        },
+        "ageRestrictions": {
+          "legalAgeEnforced": false
+        },
+        "ticketing": {
+          "safeTix": {
+            "enabled": true
+          },
+          "allInclusivePricing": {
+            "enabled": true
+          }
+        },
+        "nameOrigin": "custom",
+        "ticketTextLines": {
+          "en-us": {
+            "line6": "    PRESENTED BY CHASE    ",
+            "line5": " SUN MAR 14. 2027 12:00PM ",
+            "line4": "      BOSTON CELTICS      ",
+            "line3": "           VS.            ",
+            "line2": "     NEW YORK KNICKS      ",
+            "line1": "  MADISON SQUARE GARDEN   "
+          }
+        },
+        "linkMoreInfo": {
+          "descriptions": {
+            "en-nz": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "en-ca": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "en-us": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "pt-br": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "en-au": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "es-us": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "es-br": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "en-mx": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "es-mx": "See the nba.com/knicks/tickets/fan-first for more details.",
+            "fr-ca": "See the nba.com/knicks/tickets/fan-first for more details."
+          },
+          "url": "https://www.nba.com/knicks/tickets/fan-first"
+        },
+        "_links": {
+          "self": {
+            "href": "/discovery/v2/events/G5diZ_o6tGz_y?locale=en-us"
+          },
+          "attractions": [
+            {
+              "href": "/discovery/v2/attractions/K8vZ9171o57?locale=en-us"
+            },
+            {
+              "href": "/discovery/v2/attractions/K8vZ91718Xf?locale=en-us"
+            }
+          ],
+          "venues": [
+            {
+              "href": "/discovery/v2/venues/KovZpZA7AAEA?locale=en-us"
+            }
+          ]
+        },
+        "_embedded": {
+          "venues": [
+            {
+              "name": "Madison Square Garden",
+              "id": "KovZpZA7AAEA",
+              "url": "https://www.ticketmaster.com/madison-square-garden-tickets-new-york/venue/483329",
+              "postalCode": "10001",
+              "timezone": "America/New_York",
+              "city": {
+                "name": "New York"
+              },
+              "state": {
+                "name": "New York",
+                "stateCode": "NY"
+              },
+              "country": {
+                "name": "United States Of America",
+                "countryCode": "US"
+              },
+              "address": {
+                "line1": "7th Ave & 32nd Street"
+              },
+              "location": {
+                "longitude": "-73.99160060",
+                "latitude": "40.74970620"
+              },
+              "markets": [
+                {
+                  "name": "New York/Tri-State Area",
+                  "id": "35"
+                },
+                {
+                  "name": "All of US",
+                  "id": "51"
+                },
+                {
+                  "name": "Northern New Jersey",
+                  "id": "55"
+                },
+                {
+                  "name": "Connecticut",
+                  "id": "124"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "The Rocky Horror Picture Show: Live with the New York Cast",
+        "type": "event",
+        "id": "rZ7HnEZ1AfJK0d",
+        "test": false,
+        "url": "https://www.ticketweb.com/event/the-rocky-horror-picture-show-berlin-tickets/14993903",
+        "locale": "en-us",
+        "sales": {
+          "public": {
+            "startDateTime": "2026-07-25T03:20:00Z",
+            "startTBD": false,
+            "startTBA": false,
+            "endDateTime": "2026-09-26T23:30:00Z"
+          }
+        },
+        "dates": {
+          "access": {
+            "startDateTime": "2026-09-26T22:30:00Z",
+            "startApproximate": false,
+            "endApproximate": false
+          },
+          "start": {
+            "localDate": "2026-09-26",
+            "localTime": "19:30:00",
+            "dateTime": "2026-09-26T23:30:00Z",
+            "dateTBD": false,
+            "dateTBA": false,
+            "timeTBA": false,
+            "noSpecificTime": false
+          },
+          "end": {
+            "approximate": false,
+            "noSpecificTime": false
+          },
+          "timezone": "America/New_York",
+          "status": {
+            "code": "onsale"
+          },
+          "spanMultipleDays": false
+        },
+        "classifications": [
+          {
+            "primary": true,
+            "segment": {
+              "id": "KZFzniwnSyZfZ7v7nn",
+              "name": "Film"
+            },
+            "genre": {
+              "id": "KnvZfZ7vAkJ",
+              "name": "Music"
+            },
+            "subGenre": {
+              "id": "KZazBEonSMnZfZ7vave",
+              "name": "Music"
+            },
+            "type": {
+              "id": "KZAyXgnZfZ7v7nI",
+              "name": "Undefined"
+            },
+            "subType": {
+              "id": "KZFzBErXgnZfZ7v7lJ",
+              "name": "Undefined"
+            },
+            "family": false
+          }
+        ],
+        "pleaseNote": "This event is 21 and over. Any ticket holder unable to present valid identification indicating that they are at least 21 years of age will not be admitted to this event, and will not be eligible for a refund.",
+        "priceRanges": [
+          {
+            "type": "standard",
+            "currency": "USD",
+            "min": 31.52,
+            "max": 31.52
+          }
+        ],
+        "nameOrigin": "custom",
+        "_links": {
+          "self": {
+            "href": "/discovery/v2/events/rZ7HnEZ1AfJK0d?locale=en-us"
+          },
+          "attractions": [
+            {
+              "href": "/discovery/v2/attractions/K8vZ9171hSf?locale=en-us"
+            }
+          ],
+          "venues": [
+            {
+              "href": "/discovery/v2/venues/rZ7HnEZ178g0P?locale=en-us"
+            }
+          ]
+        },
+        "_embedded": {
+          "venues": [
+            {
+              "name": "Berlin",
+              "id": "rZ7HnEZ178g0P",
+              "url": "https://www.ticketweb.com/venue/berlin-new-york-ny/435925",
+              "postalCode": "10009",
+              "timezone": "America/New_York",
+              "city": {
+                "name": "New York"
+              },
+              "state": {
+                "name": "New York",
+                "stateCode": "NY"
+              },
+              "country": {
+                "name": "United States Of America",
+                "countryCode": "US"
+              },
+              "address": {
+                "line1": "The Lower-Level of 2A Bar",
+                "line2": "<br>25 Avenue A"
+              },
+              "location": {
+                "longitude": "-73.986080",
+                "latitude": "40.722974"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "page": {
+    "size": 3,
+    "totalElements": 3,
+    "totalPages": 1,
+    "number": 0
+  }
+}

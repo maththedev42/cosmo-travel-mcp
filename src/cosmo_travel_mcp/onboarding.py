@@ -19,12 +19,15 @@ GOOGLE_CONSOLE_URL = "https://console.cloud.google.com/"
 ROUTES_API_LIBRARY_URL = (
     "https://console.cloud.google.com/apis/library/routes.googleapis.com"
 )
+TICKETMASTER_SIGNUP_URL = "https://developer.ticketmaster.com/"
 
 SERPAPI_ENV = "SERPAPI_API_KEY"
 MAPS_ENV = "GOOGLE_MAPS_API_KEY"
+TICKETMASTER_ENV = "TICKETMASTER_API_KEY"
 
 SERPAPI_PLACEHOLDER = "<your-serpapi-key>"
 MAPS_PLACEHOLDER = "<your-google-maps-key>"
+TICKETMASTER_PLACEHOLDER = "<your-ticketmaster-key>"
 
 #: Searches included in SerpAPI's free tier, per month.
 FREE_TIER_SEARCHES = 100
@@ -50,6 +53,7 @@ SERPAPI_TOOLS = (
     "search_car_rentals",
 )
 MAPS_TOOLS = ("compare_drive_or_fly",)
+TICKETMASTER_TOOLS = ("search_ticketmaster_events",)
 
 #: No key, no network, no quota. Listed rather than inferred, because a tool
 #: absent from the readiness report reads as a tool that does not exist.
@@ -79,6 +83,7 @@ def register_argv(
     *,
     serpapi_key: str | None = None,
     maps_key: str | None = None,
+    ticketmaster_key: str | None = None,
     scope: str = "user",
     name: str = SERVER_NAME,
     binary: str = PACKAGE_NAME,
@@ -94,6 +99,8 @@ def register_argv(
         argv += ["-e", f"{SERPAPI_ENV}={serpapi_key}"]
     if maps_key:
         argv += ["-e", f"{MAPS_ENV}={maps_key}"]
+    if ticketmaster_key:
+        argv += ["-e", f"{TICKETMASTER_ENV}={ticketmaster_key}"]
     argv += ["--", *launch_argv(binary)]
     return argv
 
@@ -102,10 +109,12 @@ def register_command(
     *,
     serpapi: bool = True,
     maps: bool = True,
+    ticketmaster: bool = False,
     scope: str = "user",
     name: str = SERVER_NAME,
     serpapi_value: str = SERPAPI_PLACEHOLDER,
     maps_value: str = MAPS_PLACEHOLDER,
+    ticketmaster_value: str = TICKETMASTER_PLACEHOLDER,
     binary: str = PACKAGE_NAME,
     indent: str = "  ",
 ) -> str:
@@ -115,6 +124,8 @@ def register_command(
         lines.append(f"-e {SERPAPI_ENV}={serpapi_value}")
     if maps:
         lines.append(f"-e {MAPS_ENV}={maps_value}")
+    if ticketmaster:
+        lines.append(f"-e {TICKETMASTER_ENV}={ticketmaster_value}")
     lines.append(f"-- {' '.join(launch_argv(binary))}")
     return (" \\\n" + indent).join(lines)
 
@@ -158,6 +169,15 @@ def maps_instructions() -> list[str]:
     ]
 
 
+def ticketmaster_instructions() -> list[str]:
+    """Click-path for obtaining a Ticketmaster Discovery API key."""
+    return [
+        f"Sign up at {TICKETMASTER_SIGNUP_URL} — free developer account.",
+        "Create an app in your dashboard to obtain your Consumer Key (API key).",
+        "The free plan gives you 5,000 requests/day (5 req/sec rate limit).",
+    ]
+
+
 _KEY_HINTS = {
     SERPAPI_ENV: (
         f"get a free key at {SERPAPI_SIGNUP_URL} "
@@ -165,6 +185,9 @@ _KEY_HINTS = {
     ),
     MAPS_ENV: (
         f"create one at {GOOGLE_CONSOLE_URL} with the Routes API enabled"
+    ),
+    TICKETMASTER_ENV: (
+        f"get a free key at {TICKETMASTER_SIGNUP_URL} (5,000 requests/day)"
     ),
 }
 
@@ -238,6 +261,7 @@ def render_client_config(
     binary: str = PACKAGE_NAME,
     serpapi_key: str | None = None,
     maps_key: str | None = None,
+    ticketmaster_key: str | None = None,
     name: str = SERVER_NAME,
 ) -> str:
     """Render a ready-to-paste config snippet for *client*.
@@ -258,8 +282,10 @@ def render_client_config(
         return register_command(
             serpapi=serpapi_key is not None or True,
             maps=maps_key is not None or True,
+            ticketmaster=ticketmaster_key is not None or False,
             serpapi_value=SERPAPI_PLACEHOLDER,
             maps_value=MAPS_PLACEHOLDER,
+            ticketmaster_value=TICKETMASTER_PLACEHOLDER,
             binary=binary,
         )
 
@@ -267,6 +293,7 @@ def render_client_config(
     env_entries: list[str] = [
         f'      "{SERPAPI_ENV}": "{SERPAPI_PLACEHOLDER}"',
         f'      "{MAPS_ENV}": "{MAPS_PLACEHOLDER}"',
+        f'      "{TICKETMASTER_ENV}": "{TICKETMASTER_PLACEHOLDER}"',
     ]
     env_block = ",\n".join(env_entries)
 
@@ -312,7 +339,12 @@ def missing_key_message(env_name: str) -> str:
     )
 
 
-def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
+def setup_guide(
+    *,
+    need_serpapi: bool,
+    need_maps: bool,
+    need_ticketmaster: bool = False,
+) -> str:
     """Build the walk-through shown when a key is missing.
 
     Returned once at the top level rather than repeated on every affected tool:
@@ -337,9 +369,15 @@ def setup_guide(*, need_serpapi: bool, need_maps: bool) -> str:
             "project, though the free monthly credit covers normal use. This "
             "unlocks drive-or-fly comparison."
         )
+    if need_ticketmaster:
+        steps.append(
+            f"{len(steps) + 1}. Get a free Ticketmaster key — sign up at "
+            f"{TICKETMASTER_SIGNUP_URL} (free tier: 5,000 requests/day), "
+            "then copy the Consumer Key. This unlocks search_ticketmaster_events."
+        )
 
     add_cmd = register_command(
-        serpapi=need_serpapi, maps=need_maps, indent="    "
+        serpapi=need_serpapi, maps=need_maps, ticketmaster=need_ticketmaster, indent="    "
     )
     steps.append(
         f"{len(steps) + 1}. Give the key(s) to this server. The fastest way is "

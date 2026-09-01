@@ -2,13 +2,13 @@
 
 # cosmo-travel-mcp
 
-One MCP server with thirteen travel tools — flight search, multi-city itineraries,
-accommodations, things to do, events, car rental offices, drive-vs-fly comparisons,
+One MCP server with fourteen travel tools — flight search, multi-city itineraries,
+accommodations, things to do, events, event sales launch dates, car rental offices, drive-vs-fly comparisons,
 itinerary checking and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
-API for driving). Both providers offer a free tier that is sufficient for personal
-use: SerpAPI gives 100 searches/month and Google Maps Routes API includes a monthly
-credit.
+API for driving, Ticketmaster Discovery API for event sales dates). All three providers offer a free tier that is sufficient for personal
+use: SerpAPI gives 100 searches/month, Google Maps Routes API includes a monthly
+credit, and Ticketmaster provides 5,000 requests/day.
 
 ```bash
 uv tool install cosmo-travel-mcp
@@ -20,7 +20,7 @@ Previously this project relied on a reverse-engineered Google Flights scraper th
 started returning HTTP 200 responses that were actually internal error envelopes — a
 documented, unresolved bug. Everything here now uses **licensed commercial data
 providers** (SerpAPI for flights and accommodations, Google Maps Routes API for
-driving).
+driving, Ticketmaster Discovery API for event sales dates).
 
 ## Getting started
 
@@ -36,7 +36,7 @@ cosmo-travel-mcp setup --register
 Drop `--register` to just print the walk-through without changing anything.
 
 > **Don't have the keys yet?** See **[docs/GETTING_KEYS.md](./docs/GETTING_KEYS.md)**
-> for the full click-path on both providers, what counts against the free quota,
+> for the full click-path on all providers, what counts against the free quota,
 > and troubleshooting.
 >
 > **Already registered the server without keys?** Call `check_setup` — it returns
@@ -57,7 +57,7 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks nine of the thirteen tools: `search_flights`,
+This one key unlocks nine of the fourteen tools: `search_flights`,
 `search_multi_city`, `search_accommodations`, `get_accommodation_details`,
 `search_cheapest_dates`, `compare_trip_windows`, `search_events`,
 `search_things_to_do`, and `search_car_rentals`.
@@ -83,6 +83,13 @@ computation and cost nothing.
 5. **Note:** Google requires a billing account even though there is a generous free
    monthly credit (~$200). The `check_setup` tool makes one real API call to validate
    the key, which costs a fraction of a cent.
+
+### 3. Ticketmaster API key (event sale dates & presales)
+
+1. Sign up at [developer.ticketmaster.com](https://developer.ticketmaster.com/).
+2. Create an app in your dashboard to copy your API key (Consumer Key).
+3. The free plan gives you **5,000 requests/day** (5 req/s rate limit).
+4. Pass it to the server as `TICKETMASTER_API_KEY`. Unlocks `search_ticketmaster_events`.
 
 ### 3. Give the keys to the server
 
@@ -243,6 +250,7 @@ not something the MCP server starts on its own.
 | `get_accommodation_details` | `property_token`, `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `currency?`, `country?`, `language?` | Full property details: amenities, star distribution, per-category review sentiment, images, per-source prices. Takes a `property_token` from `search_accommodations`; `location` repeats that search's text, which the engine requires even alongside a token. |
 | `search_accommodations` | `location`, `check_in_date`, `check_out_date`, `adults?`, `children?`, `children_ages?`, `vacation_rentals?`, `currency?`, `country?`, `language?`, `min_price?`, `max_price?`, `sort_by?`, `min_rating?`, `hotel_class?`, `free_cancellation?` | Hotels and vacation rentals via SerpAPI Google Hotels engine. Defaults to vacation rentals (Airbnb/Vrbo/Booking.com listings). Set `vacation_rentals=false` for standard hotels. Filters: `sort_by` (lowest_price/highest_rating/most_reviewed), `min_rating` (3.5/4.0/4.5), `hotel_class` (2–5), `free_cancellation`. |
 | `search_events` | `query`, `when?`, `also_search?`, `pages?`, `country?`, `language?` | Events (concerts, shows, sports, festivals) at a destination via SerpAPI. One query returns one slice of the corpus, so `pages` (1–5) and `also_search` (up to 6 extra query angles) sweep wider and deduplicate — on Porto Alegre a default call found 9 events where a sweep found 20. **Costs up to `pages × (1 + len(also_search))` searches** — fewer when a page is cached or an angle runs dry — with the actual figure reported as `searches_used`. |
+| `search_ticketmaster_events` | `city?`, `country_code?`, `keyword?`, `start_date_time?`, `end_date_time?`, `classification_name?`, `size?`, `page?` (at least one of `city`/`country_code`/`keyword`/`classification_name`) | Search events with **public sale start/TBA dates** (`sales.public.startDateTime`/`startTBA`, `sales.presales`) and direct booking URLs via Ticketmaster Discovery API v2 — `priceRanges` when present (roughly 1 in 40 events, sampled live). Live-tested 2026-09-01: US, CA, MX, GB, PE, CL, BR return events; Argentina returns zero. `city` is an exact match to Ticketmaster's registry, not fuzzy — omit it and use `country_code`/`keyword` if a known city returns zero. In NYC Broadway, covers Nederlander & ATG venues; Shubert Organization venues (Telecharge) are excluded. For universal event coverage, use `search_events`. |
 | `search_things_to_do` | `location`, `category?`, `min_rating?`, `limit?`, `country?`, `language?` | What to do in a city, via SerpAPI Google Maps engine. `category` is one of attractions, museums, parks, landmarks, shopping, nightlife, restaurants, cafes, bars (default `attractions`). Each result carries `operating_hours` (per weekday) and `coordinates`, which is what a day-by-day itinerary is built from; food categories add price range, description and a reservation link. Costs 1 search per call. |
 | `search_car_rentals` | `location`, `min_rating?`, `limit?`, `country?`, `language?` | Car rental **offices** near a place, via SerpAPI Google Maps engine — locations, per-weekday `operating_hours`, `website` and `phone`. **Returns no rates:** no free provider exposes car rental pricing, so hand the traveller the `website` and treat the rate as unmeasured until they report one back. Its value is choosing *where* to collect: an airport counter typically runs 24 hours while a neighbourhood branch closes on Sundays. Hours are the regular weekly schedule and do not cover holidays — confirm a 25 December pickup on the phone. Costs 1 search per call. |
 | `compare_drive_or_fly` | `origin`, `destination`, `fuel_price_per_liter?`, `fuel_efficiency_km_per_liter?`, `rental_car_cost_total?`, `flight_price?`, `flight_duration_minutes?`, `currency?` | Driving distance + duration + toll estimates via Google Maps Routes API. Tolls are fetched from ``computeRoutes`` with ``extraComputations: ["TOLLS"]`` and degrade gracefully when unavailable. Optionally folds in caller-supplied flight numbers for side-by-side comparison. |
@@ -250,12 +258,12 @@ not something the MCP server starts on its own.
 | `compare_trip_windows` | `origin`, `destination`, `anchor_date`, `lodging_location`, `adults` (required), `min_nights?`, `max_nights?`, `max_windows?` (default 3, max 5), `currency?`, `country?`, `language?`, `max_stops?`, `min_rating?`, `hotel_class?`, `vacation_rentals?` | Prices the trip windows closest to a fixed night (e.g. a concert) — one flight search and one hotel search per window — and ranks them by **combined** total, so a date window is only cheaper once the extra nights are paid for. Reports `break_even_nightly` where a longer window saves on airfare. **Costs exactly 2 SerpAPI searches per window priced.** |
 | `check_itinerary` | `days` ([{date, stops:[{name, start, end, operating_hours?, coordinates?}]}]) | Checks a drafted itinerary for conflicts: stops on a closing day, visits outside opening hours, overlapping stops, and gaps too short to cross the distance. Returns findings (`blocker` / `warning` / `unchecked`), not prose. **Costs nothing — no API calls.** |
 | `build_calendar` | `items` ([{title, start, end?, location?, description?}]), `calendar_name?`, `timezone_name?` | Generates an RFC 5545 `.ics` plus a Google Calendar link per event. Times are floating local wall-clock. Cannot write to a calendar itself — if a calendar MCP is connected, the AI uses that (with your approval); otherwise it shows the links. **Costs nothing — no API calls.** |
-| `check_setup` | _(none)_ | Validates both API keys and reports which tools are ready. The SerpAPI check is free; the Maps check makes one real API call. |
+| `check_setup` | _(none)_ | Validates all API keys (SerpAPI, Maps, Ticketmaster) and reports which tools are ready. |
 
 ## What each call costs
 
 Every tool call that hits SerpAPI or Google Maps spends quota. The free tiers
-(SerpAPI 100 searches/month, Maps ~$200/month credit) are enough for personal use,
+(SerpAPI 100 searches/month, Maps ~$200/month credit, Ticketmaster 5,000 requests/day) are enough for personal use,
 but a cheap-seeming prompt like "find the cheapest Saturday in March" can burn a
 week of quota if it runs `search_cheapest_dates` at `max_calls=15`.
 
@@ -283,6 +291,7 @@ relocate that directory.
 | `search_accommodations` | 1 | 0 | |
 | `get_accommodation_details` | 1 | 0 | Drill into a single property from `search_accommodations`. |
 | `search_events` | `(1 + len(also_search)) × pages` | 0 | Default call is 1. A coverage sweep (`pages=2`, two extra angles) is 6 — the response reports `searches_used`. |
+| `search_ticketmaster_events` | 0 | 0 (1 Ticketmaster call) | Costs 1 call against Ticketmaster's free daily limit (5,000 requests/day, 5 req/s). Does NOT share SerpAPI quota. |
 | `search_things_to_do` | 1 | 0 | One per city, per category. A 3-city trip asking for attractions and food is 6 searches. |
 | `search_car_rentals` | 1 | 0 | One per pickup area. Comparing an airport against a downtown branch is 2. |
 | `check_itinerary` | 0 | 0 | Pure computation. |
@@ -290,7 +299,7 @@ relocate that directory.
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
 | `compare_trip_windows` | 2 × windows priced (default 3, cap 5) | 0 | One flight + one hotel per window; reports the real `searches_spent`. |
 | `compare_drive_or_fly` | 0 | 1 | |
-| `check_setup` | 0 (free account check) | 1 | The Maps check is a minimal `computeRouteMatrix` call. |
+| `check_setup` | 0 (free account check) | 1 | Validates keys; Maps check makes a minimal `computeRouteMatrix` call, Ticketmaster check makes a minimal Discovery API call. |
 
 ## Reading multi-city and round-trip prices
 
