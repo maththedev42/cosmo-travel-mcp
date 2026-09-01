@@ -57,7 +57,19 @@ _QUOTA_DISABLED = object()
 
 _QUOTA_SEARCHES_LEFT: int | None | object = None
 
-_ENGINE_ERRORS_FILE = Path.home() / ".cosmo-travel" / "engine_errors.json"
+# Resolved fresh on every call rather than cached as a module constant, so a
+# test fixture can point it at ``tmp_path`` with a plain ``monkeypatch.setattr``.
+# It was a fixed ``Path.home() / ".cosmo-travel"`` constant once — the live
+# watch's own state directory — and running the test suite overwrote a real
+# file there with a mock's fabricated error, then deleted it on the next
+# ``_reset_engine_errors()``. ``COSMO_TRAVEL_STATE_DIR`` lets a deployment move
+# the directory without an env var meant only for tests.
+def _engine_errors_path() -> Path:
+    override = os.environ.get("COSMO_TRAVEL_STATE_DIR")
+    base = Path(override) if override else Path.home() / ".cosmo-travel"
+    return base / "engine_errors.json"
+
+
 _ENGINE_ERRORS: dict[str, tuple[str, str]] | None = None
 
 
@@ -67,9 +79,10 @@ def _load_engine_errors() -> dict[str, tuple[str, str]]:
         return _ENGINE_ERRORS
 
     _ENGINE_ERRORS = {}
-    if _ENGINE_ERRORS_FILE.exists():
+    path = _engine_errors_path()
+    if path.exists():
         try:
-            data = json.loads(_ENGINE_ERRORS_FILE.read_text(encoding="utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(data, dict):
                 for k, v in data.items():
                     if isinstance(v, list) and len(v) == 2:
@@ -80,15 +93,16 @@ def _load_engine_errors() -> dict[str, tuple[str, str]]:
 
 
 def _save_engine_errors() -> None:
+    path = _engine_errors_path()
     try:
-        _ENGINE_ERRORS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         if _ENGINE_ERRORS:
-            _ENGINE_ERRORS_FILE.write_text(
+            path.write_text(
                 json.dumps(_ENGINE_ERRORS, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
-        elif _ENGINE_ERRORS_FILE.exists():
-            _ENGINE_ERRORS_FILE.unlink()
+        elif path.exists():
+            path.unlink()
     except Exception:
         pass
 
@@ -108,7 +122,15 @@ def _clear_engine_error(engine: str) -> None:
 
 
 def get_engine_error(engine: str) -> tuple[str, str] | None:
-    """Return (error_msg, timestamp_iso) if engine failed in last call."""
+    """Return (error_msg, timestamp_iso) if engine failed in last call.
+
+    The timestamp is the only staleness signal on purpose: a failure does not
+    expire on a timer, but the caller-facing reason states when it happened,
+    so "failed three weeks ago" and "failed thirty seconds ago" do not read
+    the same. Concurrent writers (two MCP server processes) last-write-wins on
+    this file; it is best-effort diagnostic state, not a source of truth
+    anything spends money on, so no lock was added for it.
+    """
     errors = _load_engine_errors()
     return errors.get(engine)
 
@@ -117,9 +139,10 @@ def _reset_engine_errors() -> None:
     """Reset tracked engine errors (for tests)."""
     global _ENGINE_ERRORS
     _ENGINE_ERRORS = {}
+    path = _engine_errors_path()
     try:
-        if _ENGINE_ERRORS_FILE.exists():
-            _ENGINE_ERRORS_FILE.unlink()
+        if path.exists():
+            path.unlink()
     except Exception:
         pass
 

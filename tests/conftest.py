@@ -2,10 +2,47 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
+
 import pytest
 import respx
 
+from cosmo_travel_mcp.tools import flights
 from cosmo_travel_mcp.tools.flights import _reset_cache, _reset_quota_counter
+
+# A REAL environment mutation, set once for the whole pytest process — not
+# via `monkeypatch`, which is function-scoped and undone at each test's
+# teardown. `_engine_errors_path()` defaults to
+# `~/.cosmo-travel/engine_errors.json`, the live watch's own state directory
+# (alongside `watchlist-eua-2026.json`, `alerts.md`), and running the suite
+# must never be able to read or write it.
+#
+# A per-test `monkeypatch.setattr` on `_engine_errors_path` was tried first
+# and looked correct on paper — teardown order should keep the patch active
+# through `_reset_engine_errors()`'s own teardown call, since fixtures that
+# depend on `monkeypatch` tear down before `monkeypatch` itself does. Measured
+# instead: instrumenting every fixture boundary with prints across the full
+# suite showed the real file vanishing between two tests' fixture teardowns,
+# not inside either one — some interaction in that boundary the analysis
+# above did not predict. A session-wide env var sidesteps the question of
+# fixture teardown ordering entirely: it is simply still set no matter what
+# runs when, so it needed no further root-causing to trust.
+os.environ["COSMO_TRAVEL_STATE_DIR"] = tempfile.mkdtemp(prefix="cosmo-travel-test-state-")
+
+
+@pytest.fixture(autouse=True)
+def _reset_engine_errors_state():
+    """Clear engine-error state between tests.
+
+    The directory itself is fixed for the whole session (see the module-level
+    `COSMO_TRAVEL_STATE_DIR` above); this only clears the in-memory cache and
+    that session's file between tests, so a failure recorded by one test does
+    not leak into the next.
+    """
+    flights._reset_engine_errors()
+    yield
+    flights._reset_engine_errors()
 
 
 @pytest.fixture(autouse=True)
