@@ -229,6 +229,30 @@ async def test_check_setup_serpapi_http_error():
     assert "not set" not in flights["reason"].lower()
 
 
+@pytest.mark.asyncio
+async def test_check_setup_reports_recorded_engine_failure():
+    """When a tool's engine failed in a prior search call, check_setup reports it as NOT ready."""
+    from cosmo_travel_mcp.tools.flights import _record_engine_error, _reset_engine_errors
+
+    _reset_engine_errors()
+    try:
+        _record_engine_error("google", "Unsupported engine test error")
+
+        with respx.mock as mock:
+            mock.get(SERPAPI_ACCOUNT_URL).respond(json=_ACCOUNT_OK)
+            mock.post(ROUTES_API_BASE).respond(json=_ROUTES_OK)
+            result = await check_setup()
+
+        events_tool = [t for t in result["tools"] if t["tool"] == "search_events"][0]
+        flights_tool = [t for t in result["tools"] if t["tool"] == "search_flights"][0]
+
+        assert events_tool["ready"] is False
+        assert "Unsupported engine test error" in events_tool["reason"]
+        assert flights_tool["ready"] is True
+    finally:
+        _reset_engine_errors()
+
+
 # ---------------------------------------------------------------------------
 # Server instructions (prompt 06)
 # ---------------------------------------------------------------------------

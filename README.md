@@ -2,7 +2,7 @@
 
 # cosmo-travel-mcp
 
-One MCP server with twelve travel tools — flight search, multi-city itineraries,
+One MCP server with thirteen travel tools — flight search, multi-city itineraries,
 accommodations, things to do, events, car rental offices, drive-vs-fly comparisons,
 itinerary checking and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes

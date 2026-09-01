@@ -154,27 +154,35 @@ def window_tokens(start: str, end: str) -> set[str]:
     return out
 
 
+def _start_date(ev: dict) -> str:
+    """Extract start_date string from both dict (google_events) and str (google) schemas."""
+    d = ev.get("date")
+    if isinstance(d, dict):
+        return d.get("start_date", "")
+    if isinstance(d, str):
+        return d
+    return ""
+
+
 def event_id(ev: dict) -> str:
     title = " ".join(str(ev.get("title", "")).split()).casefold()
-    when = (ev.get("date") or {})
-    return f"{title}|{when.get('start_date', '')}"
+    return f"{title}|{_start_date(ev)}"
 
 
 def sweep_events(key: str, watch: dict) -> list[dict]:
     """One query, one page — deliberately cheap, run every week rather than deep."""
     data = get("https://serpapi.com/search", {
-        "engine": "google_events",
+        "engine": "google",
         "q": watch["query"],
         "hl": "en", "gl": "us",
         "api_key": key,
     })
     if data.get("error"):
-        return []
+        raise RuntimeError(data["error"])
     tokens = window_tokens(watch["window"]["from"], watch["window"]["to"])
     hits = []
     for ev in data.get("events_results") or []:
-        start = (ev.get("date") or {}).get("start_date", "")
-        if start in tokens:
+        if _start_date(ev) in tokens:
             hits.append(ev)
     return hits
 
@@ -215,14 +223,11 @@ def judge(leg: dict, today: float) -> tuple[str, str]:
 
 # --------------------------------------------------------------------------- main
 EXIT_SKIPPED_QUOTA = 3
-"""Exit code for "did not run, the reserve would have been breached".
+EXIT_PROBE_FAILED = 4
+"""Exit codes for non-standard outcomes.
 
-Distinct from 0 on purpose. A skip and a quiet week leave exactly the same
-trace — `alerts.md` untouched — so a scheduler reading only the exit code
-cannot tell "nothing moved" from "nothing was measured". That matters most
-when the reserve is set at or above the quota that is left: then *every* run
-is a skip, and the watch is dead for weeks while nothing in its output looks
-wrong.
+EXIT_SKIPPED_QUOTA (3): did not run, reserve would have been breached.
+EXIT_PROBE_FAILED (4): one or more searches failed upstream.
 """
 
 
@@ -267,14 +272,20 @@ def main() -> int:
         return EXIT_SKIPPED_QUOTA
 
     alerts: list[str] = []
+    failed_probes: list[str] = []
+
     for leg in pending:
         try:
             res = price_leg(key, leg)
         except Exception as exc:                       # noqa: BLE001 — log and move on
-            log(f"{stamp}  {leg.get('label')}: request failed — {exc}")
+            msg = f"{leg.get('label')}: request failed — {exc}"
+            log(f"{stamp}  {msg}")
+            failed_probes.append(msg)
             continue
         if res is None:
-            log(f"{stamp}  {leg.get('label')}: no price returned")
+            msg = f"{leg.get('label')}: no price returned"
+            log(f"{stamp}  {msg}")
+            failed_probes.append(msg)
             continue
 
         leg.setdefault("observations", []).append({
@@ -307,7 +318,9 @@ def main() -> int:
         try:
             hits = sweep_events(key, watch)
         except Exception as exc:                       # noqa: BLE001
-            log(f"{stamp}  eventos {watch['city']}: request failed — {exc}")
+            msg = f"eventos {watch['city']}: request failed — {exc}"
+            log(f"{stamp}  {msg}")
+            failed_probes.append(msg)
             continue
 
         seen = set(watch.setdefault("seen", []))
@@ -320,12 +333,32 @@ def main() -> int:
 
         linhas = []
         for e in fresh:
-            when = (e.get("date") or {})
-            venue = (e.get("venue") or {}).get("name") or e.get("address") or ""
-            venue = venue[0] if isinstance(venue, list) else venue
-            linhas.append(f"- **{e.get('title')}** — {when.get('start_date','?')}"
-                          f"{', ' + when['when'] if when.get('when') else ''}"
-                          f"{' · ' + str(venue) if venue else ''}")
+            date_val = e.get("date")
+            if isinstance(date_val, dict):
+                when_str = date_val.get("start_date", "?")
+                if date_val.get("when"):
+                    when_str += f", {date_val['when']}"
+            elif isinstance(date_val, str) and date_val:
+                when_str = date_val
+                if e.get("time"):
+                    when_str += f" {e['time']}"
+            else:
+                when_str = "?"
+
+            venue = e.get("venue")
+            if isinstance(venue, dict):
+                v_name = venue.get("name")
+            else:
+                v_name = e.get("address")
+                if isinstance(v_name, list) and v_name:
+                    v_name = v_name[0]
+                elif isinstance(v_name, str):
+                    v_name = v_name
+                else:
+                    v_name = ""
+
+            linhas.append(f"- **{e.get('title')}** — {when_str}"
+                          f"{' · ' + str(v_name) if v_name else ''}")
         alerts.append(
             f"**{watch['city']} — {len(fresh)} evento(s) novo(s) na sua janela**\n"
             + "\n".join(linhas)
@@ -336,15 +369,25 @@ def main() -> int:
     wl["last_run"] = today_iso
     path.write_text(json.dumps(wl, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    if alerts:
-        header = f"\n## {stamp} — {len(alerts)} alerta(s)\n\n"
+    if alerts or failed_probes:
+        out_blocks = []
+        if failed_probes:
+            out_blocks.append("### Sondagens com falha nesta rodada:\n" + "\n".join(f"- {f}" for f in failed_probes))
+        if alerts:
+            out_blocks.append("\n\n".join(alerts))
+
+        header = f"\n## {stamp} — {len(alerts)} alerta(s)" + (f", {len(failed_probes)} falha(s)" if failed_probes else "") + "\n\n"
         ALERTS.write_text(
             (ALERTS.read_text(encoding="utf-8") if ALERTS.exists() else
              "# Vigília de preço — cosmo-travel\n")
-            + header + "\n\n".join(alerts) + "\n",
+            + header + "\n\n".join(out_blocks) + "\n",
             encoding="utf-8",
         )
         print("\n".join(alerts))
+
+    if failed_probes:
+        return EXIT_PROBE_FAILED
+
     return 0
 
 

@@ -26,9 +26,21 @@ from ..onboarding import (
     setup_guide,
 )
 from .driving import FIELD_MASK, ROUTES_API_BASE
-from .flights import _refresh_quota_from_account
+from .flights import _refresh_quota_from_account, get_engine_error
 
 SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
+
+TOOL_ENGINES: dict[str, str] = {
+    "search_flights": "google_flights",
+    "search_multi_city": "google_flights",
+    "search_cheapest_dates": "google_flights",
+    "compare_trip_windows": "google_flights",
+    "search_accommodations": "google_hotels",
+    "get_accommodation_details": "google_hotels",
+    "search_events": "google",
+    "search_things_to_do": "google_maps",
+    "search_car_rentals": "google_maps",
+}
 
 # Re-exported so callers (and tests) can import every onboarding anchor from
 # one place alongside check_setup itself.
@@ -200,10 +212,19 @@ async def check_setup() -> dict[str, Any]:
         else:
             account = probe["account"]
             for s in serpapi_statuses:
-                s["ready"] = True
+                tool_name = s["tool"]
+                engine = TOOL_ENGINES.get(tool_name, "")
+                engine_err = get_engine_error(engine) if engine else None
                 s["plan_searches_left"] = account.get("plan_searches_left", "?")
                 s["this_month_usage"] = account.get("this_month_usage", "?")
                 s["total_searches_left"] = account.get("total_searches_left", "?")
+
+                if engine_err:
+                    err_msg, ts = engine_err
+                    s["ready"] = False
+                    s["reason"] = f"Engine '{engine}' failed in last search call ({ts}): {err_msg}"
+                else:
+                    s["ready"] = True
 
             # Re-anchor the local quota estimate so tool warnings
             # use the latest real number.

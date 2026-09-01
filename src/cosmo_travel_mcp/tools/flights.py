@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import time
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -54,6 +55,28 @@ _LOW_QUOTA_THRESHOLD: int = 10
 _QUOTA_DISABLED = object()
 
 _QUOTA_SEARCHES_LEFT: int | None | object = None
+
+_ENGINE_ERRORS: dict[str, tuple[str, str]] = {}
+
+
+def _record_engine_error(engine: str, error_msg: str) -> None:
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    _ENGINE_ERRORS[engine] = (error_msg, now_iso)
+
+
+def _clear_engine_error(engine: str) -> None:
+    _ENGINE_ERRORS.pop(engine, None)
+
+
+def get_engine_error(engine: str) -> tuple[str, str] | None:
+    """Return (error_msg, timestamp_iso) if engine failed in last call in this session."""
+    return _ENGINE_ERRORS.get(engine)
+
+
+def _reset_engine_errors() -> None:
+    """Reset tracked engine errors (for tests)."""
+    global _ENGINE_ERRORS
+    _ENGINE_ERRORS = {}
 
 # ---------------------------------------------------------------------------
 # Session-scoped SerpAPI response cache
@@ -319,7 +342,9 @@ async def _call_serpapi(
             resp.raise_for_status()
             data: dict[str, Any] = resp.json()
             if "error" in data:
+                _record_engine_error(engine, data["error"])
                 raise ValueError(data["error"])
+            _clear_engine_error(engine)
             # --- cache the successful response ---
             if _CACHE_TTL_SECONDS > 0:
                 now_mono = time.monotonic()
@@ -333,11 +358,22 @@ async def _call_serpapi(
             if isinstance(_QUOTA_SEARCHES_LEFT, int):
                 _QUOTA_SEARCHES_LEFT -= 1
             return data, False
-        except httpx.TransportError:
+        except httpx.HTTPStatusError as exc:
+            sanitized_url = re.sub(r"api_key=[^&]+", "api_key=***", str(exc.request.url)) if exc.request else ""
+            req = httpx.Request(exc.request.method, sanitized_url, headers=exc.request.headers) if exc.request else None
+            msg = re.sub(r"api_key=[^&]+", "api_key=***", str(exc))
+            _record_engine_error(engine, msg)
+            raise httpx.HTTPStatusError(msg, request=req, response=exc.response) from None
+        except httpx.RequestError as exc:
             if attempt == 1:
                 await asyncio.sleep(_RETRY_BACKOFF_SECONDS)
                 continue
-            raise
+            sanitized_url = re.sub(r"api_key=[^&]+", "api_key=***", str(exc.request.url)) if exc.request else ""
+            req = httpx.Request(exc.request.method, sanitized_url, headers=exc.request.headers) if exc.request else None
+            msg = re.sub(r"api_key=[^&]+", "api_key=***", str(exc))
+            _record_engine_error(engine, msg)
+            cls = type(exc)
+            raise cls(msg, request=req) from None
 
 
 def _build_base_params(

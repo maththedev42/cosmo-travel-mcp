@@ -104,8 +104,10 @@ events; adding `"Christmas shows New York December 2026"` and
 February — including three shows on the night the traveller lands.
 
 **Every `also_search` angle must name the month and year** for a trip more
-than ~6 weeks out. And: *absence of results is a claim*. Before writing "there
-is nothing on", run the control and say what it was.
+than ~6 weeks out. Use short, natural query forms (e.g. `<city> events <month>`);
+avoid embedding exact dates (like `December 31 2026`) or using `things to do in <city>`,
+which suppress Google's `events_results` SERP block. And: *absence of results is a claim*.
+Before writing "there is nothing on", run the control and say what it was.
 
 ### 10. Some things no tool returns — say so, don't estimate
 Verified 2026-08-03: no free API returns Disney or Universal admission

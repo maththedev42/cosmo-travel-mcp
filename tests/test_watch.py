@@ -85,3 +85,35 @@ def test_quota_skip_has_its_own_exit_code(watch):
     """
     assert watch.EXIT_SKIPPED_QUOTA == 3
     assert watch.EXIT_SKIPPED_QUOTA != 0
+
+
+def test_probe_failed_has_its_own_exit_code(watch):
+    """Failed probes must produce non-zero exit code (4) instead of quiet week (0)."""
+    assert watch.EXIT_PROBE_FAILED == 4
+
+
+def test_start_date_supports_dict_and_string_date_fields(watch):
+    assert watch._start_date({"date": {"start_date": "Dec 31"}}) == "Dec 31"
+    assert watch._start_date({"date": "Dec 31"}) == "Dec 31"
+    assert watch._start_date({"date": None}) == ""
+
+
+def test_event_id_supports_dict_and_string_date_fields(watch):
+    legacy = {"title": "Concert", "date": {"start_date": "Dec 31"}}
+    new_shape = {"title": "Concert", "date": "Dec 31"}
+
+    assert watch.event_id(legacy) == "concert|Dec 31"
+    assert watch.event_id(new_shape) == "concert|Dec 31"
+
+
+def test_sweep_events_raises_on_api_error(watch, monkeypatch):
+    """sweep_events must raise RuntimeError on API error rather than returning [] silently."""
+    def fake_get(url, params):
+        return {"error": "Unsupported search engine."}
+
+    monkeypatch.setattr(watch, "get", fake_get)
+    with pytest.raises(RuntimeError, match="Unsupported search engine"):
+        watch.sweep_events("fake_key", {
+            "query": "New York events",
+            "window": {"from": "2026-12-30", "to": "2027-01-02"},
+        })

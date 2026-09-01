@@ -118,11 +118,62 @@ async def test_multi_word_cities_still_get_the_events_prefix(query, expected_q):
 
 @pytest.mark.asyncio
 async def test_search_events_uses_the_events_engine():
-    """Guards the historical bug where the engine was clobbered to google_flights."""
+    """Guards the engine choice for search_events (google engine returning events_results)."""
     with respx.mock as mock:
         mock.get(SERPAPI_BASE).respond(json={"events_results": []})
         await search_events("Lisbon")
-        assert mock.calls.last.request.url.params["engine"] == "google_events"
+        assert mock.calls.last.request.url.params["engine"] == "google"
+
+
+@pytest.mark.asyncio
+async def test_search_events_new_google_engine_item_shape():
+    """Item from google engine (flat date string, time, implicit venue in address[0])."""
+    mock_response = {
+        "events_results": [
+            {
+                "title": "Birdland Big Band",
+                "type": "Live big band jazz",
+                "date": "Dec 31",
+                "time": "7:00 PM",
+                "address": ["Birdland Jazz Club", "Midtown South"],
+            },
+        ],
+    }
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=mock_response)
+        result = await search_events("New York")
+
+    assert len(result["events"]) == 1
+    ev = result["events"][0]
+    assert ev["title"] == "Birdland Big Band"
+    assert ev["date"] == "Dec 31 | 7:00 PM"
+    assert ev["venue"] == "Birdland Jazz Club"
+    assert ev["address"] == "Midtown South"
+    assert "link" not in ev
+
+
+@pytest.mark.asyncio
+async def test_search_events_string_date_without_time():
+    """Item with string date and no time -> date string unmodified, no time invented."""
+    mock_response = {
+        "events_results": [
+            {
+                "title": "Times Square NYE",
+                "date": "Dec 31",
+                "address": ["Times Square", "New York, NY"],
+            },
+        ],
+    }
+
+    with respx.mock as mock:
+        mock.get(SERPAPI_BASE).respond(json=mock_response)
+        result = await search_events("New York")
+
+    ev = result["events"][0]
+    assert ev["date"] == "Dec 31"
+    assert ev["venue"] == "Times Square"
+    assert "link" not in ev
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""Event search tool backed by SerpAPI's google_events engine.
+"""Event search tool backed by SerpAPI's google engine (events_results block).
 
 Shows concerts, shows, sports, and festivals at a destination — the "what's on
 while you're there" half of trip planning.
@@ -12,17 +12,9 @@ from typing import Any
 
 from .flights import _call_serpapi, _inject_quota_warning, is_no_results_error
 
-# One query returns one slice of the corpus. Measured against the live engine
-# for Porto Alegre on 2026-08-01:
-#
-#   "Events in Porto Alegre"        9 results
-#   "shows em Porto Alegre"        10 results,  6 not in the first set
-#   "esportes em Porto Alegre"      2 results,  1 not in either
-#   page 2 of the first query       9 results,  8 in NONE of the above
-#
-# Paging is the single biggest source of missed events, and different
-# phrasings reach different corpora — which is how a niche sports event or a
-# free street party gets found at all. Both are opt-in because both cost quota.
+# In the google engine, events appear in the events_results SERP block on the
+# first page. Paging via start=10 paginates organic SERP results, not events_results.
+# _MAX_PAGES is retained for contract compatibility.
 _MAX_PAGES = 5
 _MAX_EXTRA_QUERIES = 6
 _RESULTS_PER_PAGE = 10
@@ -57,12 +49,12 @@ def _events_shaped_query(query: str) -> str:
 
 
 def _parse_event(item: dict[str, Any]) -> dict[str, Any]:
-    """Parse a single event from a SerpAPI google_events response."""
+    """Parse a single event from a SerpAPI response (google or google_events)."""
     parsed: dict[str, Any] = {
         "title": item.get("title", ""),
     }
 
-    when_info = item.get("date", {})
+    when_info = item.get("date")
     if isinstance(when_info, dict):
         date_parts: list[str] = []
         when_str = when_info.get("when", "")
@@ -73,8 +65,14 @@ def _parse_event(item: dict[str, Any]) -> dict[str, Any]:
             date_parts.append(start)
         if date_parts:
             parsed["date"] = " | ".join(date_parts) if len(date_parts) > 1 else date_parts[0]
+    elif isinstance(when_info, str) and when_info:
+        time_info = item.get("time")
+        if isinstance(time_info, str) and time_info:
+            parsed["date"] = f"{when_info} | {time_info}"
+        else:
+            parsed["date"] = when_info
 
-    venue = item.get("venue", {})
+    venue = item.get("venue")
     if isinstance(venue, dict):
         name = venue.get("name", "")
         if name:
@@ -83,17 +81,23 @@ def _parse_event(item: dict[str, Any]) -> dict[str, Any]:
             if venue.get(field) is not None:
                 parsed[key] = venue[field]
 
-    # `address` is a top-level array of strings on the event — the venue
-    # object carries only {name, rating, reviews, link}. Verified against the
-    # live API 2026-07-31: e.g.
-    # ["Smoke Jazz & Supper Club, 2751 Broadway", "New York, NY"].
+    # `address` is a top-level array of strings on the event (or a string).
+    # On the google engine, the venue name is returned as address[0] and the rest as address.
     address = item.get("address")
     if isinstance(address, list):
         addr_parts = [a for a in address if isinstance(a, str) and a]
         if addr_parts:
-            parsed["address"] = ", ".join(addr_parts)
+            if "venue" in parsed:
+                parsed["address"] = ", ".join(addr_parts)
+            else:
+                parsed["venue"] = addr_parts[0]
+                if len(addr_parts) > 1:
+                    parsed["address"] = ", ".join(addr_parts[1:])
     elif isinstance(address, str) and address:
-        parsed["address"] = address
+        if "venue" not in parsed:
+            parsed["venue"] = address
+        else:
+            parsed["address"] = address
 
     link = item.get("link", "")
     if link:
@@ -158,7 +162,7 @@ async def _fetch_page(
         params["start"] = start
 
     try:
-        data, from_cache = await _call_serpapi(params, engine="google_events")
+        data, from_cache = await _call_serpapi(params, engine="google")
     except ValueError as exc:
         if is_no_results_error(exc):
             # The search was still spent upstream; report it honestly.
