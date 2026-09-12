@@ -13,7 +13,7 @@ Read **Method** before spending a single search. Then follow **Protocol**.
 
 ---
 
-## Method — ten rules, each one a scar
+## Method — eleven rules, each one a scar
 
 ### 1. Never compare entry doors on a single date
 Comparing three arrival cities on one date picked the wrong city. Three doors
@@ -130,6 +130,47 @@ Name the official channel, offer a labelled web search, and **never write a
 number that looks measured when it is not**. A plan whose uncertainty is
 visible is worth more than one whose confidence is decorative.
 
+### 11. When the booking phase still doesn't add up, open the airline's own site
+Booking-phase (`booking_token`) usually settles a suspicious phase-1 price —
+measured 2026-09-12: a R$ 4.914 phase-1 fare resolved to a single American-only
+seller at R$ 31.171, flight number silently swapped, and that caught the fraud.
+But it is not always the last word: on the same trip the traveller's own aa.com
+screenshot showed a **third** number (R$ 8.345,96 total) that matched neither the
+phase-1 nor the booking-phase figure — currency/locale, session cookies, and live
+inventory can all move the number the airline shows a real browser between the
+MCP call and the traveller's own visit.
+
+When the traveller asks to check a fare directly, or a booking-phase number still
+disagrees with what they see themselves, use the `mcp__claude-in-chrome__*` tools
+(load them first with `ToolSearch` if deferred — `tabs_context_mcp`, `navigate`,
+`computer`, `read_page` or `get_page_text`, `tabs_create_mcp`, `tabs_close_mcp`) to
+open the airline's own site with the exact same dates, route, and passenger count,
+same day (rule 3 still applies — a browser number from a different day is not a
+comparison). Report the browser's number **next to** the MCP number, not instead of
+it, and say which sites you checked. A small canonical set for routes seen so far:
+`aa.com`, `copa.com`, `latam.com`, `gol.com.br`, `azul.com.br`, `united.com`; for
+cross-aggregator triangulation, `google.com/travel/flights` (same underlying data
+as SerpAPI, but a different locale/currency toggle can still disagree) and
+`kayak.com`. Skyscanner has no self-serve API (checked 2026-09-12 — partner-only,
+needs a business review and a commercial agreement, see the note below), but
+`skyscanner.com` is just another site to open the same way.
+
+This is a **manual, one-off assist**, not a batch data source: it spends no
+SerpAPI quota, but airline sites throttle or CAPTCHA repeated automated visits, so
+never loop it across dates and never call it from `watch.py` or any scheduled run.
+Never enter payment details or complete a purchase through browser automation —
+this step is for reading a price, not booking it; if a dialog/CAPTCHA blocks
+progress, stop and say so rather than retrying the same click.
+
+**Skyscanner does not have a free, self-serve API.** Verified 2026-09-12: the
+Flights API is partner-only through `partners.skyscanner.net` — a business review
+plus a commercial agreement, production credentials take weeks. The unofficial
+"Sky Scrapper API" on RapidAPI mirrors Skyscanner data with a free tier (~100
+requests/month) but is a third-party scrape, not an official feed — not worth
+adding as a second structured source next to the already-licensed SerpAPI. Opening
+`skyscanner.com` in the browser (rule 11, above) gets the same cross-check without
+an API key.
+
 ---
 
 ## Protocol
@@ -164,7 +205,8 @@ normal; more than six means a constraint is missing.
 ### 2. Fares — doors, then exits, then internals
 Per rules 1, 2, 7, 8. One-way per leg (`type=2`), `adults` explicit. Record
 for every leg: price, `price_level`, `typical_price_range`, and
-`price_history` **if it came**.
+`price_history` **if it came**. If a phase-1 price looks too good, or the
+traveller wants a fare checked against what they see themselves, see rule 11.
 
 ### 3. Lodging — every window, one batch
 Per rules 3, 5, 6. `vacation_rentals=False` for hotels,
