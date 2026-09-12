@@ -162,6 +162,16 @@ Never enter payment details or complete a purchase through browser automation �
 this step is for reading a price, not booking it; if a dialog/CAPTCHA blocks
 progress, stop and say so rather than retrying the same click.
 
+This is not hypothetical — the browser tools are a real, already-granted
+capability, not something to describe to the traveller instead of using. Demonstrated
+2026-09-12: filled in google.com/travel/flights by hand (New York → Porto Alegre, one
+way, 04 Jan 2027, 2 adults) and it independently reproduced both MCP numbers on the
+same query — R$ 6.839 as the cheapest real itinerary, and the once-R$-4.914 AA+Gol
+combo showing its true R$ 31.171 directly in the results. Only the date-picker's grid
+preview still teased the old R$ 4.914 (it prices off a cached bucket, not the itemized
+search) — a live reminder that even the same site can show two different numbers for
+the same query depending on which view of it you read.
+
 **Skyscanner does not have a free, self-serve API.** Verified 2026-09-12: the
 Flights API is partner-only through `partners.skyscanner.net` — a business review
 plus a commercial agreement, production credentials take weeks. The unofficial
