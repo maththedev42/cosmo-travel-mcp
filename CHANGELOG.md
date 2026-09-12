@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (skills only — not distributed)
+
+- `skills/plan-a-trip/SKILL.md` — rule 11: when a booking-phase price still
+  disagrees with what the traveller sees on an airline's own site, cross-check
+  it directly with the `mcp__claude-in-chrome__*` browser tools instead of
+  trusting either MCP number alone. Manual, one-off, never part of `watch.py`.
+  Also notes that Skyscanner has no self-serve API (partner-only) — its site
+  gets the same browser cross-check, no separate integration needed.
+
 ## [1.5.0] - 2026-09-01
 
 ### Added
