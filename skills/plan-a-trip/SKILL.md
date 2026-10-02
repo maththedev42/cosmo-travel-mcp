@@ -13,7 +13,7 @@ Read **Method** before spending a single search. Then follow **Protocol**.
 
 ---
 
-## Method — eleven rules, each one a scar
+## Method — twelve rules, each one a scar
 
 ### 1. Never compare entry doors on a single date
 Comparing three arrival cities on one date picked the wrong city. Three doors
@@ -181,6 +181,52 @@ adding as a second structured source next to the already-licensed SerpAPI. Openi
 `skyscanner.com` in the browser (rule 11, above) gets the same cross-check without
 an API key.
 
+### 12. Entry requirements belong to the route, and never come from memory
+A traveller asking about their destination is often asking the wrong question.
+Scar from 2026-09-23: asked *"do we need yellow fever vaccine for the US, and
+travel insurance for Buenos Aires and the US?"* The premise was wrong and hid two
+real rules. Reverified 2026-10-02:
+- **US has no yellow fever requirement** (CBP / CDC `wwwnc.cdc.gov/travel`).
+- **The real yellow fever question belonged to the transit country:** the flight
+  connected in Panama (PTY via Copa). Panama historically required vaccination
+  from travellers arriving from Brazil even in transit; MINSA/ATP lifted the
+  mandatory certificate for Brazil in 2026 (`atp.gob.pa`), but transit rules and
+  airline boarding checks still govern the connection.
+- **Argentina requires travel health insurance** for non-resident foreign tourists
+  under Decreto 366/2025 (`boletinoficial.gob.ar`), verified at immigration.
+- **US does not require travel insurance** for tourist entry (`travel.state.gov`),
+  even though healthcare costs make it strongly recommended.
+
+No tool in this server answers entry requirements (rule 10 applies). When
+evaluating an international itinerary:
+
+1. **Check the entire route, not just the destination.** Every country touched,
+   including international layovers and connections of even a few hours. Read the
+   route from the actual flight segments, not the traveller's stated destination.
+2. **Anchor to nationality and origin.** Entry rules depend on passport country
+   and where the traveller is arriving from or has visited recently. Ask the
+   traveller's nationality if unknown; never infer it from the departure city.
+3. **Split into three separate questions per country:** documents (passport
+   validity, visas, electronic authorizations like ESTA), health (vaccines,
+   ICVP certificates), and insurance. If an answer only addresses one, state
+   explicitly that the other two remain unverified.
+4. **"Required" and "recommended" never share a sentence or tone.** Required is a
+   condition of boarding or entry; recommended is personal risk management.
+   Conflating them causes travellers to buy what they don't need or get turned away
+   at the gate.
+5. **Never answer from memory.** Treat entry rules like same-day quotes (rule 3):
+   immigration decrees and health rules change overnight without notice. Check
+   official government portals or the operating airline's travel-requirements tool
+   (e.g. Copa/Timatic) on the day of answering, and always provide the source URL
+   and the date read.
+6. **Correct false premises out loud.** If the traveller asks whether a non-existent
+   requirement applies, explicitly clarify that it does not *and* surface the
+   actual requirements that apply to their route. Saying only "no" leaves the
+   transit trap invisible.
+7. **Flag re-verification near departure.** A check completed months before travel
+   has an expiration date. State when to re-check (typically 2–4 weeks before
+   departure).
+
 ---
 
 ## Protocol
@@ -241,7 +287,8 @@ Blockers are cheap to find and expensive to ship. Pass `operating_hours` and
 `coordinates` **verbatim** from `search_things_to_do`. Fix every `blocker`
 and re-run. Watch holiday closures specifically: a trip built around New
 Year's is a trip where half the plan may be shut on 1 January, and normal
-opening hours will not say so.
+opening hours will not say so. Before declaring an international trip ready,
+ensure rule 12 has been applied to the entire route.
 
 ### 7. Offer the calendar — `build_calendar` (free)
 One item per flight leg in each airport's own local time, plus check-ins and

@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trusting either MCP number alone. Manual, one-off, never part of `watch.py`.
   Also notes that Skyscanner has no self-serve API (partner-only) — its site
   gets the same browser cross-check, no separate integration needed.
+- `skills/plan-a-trip/SKILL.md` — rule 12: entry requirements (documents, health,
+  insurance) belong to the entire route — including international layovers and
+  connections — not just the destination, and depend on nationality and origin.
+  Never answered from memory or inferred from departure city; verify on the day
+  against official portals or airline requirements tools with source URL and date,
+  keep "required" and "recommended" strictly separated, and flag re-verification
+  near departure.
 
 ## [1.5.0] - 2026-09-01
 
