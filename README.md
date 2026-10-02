@@ -206,7 +206,12 @@ It carries twelve method rules, each one a mistake made while planning a real
 - An undated event query returns what is *near*, not what *exists* — name the
   month and year, and treat "there is nothing on" as a claim needing a control.
 
-It ships two standard-library scripts alongside it.
+It ships three standard-library scripts alongside it.
+
+**`ledger.py`** records purchased legs in fixed schema 1 inside the same
+watchlist state files `watch.py` monitors. It enforces strict validation —
+positive amount or explicit null with reason, exact passenger counts, airport local
+times without offset — and replaces free-form notes with atomic, auditable purchase records.
 
 **`render.py`** turns the researched trip into one self-contained HTML page —
 inline CSS and JS, no assets, no server — where the candidate itineraries are

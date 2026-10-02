@@ -398,7 +398,7 @@ Required at install time:
    4 legs + 4 sweeps weekly = 8 per run ≈ 35/month, which fits the free tier
    and shrinks as legs are marked purchased.
 2. Take an explicit cadence choice.
-3. Stop watching a leg the moment it is marked `purchased` — that is what
+3. Stop watching a leg the moment it is marked `purchased` (use `ledger.py purchase`) — that is what
    makes an 8-leg watch shrink instead of grow.
 4. Skip a run, with a logged reason, when remaining quota is under a reserve
    (default 20). A watch must never starve an interactive search.
@@ -471,3 +471,52 @@ Exit code contract for consumers (e.g. `semanal.sh`):
 - `0`: All scheduled probes succeeded cleanly.
 - `3` (`EXIT_SKIPPED_QUOTA`): Run skipped because quota reserve would be breached.
 - `4` (`EXIT_PROBE_FAILED`): Partial run — one or more probes failed. Valid alerts from successful probes are written to `alerts.md` and MUST be processed/displayed by the consumer alongside a warning that the run was partial.
+
+---
+
+## The trip ledger
+
+`watch.py` tracks what has not been bought yet; `ledger.py` records what has.
+Standard library only, standard state files.
+
+Six weeks of real vigil in three trips (US, Salvador, Rio) showed free-form
+purchase blocks diverging into six incompatible formats, with missing values
+recorded as zero and overnight arrivals throwing lodging off by a day.
+`ledger.py purchase` records bought legs in fixed schema 1:
+
+```bash
+python3 ledger.py purchase ~/.cosmo-travel/watchlist-<trip>.json --leg N --data purchase.json [--replace] [--date-changed]
+```
+
+### The `purchase` block (schema 1)
+
+```json
+"purchase": {
+  "schema": 1,
+  "date": "2026-03-02",
+  "seller": "LATAM Airlines",
+  "locator": "ABC123XYZ",
+  "adults": 2,
+  "segments": [
+    { "flight": "LA 8180", "from": "GRU", "to": "MIA",
+      "depart": "2026-05-10T11:40", "arrive": "2026-05-10T17:00" }
+  ],
+  "paid": { "amount": 1234.50, "currency": "BRL" },
+  "source": "confirmation email read 2026-03-02",
+  "open_issues": [],
+  "notes": "",
+  "extra": {}
+}
+```
+
+Two non-obvious rules, each from a scar:
+
+- **Missing value is `null` with a stated reason, never zero.** In an earlier run,
+  an unpriced leg sent as `0` made an itinerary look free. `paid` is a positive
+  number with currency, or `null` with `"paid_unmeasured_why"` non-empty. For a
+  round trip paid together, record the full amount on the first leg and
+  `"paid": {"included_in_leg": N}` on the return.
+- **Flight times are airport local time, floating without offset.** The same
+  convention as `build_calendar`. Timezone offsets inside flight segments lead to
+  false timezone math across legs. If a segment's arrival or departure is omitted
+  in the confirmation email, it is recorded as `null` with `"unmeasured_why"`.
