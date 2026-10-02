@@ -558,7 +558,7 @@ python3 ledger.py coverage [WATCHLIST ...]
 
 - `home`: Records comma-separated 3-letter uppercase IATA airport codes (e.g. `"POA"` or `"POA,NVT"`). Defines where the trip starts and ends.
 - `stay`: Appends a stay to `"stays"`. Either `status: "booked"` (requires `booking: {seller, locator, source, paid}`, positive amount) or `status: "not_needed"` (requires `why`, e.g. lodging included in an event or staying with friends). Never type `needed`: accommodation necessity is strictly derived from flight gaps.
-- `coverage`: Derives ground intervals between flights and checks coverage against recorded stays.
+- `coverage`: Derives ground intervals between flights and checks coverage against recorded stays. A layover missing arrival or departure times counts as a connection (omitted from output) when known bounds — previous segment departure date at 00:00 and next segment arrival date at 23:59 — leave zero possible nights; if one or more nights are possible, it is reported as `"derivable": false` with its `unmeasured_why`.
 
 #### The 03:00 rule (`PIVOT_HOUR = 3`)
 

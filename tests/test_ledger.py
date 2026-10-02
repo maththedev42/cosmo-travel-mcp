@@ -2606,3 +2606,381 @@ def test_add_leg_junta_com_watch_py(ledger, watch_mod, tmp_path, monkeypatch):
     watch_exit = watch_mod.main()
     assert watch_exit == 0
 
+
+# ===========================================================================
+# Prompt 03b: Bounded Connection Intervals with Missing Times
+# ===========================================================================
+
+
+def test_coverage_connection_missing_times_same_day_omitted_can_be_covered(ledger, tmp_path, capsys):
+    """Real case: A depart 12:10 / arrive null, B depart null / arrive 20:00 on same day -> 0 nights, connection omitted, verdict covered."""
+    wl = {
+        "trip": "EUA Conexão Mesmo Dia",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC123",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 1",
+                            "from": "POA",
+                            "to": "PTY",
+                            "depart": "2026-05-10T12:10",
+                            "arrive": None,
+                            "unmeasured_why": "horário de escala ausente no e-mail",
+                        },
+                        {
+                            "flight": "CM 2",
+                            "from": "PTY",
+                            "to": "MIA",
+                            "depart": None,
+                            "arrive": "2026-05-10T20:00",
+                            "unmeasured_why": "horário de escala ausente no e-mail",
+                        },
+                    ],
+                },
+            },
+            {
+                "label": "MIA → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC124",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 3",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-15T09:00",
+                            "arrive": "2026-05-15T21:00",
+                        }
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Miami Hotel",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {
+                    "seller": "Hotel",
+                    "locator": "HTL1",
+                    "source": "email",
+                    "paid": {"amount": 500.0, "currency": "USD"},
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-same-day-conn.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    # No gap emitted for PTY; only the destination gap in MIA
+    assert len(trip["gaps"]) == 1
+    assert trip["gaps"][0]["arrive_at"] == "MIA"
+    assert trip["gaps"][0]["depart_from"] == "MIA"
+    assert trip["gaps"][0]["derivable"] is True
+    assert trip["verdict"] == "covered"
+
+
+def test_coverage_connection_missing_times_multi_day_not_derivable(ledger, tmp_path, capsys):
+    """A arrive null with depart on day 10, B depart null with arrive on day 12 -> 2 nights possible, derivable: false."""
+    wl = {
+        "trip": "Multi Day Scale Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC123",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 1",
+                            "from": "POA",
+                            "to": "PTY",
+                            "depart": "2026-05-10T12:10",
+                            "arrive": None,
+                            "unmeasured_why": "horário de escala ausente no e-mail",
+                        },
+                        {
+                            "flight": "CM 2",
+                            "from": "PTY",
+                            "to": "MIA",
+                            "depart": None,
+                            "arrive": "2026-05-12T20:00",
+                            "unmeasured_why": "horário de escala ausente no e-mail",
+                        },
+                    ],
+                },
+            },
+            {
+                "label": "MIA → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC124",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 3",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-15T09:00",
+                            "arrive": "2026-05-15T21:00",
+                        }
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Miami Hotel",
+                "check_in": "2026-05-12",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {
+                    "seller": "Hotel",
+                    "locator": "HTL1",
+                    "source": "email",
+                    "paid": {"amount": 500.0, "currency": "USD"},
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-multi-day-scale.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    # Gap in PTY is emitted with derivable: False
+    pty_gap = next((g for g in trip["gaps"] if g["arrive_at"] == "PTY"), None)
+    assert pty_gap is not None
+    assert pty_gap["derivable"] is False
+    assert pty_gap["arrive"] is None
+    assert pty_gap["depart"] is None
+    assert pty_gap["unmeasured_why"] == "horário de escala ausente no e-mail"
+    assert trip["verdict"] == "partial"
+
+
+def test_coverage_connection_missing_both_times_not_derivable(ledger, tmp_path, capsys):
+    """Segment A with both depart and arrive null -> derivable: false."""
+    wl = {
+        "trip": "Missing Both Times Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC123",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 1",
+                            "from": "POA",
+                            "to": "PTY",
+                            "depart": None,
+                            "arrive": None,
+                            "unmeasured_why": "sem dados de voo A",
+                        },
+                        {
+                            "flight": "CM 2",
+                            "from": "PTY",
+                            "to": "MIA",
+                            "depart": "2026-05-10T14:00",
+                            "arrive": "2026-05-10T20:00",
+                        },
+                    ],
+                },
+            },
+            {
+                "label": "MIA → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC124",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 3",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-15T09:00",
+                            "arrive": "2026-05-15T21:00",
+                        }
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Miami Hotel",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {
+                    "seller": "Hotel",
+                    "locator": "HTL1",
+                    "source": "email",
+                    "paid": {"amount": 500.0, "currency": "USD"},
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-both-null.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    pty_gap = next((g for g in trip["gaps"] if g["arrive_at"] == "PTY"), None)
+    assert pty_gap is not None
+    assert pty_gap["derivable"] is False
+    assert pty_gap["unmeasured_why"] == "sem dados de voo A"
+    assert trip["verdict"] == "partial"
+
+
+def test_coverage_connection_missing_times_overnight_not_derivable(ledger, tmp_path, capsys):
+    """A depart 23:30 (day 10) / arrive null, B depart null / arrive 00:40 next day (day 11) -> 1 night possible, derivable: false."""
+    wl = {
+        "trip": "Overnight Scale Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC123",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 1",
+                            "from": "POA",
+                            "to": "PTY",
+                            "depart": "2026-05-10T23:30",
+                            "arrive": None,
+                            "unmeasured_why": "sem horário de escala",
+                        },
+                        {
+                            "flight": "CM 2",
+                            "from": "PTY",
+                            "to": "MIA",
+                            "depart": None,
+                            "arrive": "2026-05-11T00:40",
+                            "unmeasured_why": "sem horário de escala",
+                        },
+                    ],
+                },
+            },
+            {
+                "label": "MIA → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC124",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 3",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-15T09:00",
+                            "arrive": "2026-05-15T21:00",
+                        }
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Miami Hotel",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {
+                    "seller": "Hotel",
+                    "locator": "HTL1",
+                    "source": "email",
+                    "paid": {"amount": 500.0, "currency": "USD"},
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-overnight-scale.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    # One night is possible in PTY, so it must not be omitted as a 0-night connection!
+    pty_gap = next((g for g in trip["gaps"] if g["arrive_at"] == "PTY"), None)
+    assert pty_gap is not None
+    assert pty_gap["derivable"] is False
+    assert pty_gap["unmeasured_why"] == "sem horário de escala"
+    assert trip["verdict"] == "partial"
+
+

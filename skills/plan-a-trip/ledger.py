@@ -806,7 +806,39 @@ def calculate_coverage(wl: dict, filename: str) -> dict:
         depart_from = seg_b.get("from")
         depart_str = seg_b.get("depart")
 
-        if not arrive_str or not depart_str:
+        is_estimated = False
+        arrive_dt = None
+        depart_dt = None
+
+        if arrive_str:
+            try:
+                arrive_dt = datetime.fromisoformat(arrive_str)
+            except ValueError:
+                arrive_dt = None
+        elif seg_a.get("depart"):
+            try:
+                # Use date of A.depart at 00:00: arrival cannot precede departure, but local wall-clock can shift westward
+                dep_a_dt = datetime.fromisoformat(seg_a["depart"])
+                arrive_dt = datetime.combine(dep_a_dt.date(), time(0, 0))
+                is_estimated = True
+            except ValueError:
+                arrive_dt = None
+
+        if depart_str:
+            try:
+                depart_dt = datetime.fromisoformat(depart_str)
+            except ValueError:
+                depart_dt = None
+        elif seg_b.get("arrive"):
+            try:
+                # Use date of B.arrive at 23:59: departure cannot succeed arrival, but local wall-clock can shift eastward
+                arr_b_dt = datetime.fromisoformat(seg_b["arrive"])
+                depart_dt = datetime.combine(arr_b_dt.date(), time(23, 59))
+                is_estimated = True
+            except ValueError:
+                depart_dt = None
+
+        if arrive_dt is None or depart_dt is None or depart_dt < arrive_dt:
             gap: dict = {
                 "arrive_at": arrive_at,
                 "arrive": arrive_str,
@@ -825,10 +857,25 @@ def calculate_coverage(wl: dict, filename: str) -> dict:
             gaps.append(gap)
             continue
 
-        try:
-            arrive_dt = datetime.fromisoformat(arrive_str)
-            depart_dt = datetime.fromisoformat(depart_str)
-        except ValueError:
+        # Derive nights needed using PIVOT_HOUR (03:00)
+        # arrive <= (d+1)T03:00 < depart
+        nights_needed: list[str] = []
+        cur_d = arrive_dt.date() if not arrive_str else arrive_dt.date() - timedelta(days=1)
+        end_d = depart_dt.date()
+        while cur_d <= end_d:
+            pivot_dt = datetime.combine(cur_d + timedelta(days=1), time(PIVOT_HOUR, 0))
+            if arrive_dt.tzinfo is not None:
+                pivot_dt = pivot_dt.replace(tzinfo=arrive_dt.tzinfo)
+            if arrive_dt <= pivot_dt < depart_dt:
+                nights_needed.append(cur_d.strftime("%Y-%m-%d"))
+            cur_d += timedelta(days=1)
+
+        # Connection with 0 nights is omitted completely (both known hours and estimated bounds)
+        if not nights_needed:
+            continue
+
+        # If estimated bounds result in 1+ nights, number is not known -> derivable: False
+        if is_estimated:
             gap = {
                 "arrive_at": arrive_at,
                 "arrive": arrive_str,
@@ -841,24 +888,10 @@ def calculate_coverage(wl: dict, filename: str) -> dict:
                 "uncovered": [],
                 "pending_legs_inside": [],
             }
+            unmeasured_why = seg_a.get("unmeasured_why") or seg_b.get("unmeasured_why")
+            if unmeasured_why:
+                gap["unmeasured_why"] = unmeasured_why
             gaps.append(gap)
-            continue
-
-        # Derive nights needed using PIVOT_HOUR (03:00)
-        # arrive <= (d+1)T03:00 < depart
-        nights_needed: list[str] = []
-        cur_d = arrive_dt.date() - timedelta(days=1)
-        end_d = depart_dt.date()
-        while cur_d <= end_d:
-            pivot_dt = datetime.combine(cur_d + timedelta(days=1), time(PIVOT_HOUR, 0))
-            if arrive_dt.tzinfo is not None:
-                pivot_dt = pivot_dt.replace(tzinfo=arrive_dt.tzinfo)
-            if arrive_dt <= pivot_dt < depart_dt:
-                nights_needed.append(cur_d.strftime("%Y-%m-%d"))
-            cur_d += timedelta(days=1)
-
-        # Connection on same day with 0 nights is omitted completely
-        if not nights_needed:
             continue
 
         late_arrival = any(

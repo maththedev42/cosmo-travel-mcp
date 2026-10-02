@@ -47,7 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `watch` boolean with `watch_off_reason` when false; rejects duplicate legs; and
   supports `--create` to initialize a new watchlist with `--trip NAME` and optional
   `--home CODES` without overwriting existing files.
-
+- `skills/plan-a-trip/ledger.py` — `coverage` refinement: bounded connection intervals
+  when segment arrival or departure times are omitted. Uses the previous segment's
+  departure date at 00:00 and next segment's arrival date at 23:59 to derive possible
+  nights; if zero nights are possible, the layover is omitted as a connection (allowing
+  verdicts to reach `covered`); if one or more nights are possible, it is reported as
+  `derivable: false` with `unmeasured_why`.
 
 ## [1.5.0] - 2026-09-01
 
