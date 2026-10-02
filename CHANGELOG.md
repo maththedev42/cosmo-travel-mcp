@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `not_needed` stays, reporting grouped uncovered ranges (`check_in`,
   `check_out`, `nights`) and paid nights outside any gap. Integrates coverage
   into `ledger.py summary` (`coverage: {verdict, uncovered_nights}`).
+- `skills/plan-a-trip/ledger.py` — `add-leg` subcommand: appends a leg to a watchlist
+  with `"purchased": false`, outputting the new index for `purchase --leg`. Validates
+  origin, destination, ISO date, adults, and non-empty label; requires an explicit
+  `watch` boolean with `watch_off_reason` when false; rejects duplicate legs; and
+  supports `--create` to initialize a new watchlist with `--trip NAME` and optional
+  `--home CODES` without overwriting existing files.
+
 
 ## [1.5.0] - 2026-09-01
 

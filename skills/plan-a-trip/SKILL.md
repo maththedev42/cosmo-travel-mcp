@@ -335,6 +335,17 @@ Two things the schema forces you to fill in, and should:
 
 ### 9. Offer the price watch — see below
 
+### 10. Record what is already bought — `ledger.py`
+After offering the price watch for remaining unpurchased legs, record whatever has
+already been purchased (`add-leg` + `purchase`, `stay`), and run `coverage` before
+declaring a trip closed. A trip bought without prior vigil starts here; a trip
+transitioning from planning to booking records legs as they close:
+1. Append bought legs with `ledger.py add-leg` (or `add-leg --create` if starting fresh).
+2. Record flight confirmation details, local times, and costs with `ledger.py purchase`.
+3. Record lodging reservations or exemptions (`status: "not_needed"`) with `ledger.py stay`.
+4. Run `ledger.py coverage` to verify that all night intervals between flights are covered.
+5. Check `ledger.py summary` to verify total spending and confirm no unmeasured gaps remain.
+
 ---
 
 ## The price watch
@@ -557,3 +568,62 @@ A night `d` (sleeping from `d` to `d+1`) is required if and only if the travelle
 Compare the two cases side by side:
 - **Arrival at 07:05 (day 21):** At 03:00 of day 21, the traveller was still in flight. Night of the 20th does **not** enter — it was spent on the plane (no phantom night).
 - **Arrival at 00:38 (day 21):** At 03:00 of day 21, the traveller is already on the ground. Night of the 20th **does** enter, and the interval is flagged `"late_arrival": true` (check-in occurs on the eve of the arrival date).
+
+### Add leg — flights bought outside the vigil
+
+```bash
+python3 ledger.py add-leg WATCHLIST --data FILE [--create --trip NAME [--home CODES]]
+```
+
+When a trip or positioning flight is purchased without prior surveillance (e.g. booked
+directly on an airline site or added to an existing trip), `add-leg` appends it to
+`legs` with `"purchased": false` and outputs the new integer index to pass to
+`purchase --leg`.
+
+- `--data` (JSON file or `-`):
+  ```json
+  {
+    "label": "GRU → MIA · 10 mai",
+    "origin": "GRU",
+    "destination": "MIA",
+    "outbound_date": "2026-05-10",
+    "adults": 2,
+    "watch": false,
+    "watch_off_reason": "comprado direto no site da companhia"
+  }
+  ```
+- `watch` is **mandatory** and an explicit boolean. If `watch: false`,
+  `"watch_off_reason"` is required and must be non-empty.
+- Validates 3-letter IATA codes, ISO date, adults >= 1, non-empty label, rejects
+  unknown keys, and rejects duplicate legs matching existing `(origin, destination, outbound_date)`.
+- With `--create`: creates a new watchlist file with `"cadence": "off"`. Requires
+  `--trip NAME` (optional `--home CODES`). Fails if the file already exists (never
+  overwrites). Without `--create`, the watchlist must already exist (fails if missing).
+
+#### The 5-step flow: a trip bought outside the vigil
+
+For a trip booked without surveillance, run five commands in sequence without hand-editing any JSON:
+
+1. **Create watchlist and add outbound leg:**
+   ```bash
+   python3 ledger.py add-leg ~/.cosmo-travel/watchlist-eua.json --create --trip "EUA 2026" --home "POA" --data outbound.json
+   ```
+2. **Record outbound purchase:**
+   ```bash
+   python3 ledger.py purchase ~/.cosmo-travel/watchlist-eua.json --leg 0 --data outbound-purchase.json
+   ```
+3. **Set home airport(s)** (if omitted during `--create`):
+   ```bash
+   python3 ledger.py home ~/.cosmo-travel/watchlist-eua.json POA
+   ```
+4. **Add return leg and record its purchase:**
+   ```bash
+   python3 ledger.py add-leg ~/.cosmo-travel/watchlist-eua.json --data return.json
+   python3 ledger.py purchase ~/.cosmo-travel/watchlist-eua.json --leg 1 --data return-purchase.json
+   ```
+5. **Verify coverage and summary:**
+   ```bash
+   python3 ledger.py coverage ~/.cosmo-travel/watchlist-eua.json
+   python3 ledger.py summary ~/.cosmo-travel/watchlist-eua.json
+   ```
+

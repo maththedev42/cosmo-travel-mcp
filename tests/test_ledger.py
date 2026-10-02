@@ -2186,3 +2186,423 @@ def test_summary_includes_coverage(ledger, tmp_path, capsys):
         "uncovered_nights": 3,
     }
 
+
+# ---------------------------------------------------------------------------
+# Prompt 04: add-leg
+# ---------------------------------------------------------------------------
+
+
+def test_add_leg_full_flow_five_commands(ledger, tmp_path, capsys):
+    """The entire real-world flow in 5 commands without manual JSON edits:
+
+    add-leg --create -> purchase --leg 0 -> second add-leg -> purchase --leg 1 -> coverage & summary
+    """
+    wl_path = tmp_path / "watchlist-flow.json"
+
+    # Step 1: add-leg --create for outbound leg
+    leg0_data = {
+        "label": "POA → MIA · 10 mai",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 2,
+        "watch": False,
+        "watch_off_reason": "já comprado fora da vigília",
+    }
+    leg0_file = tmp_path / "leg0.json"
+    leg0_file.write_text(json.dumps(leg0_data), encoding="utf-8")
+
+    code = ledger.main([
+        "add-leg",
+        str(wl_path),
+        "--data",
+        str(leg0_file),
+        "--create",
+        "--trip",
+        "EUA 2026",
+        "--home",
+        "POA",
+    ])
+    assert code == 0
+    out = capsys.readouterr().out.strip()
+    assert out == "0"
+    assert wl_path.exists()
+
+    # Step 2: purchase --leg 0
+    purch0_data = {
+        "schema": 1,
+        "date": "2026-03-01",
+        "seller": "Copa",
+        "locator": "LOC1",
+        "adults": 2,
+        "paid": {"amount": 2000.0, "currency": "BRL"},
+        "source": "email: confirmation",
+        "segments": [
+            {
+                "flight": "CM 1",
+                "from": "POA",
+                "to": "MIA",
+                "depart": "2026-05-10T06:00",
+                "arrive": "2026-05-10T18:00",
+            }
+        ],
+    }
+    purch0_file = tmp_path / "purch0.json"
+    purch0_file.write_text(json.dumps(purch0_data), encoding="utf-8")
+
+    code = ledger.main(["purchase", str(wl_path), "--leg", "0", "--data", str(purch0_file)])
+    assert code == 0
+    capsys.readouterr()
+
+    # Step 3: second add-leg for return leg
+    leg1_data = {
+        "label": "MIA → POA · 15 mai",
+        "origin": "MIA",
+        "destination": "POA",
+        "outbound_date": "2026-05-15",
+        "adults": 2,
+        "watch": False,
+        "watch_off_reason": "já comprado fora da vigília",
+    }
+    leg1_file = tmp_path / "leg1.json"
+    leg1_file.write_text(json.dumps(leg1_data), encoding="utf-8")
+
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(leg1_file)])
+    assert code == 0
+    out = capsys.readouterr().out.strip()
+    assert out == "1"
+
+    # Step 4: purchase --leg 1
+    purch1_data = {
+        "schema": 1,
+        "date": "2026-03-01",
+        "seller": "Copa",
+        "locator": "LOC2",
+        "adults": 2,
+        "paid": {"amount": 2000.0, "currency": "BRL"},
+        "source": "email: confirmation",
+        "segments": [
+            {
+                "flight": "CM 2",
+                "from": "MIA",
+                "to": "POA",
+                "depart": "2026-05-15T11:00",
+                "arrive": "2026-05-15T22:00",
+            }
+        ],
+    }
+    purch1_file = tmp_path / "purch1.json"
+    purch1_file.write_text(json.dumps(purch1_data), encoding="utf-8")
+
+    code = ledger.main(["purchase", str(wl_path), "--leg", "1", "--data", str(purch1_file)])
+    assert code == 0
+    capsys.readouterr()
+
+    # Step 5: coverage and summary
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    cov_out = json.loads(capsys.readouterr().out)
+    trip_cov = cov_out["trips"][0]
+    assert trip_cov["verdict"] == "uncovered"
+    assert len(trip_cov["gaps"]) == 1
+    assert trip_cov["gaps"][0]["nights_needed"] == [
+        "2026-05-10",
+        "2026-05-11",
+        "2026-05-12",
+        "2026-05-13",
+        "2026-05-14",
+    ]
+    assert trip_cov["gaps"][0]["uncovered"] == [
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "nights": 5}
+    ]
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-05-10"])
+    assert code == 0
+    sum_out = json.loads(capsys.readouterr().out)
+    trip_sum = sum_out["trips"][0]
+    assert trip_sum["paid_by_currency"] == {"BRL": 4000.0}
+    assert trip_sum["paid_is_partial"] is False
+    assert trip_sum["coverage"]["verdict"] == "uncovered"
+    assert trip_sum["coverage"]["uncovered_nights"] == 5
+
+
+def test_add_leg_watch_mandatory(ledger, tmp_path, capsys):
+    """Mutation 1: 'watch' is mandatory and explicit. Omitting it or non-boolean must fail."""
+    wl_path = _sample_watchlist(tmp_path)
+    initial_content = wl_path.read_text(encoding="utf-8")
+
+    # Missing watch
+    bad_data = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+    }
+    bad_file = tmp_path / "bad_watch.json"
+    bad_file.write_text(json.dumps(bad_data), encoding="utf-8")
+
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(bad_file)])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "missing required key(s) in leg data: watch" in err
+    assert wl_path.read_text(encoding="utf-8") == initial_content
+
+    # Non-boolean watch
+    bad_data["watch"] = "false"
+    bad_file.write_text(json.dumps(bad_data), encoding="utf-8")
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(bad_file)])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "watch must be a boolean" in err
+    assert wl_path.read_text(encoding="utf-8") == initial_content
+
+
+def test_add_leg_create_existing_file_fails(ledger, tmp_path, capsys):
+    """Mutation 2: --create fails when watchlist file already exists (never overwrites)."""
+    wl_path = tmp_path / "existing.json"
+    wl_path.write_text(json.dumps({"trip": "Original"}), encoding="utf-8")
+
+    valid_leg = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+    leg_file = tmp_path / "leg.json"
+    leg_file.write_text(json.dumps(valid_leg), encoding="utf-8")
+
+    code = ledger.main([
+        "add-leg",
+        str(wl_path),
+        "--data",
+        str(leg_file),
+        "--create",
+        "--trip",
+        "New Trip",
+    ])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "already exists" in err
+    assert "--create will not overwrite" in err
+    # File content preserved
+    data = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert data == {"trip": "Original"}
+
+
+def test_add_leg_create_validation_failure_leaves_no_file(ledger, tmp_path, capsys):
+    """Mutation 3: If validation fails, --create must NOT leave a created file on disk."""
+    wl_path = tmp_path / "not-created.json"
+    assert not wl_path.exists()
+
+    # Invalid leg data: invalid IATA code
+    invalid_leg = {
+        "label": "POA → MIA",
+        "origin": "invalid_code",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+    bad_file = tmp_path / "invalid_leg.json"
+    bad_file.write_text(json.dumps(invalid_leg), encoding="utf-8")
+
+    code = ledger.main([
+        "add-leg",
+        str(wl_path),
+        "--data",
+        str(bad_file),
+        "--create",
+        "--trip",
+        "Fail Trip",
+    ])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "validation error" in err
+    assert not wl_path.exists()
+
+
+def test_add_leg_missing_file_without_create_fails(ledger, tmp_path, capsys):
+    """Mutation 4: Without --create, a missing file path must fail and never create a file."""
+    wl_path = tmp_path / "mistyped-path.json"
+    assert not wl_path.exists()
+
+    valid_leg = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+    leg_file = tmp_path / "leg.json"
+    leg_file.write_text(json.dumps(valid_leg), encoding="utf-8")
+
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(leg_file)])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "watchlist file not found" in err
+    assert not wl_path.exists()
+
+
+def test_add_leg_validation_rules(ledger, tmp_path, capsys):
+    """Validation rules: label, origin/dest IATA codes, outbound_date, adults, watch_off_reason, duplicate check."""
+    wl_path = _sample_watchlist(tmp_path)
+    initial_content = wl_path.read_text(encoding="utf-8")
+
+    def assert_invalid(leg_dict, expected_err):
+        f = tmp_path / "bad.json"
+        f.write_text(json.dumps(leg_dict), encoding="utf-8")
+        ret = ledger.main(["add-leg", str(wl_path), "--data", str(f)])
+        assert ret != 0
+        err = capsys.readouterr().err
+        assert expected_err in err
+        assert wl_path.read_text(encoding="utf-8") == initial_content
+
+    base = {
+        "label": "Test Leg",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+
+    # 1. Empty label
+    bad = dict(base)
+    bad["label"] = "  "
+    assert_invalid(bad, "label must be a non-empty string")
+
+    # 2. Invalid origin
+    bad = dict(base)
+    bad["origin"] = "poa"
+    assert_invalid(bad, "invalid IATA code 'poa' in origin: must be 3 uppercase letters")
+
+    # 3. Invalid destination
+    bad = dict(base)
+    bad["destination"] = "MIA,123"
+    assert_invalid(bad, "invalid IATA code '123' in destination: must be 3 uppercase letters")
+
+    # 4. Invalid outbound_date
+    bad = dict(base)
+    bad["outbound_date"] = "2026/05/10"
+    assert_invalid(bad, "outbound_date must be a valid ISO date")
+
+    # 5. Invalid adults
+    bad = dict(base)
+    bad["adults"] = 0
+    assert_invalid(bad, "adults must be an integer >= 1")
+    bad["adults"] = True
+    assert_invalid(bad, "adults must be an integer >= 1")
+
+    # 6. watch: false without watch_off_reason
+    bad = dict(base)
+    bad["watch"] = False
+    assert_invalid(bad, "watch_off_reason is required and cannot be empty when watch is false")
+
+    # 7. Unknown key
+    bad = dict(base)
+    bad["extra_field"] = "foo"
+    assert_invalid(bad, "unknown key(s) in leg data: extra_field")
+
+    # 8. Duplicate leg (same origin, destination, outbound_date as leg 0 in sample watchlist: GRU,CGH -> MIA,FLL on 2026-11-05)
+    dup = {
+        "label": "Duplicate leg",
+        "origin": "GRU,CGH",
+        "destination": "MIA,FLL",
+        "outbound_date": "2026-11-05",
+        "adults": 1,
+        "watch": True,
+    }
+    assert_invalid(dup, "already exists at index 0")
+
+
+def test_add_leg_create_missing_trip_fails(ledger, tmp_path, capsys):
+    """--create requires --trip."""
+    wl_path = tmp_path / "no-trip.json"
+    valid_leg = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+    f = tmp_path / "leg.json"
+    f.write_text(json.dumps(valid_leg), encoding="utf-8")
+
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(f), "--create"])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "--trip NAME is required when using --create" in err
+    assert not wl_path.exists()
+
+
+def test_add_leg_create_invalid_home_fails(ledger, tmp_path, capsys):
+    """--create with invalid --home fails and leaves no file."""
+    wl_path = tmp_path / "bad-home.json"
+    valid_leg = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-05-10",
+        "adults": 1,
+        "watch": True,
+    }
+    f = tmp_path / "leg.json"
+    f.write_text(json.dumps(valid_leg), encoding="utf-8")
+
+    code = ledger.main(["add-leg", str(wl_path), "--data", str(f), "--create", "--trip", "Trip", "--home", "poa"])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "invalid IATA code 'poa' in --home" in err
+    assert not wl_path.exists()
+
+
+def test_add_leg_junta_com_watch_py(ledger, watch_mod, tmp_path, monkeypatch):
+    """A watchlist created by add-leg --create with watch: false passes through watch.main() returning 0 without calling searches_left or price_leg."""
+    wl_path = tmp_path / "watchlist-junta.json"
+    leg_data = {
+        "label": "POA → MIA",
+        "origin": "POA",
+        "destination": "MIA",
+        "outbound_date": "2026-11-05",
+        "adults": 2,
+        "watch": False,
+        "watch_off_reason": "já comprado",
+    }
+    leg_file = tmp_path / "leg.json"
+    leg_file.write_text(json.dumps(leg_data), encoding="utf-8")
+
+    code = ledger.main([
+        "add-leg",
+        str(wl_path),
+        "--data",
+        str(leg_file),
+        "--create",
+        "--trip",
+        "EUA 2026",
+        "--home",
+        "POA",
+    ])
+    assert code == 0
+
+    # Ensure searches_left and price_leg raise AssertionError if called
+    def fail_searches_left(key):
+        raise AssertionError("searches_left was called when nothing to watch")
+
+    def fail_price_leg(key, leg):
+        raise AssertionError("price_leg was called when nothing to watch")
+
+    monkeypatch.setattr(watch_mod, "api_key", lambda: "fake-key")
+    monkeypatch.setattr(watch_mod, "searches_left", fail_searches_left)
+    monkeypatch.setattr(watch_mod, "price_leg", fail_price_leg)
+    monkeypatch.setattr(watch_mod, "LOG", tmp_path / "watch.log")
+    monkeypatch.setattr(watch_mod, "ALERTS", tmp_path / "alerts.md")
+    monkeypatch.setattr(sys, "argv", ["watch.py", str(wl_path)])
+
+    watch_exit = watch_mod.main()
+    assert watch_exit == 0
+
