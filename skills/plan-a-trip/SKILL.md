@@ -520,3 +520,17 @@ Two non-obvious rules, each from a scar:
   convention as `build_calendar`. Timezone offsets inside flight segments lead to
   false timezone math across legs. If a segment's arrival or departure is omitted
   in the confirmation email, it is recorded as `null` with `"unmeasured_why"`.
+
+### Summary — "fechamos tudo?" in one call
+
+```bash
+python3 ledger.py summary [WATCHLIST ...] [--today YYYY-MM-DD]
+```
+
+Scans the state directory (or explicit watchlist files) and outputs structured JSON
+for agents. It separates bought from watched, groups spending by currency, and
+reports gaps (`paid_gaps: {legacy, unmeasured}`).
+
+**A total with `paid_is_partial: true` must be stated out loud as partial, naming
+how many legs were left out and why.** Presenting a partial sum as a complete total
+is the exact failure mode this command replaces.

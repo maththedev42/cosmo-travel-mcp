@@ -14,7 +14,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 ALLOWED_PURCHASE_KEYS = {
@@ -432,6 +432,175 @@ def run_purchase(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_summary(args: argparse.Namespace) -> int:
+    if args.today:
+        try:
+            today_date = datetime.strptime(args.today, "%Y-%m-%d").date()
+        except ValueError:
+            print(f"error: --today must be YYYY-MM-DD, got {args.today}", file=sys.stderr)
+            return 2
+    else:
+        today_date = date.today()
+    today_iso = today_date.isoformat()
+
+    if args.watchlist:
+        candidate_paths = [Path(p) for p in args.watchlist]
+    else:
+        sdir = state_dir()
+        if not sdir.exists():
+            candidate_paths = []
+        else:
+            candidate_paths = sorted(
+                [p for p in sdir.glob("watchlist-*.json") if ".bak" not in p.name]
+            )
+
+    trips: list[dict] = []
+    unreadable: list[dict] = []
+
+    for path in candidate_paths:
+        if not path.is_file():
+            unreadable.append({"file": path.name, "why": f"file not found: {path}"})
+            continue
+
+        try:
+            raw_text = path.read_text(encoding="utf-8")
+            wl = json.loads(raw_text)
+        except Exception as exc:
+            unreadable.append({"file": path.name, "why": f"JSON parse error: {exc}"})
+            continue
+
+        if not isinstance(wl, dict) or "legs" not in wl or not isinstance(wl["legs"], list):
+            unreadable.append({"file": path.name, "why": "missing or invalid 'legs' list in watchlist"})
+            continue
+
+        trip_name = wl.get("trip", "")
+        last_run = wl.get("last_run")
+        days_since_last_run = None
+        if last_run and isinstance(last_run, str):
+            try:
+                lr_date = datetime.strptime(last_run, "%Y-%m-%d").date()
+                days_since_last_run = (today_date - lr_date).days
+            except ValueError:
+                pass
+
+        paid_by_currency: dict[str, float] = {}
+        legacy_gaps = 0
+        unmeasured_gaps = 0
+        open_issues: list[dict] = []
+        legs_summary: list[dict] = []
+
+        for idx, leg in enumerate(wl["legs"]):
+            if leg.get("purchased") is True:
+                state = "purchased"
+            elif leg.get("watch", True):
+                state = "watching"
+            else:
+                state = "settled_without_ticket"
+
+            entry: dict = {
+                "index": idx,
+                "label": leg.get("label", ""),
+                "state": state,
+            }
+
+            if state == "purchased":
+                if "outbound_date" in leg:
+                    entry["outbound_date"] = leg["outbound_date"]
+
+                purchase = leg.get("purchase")
+                if isinstance(purchase, dict) and purchase.get("schema") == 1:
+                    p_info: dict = {
+                        "schema": 1,
+                        "locator": purchase.get("locator"),
+                        "seller": purchase.get("seller"),
+                        "paid": purchase.get("paid"),
+                        "open_issues": purchase.get("open_issues", []),
+                    }
+                    paid_val = purchase.get("paid")
+                    if paid_val is None:
+                        p_info["paid_unmeasured_why"] = purchase.get("paid_unmeasured_why")
+                        unmeasured_gaps += 1
+                    elif isinstance(paid_val, dict):
+                        if "amount" in paid_val and "currency" in paid_val:
+                            amt = paid_val["amount"]
+                            curr = paid_val["currency"]
+                            paid_by_currency[curr] = round(paid_by_currency.get(curr, 0.0) + amt, 2)
+                        elif "included_in_leg" in paid_val:
+                            pass
+                    entry["purchase"] = p_info
+
+                    for issue in purchase.get("open_issues", []):
+                        open_issues.append({"leg": idx, "issue": issue})
+                else:
+                    legacy_gaps += 1
+                    legacy_keys = sorted(purchase.keys()) if isinstance(purchase, dict) else []
+                    entry["purchase"] = {
+                        "schema": None,
+                        "legacy_keys": legacy_keys,
+                    }
+
+            elif state == "watching":
+                obs_list = leg.get("observations")
+                if isinstance(obs_list, list) and len(obs_list) > 0:
+                    last_obs = obs_list[-1]
+                    if isinstance(last_obs, dict):
+                        entry["last_observation"] = {
+                            "date": last_obs.get("date"),
+                            "price": last_obs.get("price"),
+                        }
+                    else:
+                        entry["last_observation"] = None
+                else:
+                    entry["last_observation"] = None
+
+                baseline = leg.get("baseline")
+                if isinstance(baseline, dict) and "low_band_ceiling" in baseline:
+                    entry["low_band_ceiling"] = baseline["low_band_ceiling"]
+
+                trigger = leg.get("trigger")
+                if isinstance(trigger, dict) and trigger.get("hard_deadline"):
+                    hd_str = trigger["hard_deadline"]
+                    entry["hard_deadline"] = hd_str
+                    try:
+                        hd_date = datetime.strptime(hd_str, "%Y-%m-%d").date()
+                        entry["days_to_deadline"] = (hd_date - today_date).days
+                    except ValueError:
+                        entry["days_to_deadline"] = None
+
+            elif state == "settled_without_ticket":
+                if "watch_off_reason" in leg:
+                    entry["watch_off_reason"] = leg["watch_off_reason"]
+
+            legs_summary.append(entry)
+
+        paid_gaps = {
+            "legacy": legacy_gaps,
+            "unmeasured": unmeasured_gaps,
+        }
+        paid_is_partial = (legacy_gaps > 0 or unmeasured_gaps > 0)
+
+        trip_summary = {
+            "file": path.name,
+            "trip": trip_name,
+            "last_run": last_run,
+            "days_since_last_run": days_since_last_run,
+            "legs": legs_summary,
+            "paid_by_currency": paid_by_currency,
+            "paid_is_partial": paid_is_partial,
+            "paid_gaps": paid_gaps,
+            "open_issues": open_issues,
+        }
+        trips.append(trip_summary)
+
+    result = {
+        "today": today_iso,
+        "trips": trips,
+        "unreadable": unreadable,
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ledger.py",
@@ -459,6 +628,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow depart date to differ from leg outbound_date",
     )
 
+    # summary sub-command
+    p_summary = subparsers.add_parser(
+        "summary", help="Summarize travel watchlists and purchases"
+    )
+    p_summary.add_argument(
+        "watchlist",
+        nargs="*",
+        help="Path(s) to watchlist JSON file(s). If omitted, scans state_dir() for watchlist-*.json",
+    )
+    p_summary.add_argument(
+        "--today",
+        help="Reference date for calculations (YYYY-MM-DD), defaults to today",
+    )
+
     return parser
 
 
@@ -468,6 +651,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "purchase":
         return run_purchase(args)
+    if args.subcommand == "summary":
+        return run_summary(args)
 
     return 0
 

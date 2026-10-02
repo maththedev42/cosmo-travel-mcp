@@ -662,3 +662,487 @@ def test_junta_com_watch_py(ledger, watch_mod, tmp_path, monkeypatch):
     after_watch = json.loads(wl_path.read_text(encoding="utf-8"))
     assert after_watch["legs"][0]["purchase"] == recorded_purchase
     assert after_watch["legs"][0]["purchased"] is True
+
+
+# ===========================================================================
+# SUMMARY TESTS (Prompt 02)
+# ===========================================================================
+
+
+def test_rule_1_state_from_booleans_not_label(ledger, tmp_path, capsys):
+    """Rule 1: state is derived from purchased and watch booleans, NEVER from label text."""
+    wl = {
+        "trip": "Status Test",
+        "legs": [
+            {
+                # Deceptive label: says COMPRADO, but boolean says watching!
+                "label": "GRU → MIA -- COMPRADO",
+                "purchased": False,
+                "watch": True,
+            },
+            {
+                # watch: false -> settled_without_ticket
+                "label": "MIA → MCO",
+                "purchased": False,
+                "watch": False,
+                "watch_off_reason": "alugou carro",
+            },
+            {
+                # purchased: true -> purchased
+                "label": "MCO → JFK",
+                "purchased": True,
+            },
+            {
+                # watch omitted -> default to watching
+                "label": "JFK → GRU",
+                "purchased": False,
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-status.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    legs = out["trips"][0]["legs"]
+    assert legs[0]["state"] == "watching"
+    assert legs[1]["state"] == "settled_without_ticket"
+    assert legs[1]["watch_off_reason"] == "alugou carro"
+    assert legs[2]["state"] == "purchased"
+    assert legs[3]["state"] == "watching"
+
+
+def test_rule_2_legacy_block_not_read_and_counted_in_gaps(ledger, tmp_path, capsys):
+    """Rule 2: Legacy blocks without schema 1 are not read, values are not extracted, and they count in paid_gaps.legacy."""
+    wl = {
+        "trip": "Legacy Test",
+        "legs": [
+            {
+                "label": "GRU → MIA",
+                "purchased": True,
+                "purchase": {
+                    "date": "04/08/2026",
+                    "flight": "CM 123",
+                    "note": "anotação livre",
+                    "order": "ORD-123",
+                    "total_brl": 1500.0,
+                },
+            },
+            {
+                "label": "MIA → GRU",
+                "purchased": True,
+                # purchased: True without a purchase block
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-legacy.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    assert trip["paid_gaps"]["legacy"] == 2
+    assert trip["paid_is_partial"] is True
+    assert trip["paid_by_currency"] == {}
+
+    leg0 = trip["legs"][0]
+    assert leg0["purchase"]["schema"] is None
+    assert leg0["purchase"]["legacy_keys"] == ["date", "flight", "note", "order", "total_brl"]
+
+    leg1 = trip["legs"][1]
+    assert leg1["purchase"]["schema"] is None
+    assert leg1["purchase"]["legacy_keys"] == []
+
+
+def test_rule_3_included_in_leg_no_gap_no_double_count(ledger, tmp_path, capsys):
+    """Rule 3: included_in_leg is not a gap, not counted again, and gives complete total."""
+    wl = {
+        "trip": "Round Trip",
+        "legs": [
+            {
+                "label": "GRU → MIA",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC123",
+                    "seller": "LATAM",
+                    "paid": {"amount": 5000.0, "currency": "BRL"},
+                },
+            },
+            {
+                "label": "MIA → GRU",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC123",
+                    "seller": "LATAM",
+                    "paid": {"included_in_leg": 0},
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-bundle.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    assert trip["paid_by_currency"] == {"BRL": 5000.0}
+    assert trip["paid_gaps"] == {"legacy": 0, "unmeasured": 0}
+    assert trip["paid_is_partial"] is False
+
+
+def test_rule_4_paid_null_counted_in_unmeasured_with_why(ledger, tmp_path, capsys):
+    """Rule 4: paid: null counts in paid_gaps.unmeasured with reason preserved in leg summary."""
+    wl = {
+        "trip": "Null Paid Test",
+        "legs": [
+            {
+                "label": "GRU → MIA",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC999",
+                    "seller": "Copa",
+                    "paid": None,
+                    "paid_unmeasured_why": "comprado por terceiros sem recibo",
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-null.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    assert trip["paid_gaps"] == {"legacy": 0, "unmeasured": 1}
+    assert trip["paid_is_partial"] is True
+    assert trip["legs"][0]["purchase"]["paid"] is None
+    assert trip["legs"][0]["purchase"]["paid_unmeasured_why"] == "comprado por terceiros sem recibo"
+
+
+def test_rule_6_deadline_relative_to_today(ledger, tmp_path, capsys):
+    """Rule 6: days_to_deadline relative to --today; negative when past, never zeroed or hidden."""
+    wl = {
+        "trip": "Deadline Test",
+        "legs": [
+            {
+                "label": "GRU → MIA",
+                "purchased": False,
+                "watch": True,
+                "trigger": {"hard_deadline": "2026-11-16"},
+            },
+            {
+                "label": "MIA → JFK",
+                "purchased": False,
+                "watch": True,
+                "trigger": {"hard_deadline": "2026-09-20"},
+            },
+            {
+                "label": "JFK → GRU",
+                "purchased": False,
+                "watch": True,
+                # No hard_deadline
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-deadlines.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    legs = out["trips"][0]["legs"]
+
+    assert legs[0]["hard_deadline"] == "2026-11-16"
+    assert legs[0]["days_to_deadline"] == 45
+
+    assert legs[1]["hard_deadline"] == "2026-09-20"
+    assert legs[1]["days_to_deadline"] == -12  # past deadline, negative!
+
+    assert "hard_deadline" not in legs[2]
+
+
+def test_rule_7_days_since_last_run(ledger, tmp_path, capsys):
+    """Rule 7: days_since_last_run relative to --today; null when last_run is absent."""
+    wl1 = {
+        "trip": "Trip 1",
+        "last_run": "2026-09-17",
+        "legs": [],
+    }
+    wl2 = {
+        "trip": "Trip 2",
+        "legs": [],
+    }
+    p1 = tmp_path / "wl1.json"
+    p2 = tmp_path / "wl2.json"
+    p1.write_text(json.dumps(wl1), encoding="utf-8")
+    p2.write_text(json.dumps(wl2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(p1), str(p2), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trips = {t["trip"]: t for t in out["trips"]}
+
+    assert trips["Trip 1"]["last_run"] == "2026-09-17"
+    assert trips["Trip 1"]["days_since_last_run"] == 15
+    assert trips["Trip 2"]["last_run"] is None
+    assert trips["Trip 2"]["days_since_last_run"] is None
+
+
+def test_rule_8_unreadable_file_does_not_abort_summary(ledger, tmp_path, capsys):
+    """Rule 8: An unreadable file goes to unreadable with reason; remaining files are summarized normally."""
+    good_wl = {"trip": "Valid Trip", "legs": []}
+    p_good = tmp_path / "good.json"
+    p_good.write_text(json.dumps(good_wl), encoding="utf-8")
+
+    p_broken = tmp_path / "broken.json"
+    p_broken.write_text("this is not valid json", encoding="utf-8")
+
+    p_no_legs = tmp_path / "no_legs.json"
+    p_no_legs.write_text(json.dumps({"trip": "Missing legs"}), encoding="utf-8")
+
+    code = ledger.main(["summary", str(p_good), str(p_broken), str(p_no_legs), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+
+    assert len(out["trips"]) == 1
+    assert out["trips"][0]["trip"] == "Valid Trip"
+
+    unreadable_files = {u["file"] for u in out["unreadable"]}
+    assert "broken.json" in unreadable_files
+    assert "no_legs.json" in unreadable_files
+
+
+def test_rule_9_last_observation(ledger, tmp_path, capsys):
+    """Rule 9: last_observation is the last item of observations; null when absent."""
+    wl = {
+        "trip": "Obs Test",
+        "legs": [
+            {
+                "label": "GRU → MIA",
+                "purchased": False,
+                "watch": True,
+                "observations": [
+                    {"date": "2026-09-10", "price": 1000},
+                    {"date": "2026-09-24", "price": 918},
+                ],
+                "baseline": {"low_band_ceiling": 602},
+            },
+            {
+                "label": "MIA → JFK",
+                "purchased": False,
+                "watch": True,
+                "observations": [],
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-obs.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    legs = out["trips"][0]["legs"]
+
+    assert legs[0]["last_observation"] == {"date": "2026-09-24", "price": 918}
+    assert legs[0]["low_band_ceiling"] == 602
+    assert legs[1]["last_observation"] is None
+
+
+def test_two_files_two_currencies(ledger, tmp_path, capsys):
+    """Totals are per currency and per file, never summed across currencies or files."""
+    wl1 = {
+        "trip": "Viagem Brasil",
+        "legs": [
+            {
+                "label": "Leg 1",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC1",
+                    "seller": "GOL",
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                },
+            },
+            {
+                "label": "Leg 2",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC2",
+                    "seller": "LATAM",
+                    "paid": {"amount": 234.50, "currency": "BRL"},
+                },
+            },
+        ],
+    }
+    wl2 = {
+        "trip": "Viagem EUA",
+        "legs": [
+            {
+                "label": "Leg A",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC3",
+                    "seller": "Copa",
+                    "paid": {"amount": 300.0, "currency": "BRL"},
+                },
+            },
+            {
+                "label": "Leg B",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "LOC4",
+                    "seller": "Delta",
+                    "paid": {"amount": 400.0, "currency": "USD"},
+                },
+            },
+        ],
+    }
+    p1 = tmp_path / "wl_brl.json"
+    p2 = tmp_path / "wl_mixed.json"
+    p1.write_text(json.dumps(wl1), encoding="utf-8")
+    p2.write_text(json.dumps(wl2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(p1), str(p2), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trips = {t["trip"]: t for t in out["trips"]}
+
+    assert trips["Viagem Brasil"]["paid_by_currency"] == {"BRL": 1234.50}
+    assert trips["Viagem EUA"]["paid_by_currency"] == {"BRL": 300.0, "USD": 400.0}
+    # Never cross-currency summed
+    assert "total" not in trips["Viagem EUA"]["paid_by_currency"]
+
+
+def test_mixed_real_case(ledger, tmp_path, capsys):
+    """The mixed real case: 1 schema 1, 1 legacy, 1 paid: null, 1 watching, 1 settled_without_ticket."""
+    wl = {
+        "trip": "EUA Real Case",
+        "last_run": "2026-09-17",
+        "legs": [
+            {
+                # Leg 0: schema 1 with open_issues
+                "label": "GRU → MIA",
+                "outbound_date": "2026-11-05",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "ABC123XYZ",
+                    "seller": "LATAM Airlines",
+                    "paid": {"amount": 1234.50, "currency": "BRL"},
+                    "open_issues": ["chegada 00:38 exige noite do dia 20"],
+                },
+            },
+            {
+                # Leg 1: legacy purchase block with real keys
+                "label": "MIA → MCO -- COMPRADO",
+                "purchased": True,
+                "purchase": {
+                    "date": "04/08/2026",
+                    "flight": "XX 1234",
+                    "note": "comprado à mão",
+                    "order": "ORD-555",
+                    "total_brl": 500.0,
+                },
+            },
+            {
+                # Leg 2: paid null
+                "label": "MCO → JFK",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "locator": "XYZ789",
+                    "seller": "JetBlue",
+                    "paid": None,
+                    "paid_unmeasured_why": "comprado com milhas sem taxa",
+                },
+            },
+            {
+                # Leg 3: watching
+                "label": "JFK → BOS",
+                "purchased": False,
+                "watch": True,
+                "observations": [{"date": "2026-09-24", "price": 918}],
+                "baseline": {"low_band_ceiling": 602},
+                "trigger": {"hard_deadline": "2026-11-16"},
+            },
+            {
+                # Leg 4: settled_without_ticket
+                "label": "BOS → NYC",
+                "purchased": False,
+                "watch": False,
+                "watch_off_reason": "decidiu ir de trem",
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-mixed.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+
+    assert trip["days_since_last_run"] == 15
+
+    legs = trip["legs"]
+    assert legs[0]["state"] == "purchased"
+    assert legs[0]["purchase"]["schema"] == 1
+    assert legs[0]["purchase"]["paid"] == {"amount": 1234.50, "currency": "BRL"}
+
+    assert legs[1]["state"] == "purchased"
+    assert legs[1]["purchase"]["schema"] is None
+    assert legs[1]["purchase"]["legacy_keys"] == ["date", "flight", "note", "order", "total_brl"]
+
+    assert legs[2]["state"] == "purchased"
+    assert legs[2]["purchase"]["paid"] is None
+    assert legs[2]["purchase"]["paid_unmeasured_why"] == "comprado com milhas sem taxa"
+
+    assert legs[3]["state"] == "watching"
+    assert legs[3]["last_observation"] == {"date": "2026-09-24", "price": 918}
+    assert legs[3]["low_band_ceiling"] == 602
+    assert legs[3]["days_to_deadline"] == 45
+
+    assert legs[4]["state"] == "settled_without_ticket"
+    assert legs[4]["watch_off_reason"] == "decidiu ir de trem"
+
+    # paid_by_currency only sums schema 1 with real amount; ignores legacy total_brl!
+    assert trip["paid_by_currency"] == {"BRL": 1234.50}
+
+    # paid_gaps and paid_is_partial
+    assert trip["paid_gaps"] == {"legacy": 1, "unmeasured": 1}
+    assert trip["paid_is_partial"] is True
+
+    # open_issues aggregated
+    assert trip["open_issues"] == [
+        {"leg": 0, "issue": "chegada 00:38 exige noite do dia 20"}
+    ]
+
+
+def test_default_state_directory(ledger, tmp_path, capsys):
+    """When run without arguments, summary scans state_dir() for watchlist-*.json, ignoring *.bak* and alerts.md."""
+    # Write files directly into tmp_path (which isolate_state_dir pointed COSMO_TRAVEL_STATE_DIR to)
+    (tmp_path / "watchlist-a.json").write_text(json.dumps({"trip": "Trip A", "legs": []}), encoding="utf-8")
+    (tmp_path / "watchlist-b.json").write_text(json.dumps({"trip": "Trip B", "legs": []}), encoding="utf-8")
+    (tmp_path / "watchlist-a.json.bak-20260831").write_text(json.dumps({"trip": "Trip Bak", "legs": []}), encoding="utf-8")
+    (tmp_path / "alerts.md").write_text("# Alerts", encoding="utf-8")
+
+    code = ledger.main(["summary", "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+
+    trip_files = [t["file"] for t in out["trips"]]
+    assert trip_files == ["watchlist-a.json", "watchlist-b.json"]
+
