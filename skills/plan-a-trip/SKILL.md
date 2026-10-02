@@ -77,7 +77,8 @@ for **six** nights in New York for itineraries that land at 07:05 the next
 morning — one phantom night at R$ 709.
 
 Assert it: `sum(nights) == (departure_date - arrival_date).days`, and
-`first_window.check_in == arrival_date`. Both, every time.
+`first_window.check_in == arrival_date`. Both, every time. `ledger.py coverage`
+makes this assertion automatically from purchased flight legs.
 
 ### 7. A later return is not cheaper until lodging is counted
 Airfare fell R$ 1.200; the seven added nights cost R$ 3.285. And check the
@@ -440,6 +441,7 @@ Hotel rates move daily and mean-revert — measured: the same room, same query,
 R$ 583 → R$ 493 → R$ 768 across three days. A "minimum" is not a meaningful
 target. The right advice is *book refundable and re-check*, not *watch and
 pounce*. Say that instead of offering a watch that would fire constantly.
+Estadia no ledger é registro de cobertura, não vigília de preço.
 
 ### Where the scheduler lives
 **Not in the MCP server.** A tool server that installs background jobs is a
@@ -534,3 +536,24 @@ reports gaps (`paid_gaps: {legacy, unmeasured}`).
 **A total with `paid_is_partial: true` must be stated out loud as partial, naming
 how many legs were left out and why.** Presenting a partial sum as a complete total
 is the exact failure mode this command replaces.
+
+### Home, stays, and coverage — derived nights vs. bookings
+
+```bash
+python3 ledger.py home     WATCHLIST CODES
+python3 ledger.py stay     WATCHLIST --data FILE
+python3 ledger.py coverage [WATCHLIST ...]
+```
+
+- `home`: Records comma-separated 3-letter uppercase IATA airport codes (e.g. `"POA"` or `"POA,NVT"`). Defines where the trip starts and ends.
+- `stay`: Appends a stay to `"stays"`. Either `status: "booked"` (requires `booking: {seller, locator, source, paid}`, positive amount) or `status: "not_needed"` (requires `why`, e.g. lodging included in an event or staying with friends). Never type `needed`: accommodation necessity is strictly derived from flight gaps.
+- `coverage`: Derives ground intervals between flights and checks coverage against recorded stays.
+
+#### The 03:00 rule (`PIVOT_HOUR = 3`)
+
+A night `d` (sleeping from `d` to `d+1`) is required if and only if the traveller is on the ground at **03:00 of `d+1`**:
+`arrive <= (d+1)T03:00 < depart`
+
+Compare the two cases side by side:
+- **Arrival at 07:05 (day 21):** At 03:00 of day 21, the traveller was still in flight. Night of the 20th does **not** enter — it was spent on the plane (no phantom night).
+- **Arrival at 00:38 (day 21):** At 03:00 of day 21, the traveller is already on the ground. Night of the 20th **does** enter, and the interval is flagged `"late_arrival": true` (check-in occurs on the eve of the arrival date).
