@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   passenger counts and origin/destination against the watchlist, writes atomically
   without touching untouched keys, and preserves legacy purchase blocks in
   `purchase_legacy` when `--replace` is given.
+- `skills/plan-a-trip/ledger.py` — `summary` subcommand: summarizes watchlists
+  across state directory or explicit files, classifying legs by booleans (`purchased`,
+  `watching`, `settled_without_ticket`), summing paid amounts strictly per-currency
+  for schema 1 blocks, isolating legacy and unmeasured gaps with `paid_is_partial`,
+  reporting observation baselines and deadlines relative to `--today`, and reporting
+  corrupted files to `unreadable` without aborting other files.
 
 ## [1.5.0] - 2026-09-01
 
