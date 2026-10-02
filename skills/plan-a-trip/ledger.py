@@ -83,6 +83,25 @@ REQUIRED_STAY_BOOKING_KEYS = {
     "paid",
 }
 
+ALLOWED_ADD_LEG_KEYS = {
+    "label",
+    "origin",
+    "destination",
+    "outbound_date",
+    "adults",
+    "watch",
+    "watch_off_reason",
+}
+
+REQUIRED_ADD_LEG_KEYS = {
+    "label",
+    "origin",
+    "destination",
+    "outbound_date",
+    "adults",
+    "watch",
+}
+
 
 def state_dir() -> Path:
     """Resolve the travel state directory fresh on every call."""
@@ -547,6 +566,103 @@ def validate_stay(
                     pass
 
     return errors, warnings
+
+
+def validate_add_leg(
+    leg_data: dict,
+    existing_legs: list[dict] | None = None,
+) -> list[str]:
+    """Validate leg data for add-leg subcommand.
+
+    Returns list of error messages.
+    """
+    errors: list[str] = []
+
+    if not isinstance(leg_data, dict):
+        return ["leg data must be a JSON object"]
+
+    # 1. Allowed / required keys
+    extra_keys = set(leg_data.keys()) - ALLOWED_ADD_LEG_KEYS
+    if extra_keys:
+        errors.append(
+            f"unknown key(s) in leg data: {', '.join(sorted(extra_keys))}. "
+            f"Allowed keys: {', '.join(sorted(ALLOWED_ADD_LEG_KEYS))}"
+        )
+
+    missing_keys = REQUIRED_ADD_LEG_KEYS - set(leg_data.keys())
+    if missing_keys:
+        errors.append(
+            f"missing required key(s) in leg data: {', '.join(sorted(missing_keys))}"
+        )
+
+    # 2. label
+    if "label" in leg_data:
+        val = leg_data["label"]
+        if not isinstance(val, str) or not val.strip():
+            errors.append("label must be a non-empty string")
+
+    # 3. origin and destination
+    for field in ("origin", "destination"):
+        if field in leg_data:
+            val = leg_data[field]
+            if not isinstance(val, str):
+                errors.append(f"{field} must be a comma-separated string of 3-letter IATA codes")
+            else:
+                codes = [c.strip() for c in val.split(",") if c.strip()]
+                if not codes:
+                    errors.append(f"{field} must contain at least one 3-letter IATA code")
+                else:
+                    for c in codes:
+                        if len(c) != 3 or not c.isalpha() or not c.isupper():
+                            errors.append(f"invalid IATA code '{c}' in {field}: must be 3 uppercase letters")
+
+    # 4. outbound_date
+    if "outbound_date" in leg_data:
+        val = leg_data["outbound_date"]
+        if not isinstance(val, str):
+            errors.append("outbound_date must be a valid ISO date string (YYYY-MM-DD)")
+        else:
+            try:
+                d = datetime.strptime(val, "%Y-%m-%d").date()
+                if d.strftime("%Y-%m-%d") != val:
+                    errors.append(f"outbound_date must be YYYY-MM-DD, got {val}")
+            except ValueError:
+                errors.append(f"outbound_date must be a valid ISO date (YYYY-MM-DD), got {val}")
+
+    # 5. adults
+    if "adults" in leg_data:
+        val = leg_data["adults"]
+        if not isinstance(val, int) or isinstance(val, bool) or val < 1:
+            errors.append(f"adults must be an integer >= 1, got {val}")
+
+    # 6. watch and watch_off_reason
+    if "watch" in leg_data:
+        watch_val = leg_data["watch"]
+        if not isinstance(watch_val, bool):
+            errors.append(f"watch must be a boolean (true/false), got {type(watch_val).__name__}")
+        elif watch_val is False:
+            reason = leg_data.get("watch_off_reason")
+            if not reason or not isinstance(reason, str) or not reason.strip():
+                errors.append("watch_off_reason is required and cannot be empty when watch is false")
+
+    # 7. Duplicate leg check
+    if existing_legs and "origin" in leg_data and "destination" in leg_data and "outbound_date" in leg_data:
+        orig = leg_data["origin"]
+        dest = leg_data["destination"]
+        out_d = leg_data["outbound_date"]
+        for idx, ex_leg in enumerate(existing_legs):
+            if (
+                ex_leg.get("origin") == orig
+                and ex_leg.get("destination") == dest
+                and ex_leg.get("outbound_date") == out_d
+            ):
+                errors.append(
+                    f"leg with same origin ('{orig}'), destination ('{dest}'), "
+                    f"and outbound_date ('{out_d}') already exists at index {idx}"
+                )
+                break
+
+    return errors
 
 
 def group_consecutive_nights(nights: list[str]) -> list[dict]:
@@ -1255,6 +1371,121 @@ def run_coverage(args: argparse.Namespace) -> int:
     return 0
 
 
+def resolve_watchlist_for_create(target: str) -> Path:
+    """Resolve a watchlist path for creation, placing in state_dir() if bare filename."""
+    p = Path(target)
+    if p.is_absolute() or "/" in target or "\\" in target:
+        return p
+    return state_dir() / target
+
+
+def run_add_leg(args: argparse.Namespace) -> int:
+    # 1. Resolve path
+    if args.create:
+        watchlist_path = resolve_watchlist_for_create(args.watchlist)
+    else:
+        watchlist_path = resolve_watchlist(args.watchlist)
+
+    # 2. Check --create requirements
+    if args.create:
+        if not args.trip or not args.trip.strip():
+            print("error: --trip NAME is required when using --create", file=sys.stderr)
+            return 2
+
+    validated_home: str | None = None
+    if args.home:
+        raw_codes = [c.strip() for c in args.home.split(",") if c.strip()]
+        if not raw_codes:
+            print("error: at least one IATA code must be provided for --home", file=sys.stderr)
+            return 2
+        for c in raw_codes:
+            if len(c) != 3 or not c.isalpha() or not c.isupper():
+                print(f"validation error: invalid IATA code '{c}' in --home: must be 3 uppercase letters", file=sys.stderr)
+                return 2
+        validated_home = ",".join(raw_codes)
+
+    # 3. Read data
+    if args.data == "-":
+        raw_data = sys.stdin.read()
+    else:
+        data_path = Path(args.data)
+        if not data_path.exists():
+            print(f"error: data file not found: {data_path}", file=sys.stderr)
+            return 2
+        try:
+            raw_data = data_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            print(f"error reading data file: {exc}", file=sys.stderr)
+            return 2
+
+    try:
+        leg_data = json.loads(raw_data)
+    except Exception as exc:
+        print(f"error parsing data JSON: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(leg_data, dict):
+        print("error: leg data must be a JSON object", file=sys.stderr)
+        return 2
+
+    # 4. Check file existence rule
+    if args.create:
+        if watchlist_path.exists():
+            print(f"error: watchlist file already exists: {watchlist_path} (--create will not overwrite)", file=sys.stderr)
+            return 2
+        existing_legs: list[dict] = []
+        wl: dict | None = None
+    else:
+        if not watchlist_path.exists():
+            print(f"error: watchlist file not found: {watchlist_path}", file=sys.stderr)
+            return 2
+        try:
+            wl = json.loads(watchlist_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"error reading watchlist JSON: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(wl, dict) or "legs" not in wl or not isinstance(wl["legs"], list):
+            print("error: missing or invalid 'legs' list in watchlist", file=sys.stderr)
+            return 2
+        existing_legs = wl["legs"]
+
+    # 5. Validate leg data (including duplicate check against existing_legs)
+    # CRITICAL: If validation fails, no file is created or touched!
+    errors = validate_add_leg(leg_data, existing_legs)
+    if errors:
+        for err in errors:
+            print(f"validation error: {err}", file=sys.stderr)
+        return 2
+
+    # 6. Apply change
+    if args.create:
+        today_iso = date.today().isoformat()
+        wl = {
+            "trip": args.trip,
+            "created": today_iso,
+            "cadence": "off",
+            "legs": [],
+            "event_watches": [],
+        }
+        if validated_home:
+            wl["home"] = validated_home
+
+    assert wl is not None
+    new_leg = dict(leg_data)
+    new_leg["purchased"] = False
+    new_idx = len(wl["legs"])
+    wl["legs"].append(new_leg)
+
+    try:
+        atomic_write_json(watchlist_path, wl)
+    except Exception as exc:
+        print(f"error saving watchlist: {exc}", file=sys.stderr)
+        return 2
+
+    print(new_idx)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ledger.py",
@@ -1322,6 +1553,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path(s) to watchlist JSON file(s). If omitted, scans state_dir() for watchlist-*.json",
     )
 
+    # add-leg sub-command
+    p_add_leg = subparsers.add_parser(
+        "add-leg", help="Add a leg to a watchlist, optionally creating the watchlist"
+    )
+    p_add_leg.add_argument("watchlist", help="Path to watchlist JSON file")
+    p_add_leg.add_argument(
+        "--data", required=True, help="Path to JSON file with leg block, or - for stdin"
+    )
+    p_add_leg.add_argument(
+        "--create", action="store_true", help="Create the watchlist file if it does not exist"
+    )
+    p_add_leg.add_argument(
+        "--trip", help="Trip name (required when using --create)"
+    )
+    p_add_leg.add_argument(
+        "--home", help="Comma-separated 3-letter IATA airport codes (optional with --create)"
+    )
+
     return parser
 
 
@@ -1339,6 +1588,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_stay(args)
     if args.subcommand == "coverage":
         return run_coverage(args)
+    if args.subcommand == "add-leg":
+        return run_add_leg(args)
 
     return 0
 
