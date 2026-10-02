@@ -1146,3 +1146,1043 @@ def test_default_state_directory(ledger, tmp_path, capsys):
     trip_files = [t["file"] for t in out["trips"]]
     assert trip_files == ["watchlist-a.json", "watchlist-b.json"]
 
+
+# ---------------------------------------------------------------------------
+# Prompt 03: home, stay, coverage
+# ---------------------------------------------------------------------------
+
+
+def test_home_command(ledger, tmp_path, capsys):
+    wl_path = _sample_watchlist(tmp_path)
+    # Valid code
+    code = ledger.main(["home", str(wl_path), "POA"])
+    assert code == 0
+    data = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert data["home"] == "POA"
+
+    # Multiple valid codes
+    code = ledger.main(["home", str(wl_path), "POA,NVT"])
+    assert code == 0
+    data = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert data["home"] == "POA,NVT"
+
+    # Invalid code
+    code = ledger.main(["home", str(wl_path), "poa"])
+    assert code != 0
+    err = capsys.readouterr().err
+    assert "invalid IATA code" in err
+    # File not modified with invalid code
+    data = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert data["home"] == "POA,NVT"
+
+
+def test_stay_validation_rules(ledger, tmp_path, capsys):
+    wl_path = _sample_watchlist(tmp_path)
+    initial_content = wl_path.read_text(encoding="utf-8")
+
+    # Helper to test invalid stay
+    def assert_invalid_stay(stay_dict, expected_err_substr):
+        stay_file = tmp_path / "bad_stay.json"
+        stay_file.write_text(json.dumps(stay_dict), encoding="utf-8")
+        ret = ledger.main(["stay", str(wl_path), "--data", str(stay_file)])
+        assert ret != 0
+        err = capsys.readouterr().err
+        assert expected_err_substr in err
+        # File must not be touched
+        assert wl_path.read_text(encoding="utf-8") == initial_content
+
+    # 1. check_out <= check_in
+    assert_invalid_stay(
+        {"check_in": "2026-05-15", "check_out": "2026-05-10", "status": "not_needed", "why": "test"},
+        "check_out (2026-05-10) must be after check_in (2026-05-15)",
+    )
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-10", "status": "not_needed", "why": "test"},
+        "check_out (2026-05-10) must be after check_in (2026-05-10)",
+    )
+
+    # 2. invalid date format
+    assert_invalid_stay(
+        {"check_in": "2026/05/10", "check_out": "2026-05-15", "status": "not_needed", "why": "test"},
+        "check_in must be a valid ISO date",
+    )
+
+    # 3. invalid status
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "needed", "why": "test"},
+        "status must be 'booked' or 'not_needed'",
+    )
+
+    # 4. unknown keys
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "not_needed", "why": "test", "extra_field": 123},
+        "unknown key(s) in stay: extra_field",
+    )
+
+    # 5. booked missing booking
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked"},
+        "booking object is required when status is 'booked'",
+    )
+
+    # 6. booked with why
+    valid_booking = {
+        "seller": "Booking.com",
+        "locator": "HOTEL123",
+        "source": "email: confirmation",
+        "paid": {"amount": 500.0, "currency": "BRL"},
+    }
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "why": "friends", "booking": valid_booking},
+        "why is not allowed when status is 'booked'",
+    )
+
+    # 7. booked with unknown key in booking
+    bad_b = dict(valid_booking)
+    bad_b["room_number"] = 101
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": bad_b},
+        "unknown key(s) in booking: room_number",
+    )
+
+    # 8. booked missing required keys in booking
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": {"seller": "A"}},
+        "missing required key(s) in booking",
+    )
+
+    # 9. booked with paid.amount == 0
+    bad_paid_zero = dict(valid_booking)
+    bad_paid_zero["paid"] = {"amount": 0, "currency": "BRL"}
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": bad_paid_zero},
+        "booking.paid.amount must be a positive number (> 0), got 0",
+    )
+
+    # 10. booked with included_in_leg in paid
+    bad_paid_inc = dict(valid_booking)
+    bad_paid_inc["paid"] = {"included_in_leg": 0}
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": bad_paid_inc},
+        "included_in_leg is only for flights, not allowed for stays",
+    )
+
+    # 11. booked with paid=null and no paid_unmeasured_why
+    bad_paid_null = dict(valid_booking)
+    bad_paid_null["paid"] = None
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": bad_paid_null},
+        "when booking.paid is null, paid_unmeasured_why is required",
+    )
+
+    # 12. booked refundable_until > check_in
+    bad_ref = dict(valid_booking)
+    bad_ref["refundable_until"] = "2026-05-12"
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": bad_ref},
+        "booking.refundable_until (2026-05-12) must be <= check_in (2026-05-10)",
+    )
+
+    # 13. not_needed with booking
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "not_needed", "why": "friends", "booking": valid_booking},
+        "booking is not allowed when status is 'not_needed'",
+    )
+
+    # 14. not_needed missing why or empty why
+    assert_invalid_stay(
+        {"check_in": "2026-05-10", "check_out": "2026-05-15", "status": "not_needed", "why": "   "},
+        "why is required and cannot be empty when status is 'not_needed'",
+    )
+
+    # 15. Valid stay appends cleanly
+    stay_file = tmp_path / "valid_stay.json"
+    stay_file.write_text(json.dumps({"label": "Hotel NYC", "check_in": "2026-05-10", "check_out": "2026-05-15", "status": "booked", "booking": valid_booking}), encoding="utf-8")
+    ret = ledger.main(["stay", str(wl_path), "--data", str(stay_file)])
+    assert ret == 0
+    saved = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert len(saved.get("stays", [])) == 1
+    assert saved["stays"][0]["label"] == "Hotel NYC"
+
+    # 16. Overlapping stay: warns but still saves
+    overlap_stay = {
+        "label": "Hotel Overlap",
+        "check_in": "2026-05-12",
+        "check_out": "2026-05-16",
+        "status": "not_needed",
+        "why": "friends",
+    }
+    stay_file2 = tmp_path / "overlap_stay.json"
+    stay_file2.write_text(json.dumps(overlap_stay), encoding="utf-8")
+    ret = ledger.main(["stay", str(wl_path), "--data", str(stay_file2)])
+    assert ret == 0
+    err = capsys.readouterr().err
+    assert "warning: stay overlaps with existing stay 'Hotel NYC'" in err
+    saved = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert len(saved.get("stays", [])) == 2
+
+
+def test_coverage_arrival_1810_depart_1140_five_nights(ledger, tmp_path, capsys):
+    """Case 1: arrive 24th 18:10, depart 29th 11:40 -> 5 nights required (24, 25, 26, 27, 28)."""
+    wl = {
+        "trip": "NY Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-24",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "LATAM",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "LA 100",
+                            "from": "POA",
+                            "to": "JFK",
+                            "depart": "2026-05-24T06:00",
+                            "arrive": "2026-05-24T18:10",
+                        }
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-29",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "LATAM",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "LA 200",
+                            "from": "JFK",
+                            "to": "POA",
+                            "depart": "2026-05-29T11:40",
+                            "arrive": "2026-05-29T23:50",
+                        }
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-c1.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "uncovered"
+    assert len(trip["gaps"]) == 1
+    gap = trip["gaps"][0]
+    assert gap["late_arrival"] is False
+    assert gap["nights_needed"] == [
+        "2026-05-24",
+        "2026-05-25",
+        "2026-05-26",
+        "2026-05-27",
+        "2026-05-28",
+    ]
+    assert gap["uncovered"] == [
+        {"check_in": "2026-05-24", "check_out": "2026-05-29", "nights": 5}
+    ]
+
+
+def test_coverage_arrival_0705_overnight_flight(ledger, tmp_path, capsys):
+    """Case 2: arrival 07:05 on day 21 -> night of 20th does NOT enter (spent on plane)."""
+    wl = {
+        "trip": "Overnight Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-20",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "LATAM",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "LA 100",
+                            "from": "POA",
+                            "to": "JFK",
+                            "depart": "2026-05-20T21:00",
+                            "arrive": "2026-05-21T07:05",
+                        }
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-25",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "LATAM",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "LA 200",
+                            "from": "JFK",
+                            "to": "POA",
+                            "depart": "2026-05-25T14:00",
+                            "arrive": "2026-05-26T06:00",
+                        }
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-c2.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert "2026-05-20" not in gap["nights_needed"]
+    assert gap["nights_needed"] == [
+        "2026-05-21",
+        "2026-05-22",
+        "2026-05-23",
+        "2026-05-24",
+    ]
+    assert gap["late_arrival"] is False
+
+
+def test_coverage_arrival_0038_late_arrival(ledger, tmp_path, capsys):
+    """Case 3: arrival 00:38 on day 21 -> night of 20th DOES enter, late_arrival is true."""
+    wl = {
+        "trip": "Late Arrival Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-20",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 100",
+                            "from": "POA",
+                            "to": "MIA",
+                            "depart": "2026-05-20T16:00",
+                            "arrive": "2026-05-21T00:38",
+                        }
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-25",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 200",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-25T14:00",
+                            "arrive": "2026-05-25T23:00",
+                        }
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-c3.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert "2026-05-20" in gap["nights_needed"]
+    assert gap["late_arrival"] is True
+    assert gap["nights_needed"][0] == "2026-05-20"
+
+
+def test_coverage_day_connection_omitted(ledger, tmp_path, capsys):
+    """Same day connection (e.g. arrive 12:20, depart 17:05) produces 0 nights and is omitted."""
+    wl = {
+        "trip": "Connection Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-20",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 100",
+                            "from": "POA",
+                            "to": "PTY",
+                            "depart": "2026-05-20T06:00",
+                            "arrive": "2026-05-20T12:20",
+                        },
+                        {
+                            "flight": "CM 200",
+                            "from": "PTY",
+                            "to": "MIA",
+                            "depart": "2026-05-20T17:05",
+                            "arrive": "2026-05-20T21:30",
+                        },
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-25",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {
+                            "flight": "CM 300",
+                            "from": "MIA",
+                            "to": "POA",
+                            "depart": "2026-05-25T14:00",
+                            "arrive": "2026-05-25T23:00",
+                        }
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-conn.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    # Exactly 1 gap (MIA stay from May 20 21:30 to May 25 14:00), PTY layover omitted!
+    assert len(trip["gaps"]) == 1
+    assert trip["gaps"][0]["arrive_at"] == "MIA"
+    assert trip["gaps"][0]["depart_from"] == "MIA"
+
+
+def test_coverage_different_airports_two_stays_covered(ledger, tmp_path, capsys):
+    """Arrive CGH, depart GRU, covered by two contiguous stays in two cities -> covered."""
+    wl = {
+        "trip": "Multi City Stay",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "GRU", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Santos",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-12",
+                "status": "booked",
+                "booking": {"seller": "A", "locator": "L1", "source": "email", "paid": {"amount": 400.0, "currency": "BRL"}},
+            },
+            {
+                "label": "São Paulo",
+                "check_in": "2026-05-12",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {"seller": "B", "locator": "L2", "source": "email", "paid": {"amount": 600.0, "currency": "BRL"}},
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-covered.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "covered"
+    assert trip["gaps"][0]["uncovered"] == []
+    assert len(trip["gaps"][0]["covered"]) == 5
+    assert trip["nights_outside_any_gap"] == []
+
+
+def test_coverage_stay_ends_in_middle_checkout_night_uncovered(ledger, tmp_path, capsys):
+    """5 nights needed, stay check_out on 3rd day -> check_out night is uncovered."""
+    wl = {
+        "trip": "Partial Stay Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "GRU", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Short stay",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-12",
+                "status": "booked",
+                "booking": {"seller": "A", "locator": "L1", "source": "email", "paid": {"amount": 400.0, "currency": "BRL"}},
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-middle.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "uncovered"
+    # Uncovered range starts at 2026-05-12 (the check_out date of the stay!)
+    assert trip["gaps"][0]["uncovered"] == [
+        {"check_in": "2026-05-12", "check_out": "2026-05-15", "nights": 3}
+    ]
+
+
+def test_coverage_not_needed_stay_covers_equally(ledger, tmp_path, capsys):
+    """Stay with status 'not_needed' covers dates the same as booked."""
+    wl = {
+        "trip": "Event Stay Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "GRU", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Casa de amigos",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "not_needed",
+                "why": "hospedagem na casa de amigos",
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-not-needed.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "covered"
+    assert trip["gaps"][0]["uncovered"] == []
+
+
+def test_coverage_nights_outside_any_gap(ledger, tmp_path, capsys):
+    """Paid stay night outside derived gap is recorded in nights_outside_any_gap."""
+    wl = {
+        "trip": "Outside Nights Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "CGH", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Legitimate stay",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {"seller": "A", "locator": "L1", "source": "email", "paid": {"amount": 500.0, "currency": "BRL"}},
+            },
+            {
+                "label": "Extra unused stay",
+                "check_in": "2026-05-20",
+                "check_out": "2026-05-22",
+                "status": "booked",
+                "booking": {"seller": "B", "locator": "L2", "source": "email", "paid": {"amount": 300.0, "currency": "BRL"}},
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-outside.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["nights_outside_any_gap"] == ["2026-05-20", "2026-05-21"]
+
+
+def test_coverage_legacy_leg_in_middle_partial(ledger, tmp_path, capsys):
+    """Legacy purchased leg in the middle causes verdict to be 'partial', never 'covered'."""
+    wl = {
+        "trip": "Legacy In Middle",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-12",
+                "purchased": True,
+                "purchase": {
+                    "date": "12/03/2026",
+                    "flight": "G3 1234",
+                    "paid_brl": 300.0,
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC3",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "SDU", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Full stay",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-15",
+                "status": "booked",
+                "booking": {"seller": "A", "locator": "L1", "source": "email", "paid": {"amount": 500.0, "currency": "BRL"}},
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-legacy-mid.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "partial"
+    assert len(trip["not_derivable"]) == 1
+    assert trip["not_derivable"][0]["leg"] == 1
+
+
+def test_coverage_missing_home_not_derivable(ledger, tmp_path, capsys):
+    """Missing 'home' results in verdict 'not_derivable' and empty gaps."""
+    wl = {
+        "trip": "No Home Trip",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-no-home.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["verdict"] == "not_derivable"
+    assert trip["gaps"] == []
+    assert any(nd.get("reason") == "missing_home" for nd in trip["not_derivable"])
+
+
+def test_coverage_one_way_flight_open_end(ledger, tmp_path, capsys):
+    """Outbound bought, return not bought -> open_end is set, verdict is partial (never covered)."""
+    wl = {
+        "trip": "One Way Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "MIA", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T23:00"}
+                    ],
+                },
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-open-end.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert trip["open_end"] == "2026-05-10"
+    assert trip["verdict"] != "covered"
+    assert trip["verdict"] == "partial"
+
+
+def test_coverage_pending_legs_inside(ledger, tmp_path, capsys):
+    """Unpurchased leg falling inside a gap is listed in pending_legs_inside."""
+    wl = {
+        "trip": "Pending Inside Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 1", "from": "POA", "to": "MIA", "depart": "2026-05-10T06:00", "arrive": "2026-05-10T18:00"}
+                    ],
+                },
+            },
+            {
+                "label": "MIA → MCO",
+                "outbound_date": "2026-05-12",
+                "purchased": False,
+                "watch": True,
+            },
+            {
+                "label": "MCO → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 2", "from": "MCO", "to": "POA", "depart": "2026-05-15T11:00", "arrive": "2026-05-15T22:00"}
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-pending.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert len(gap["pending_legs_inside"]) == 1
+    pending = gap["pending_legs_inside"][0]
+    assert pending["leg"] == 1
+    assert pending["outbound_date"] == "2026-05-12"
+
+
+def test_watch_main_preserves_home_and_stays(ledger, watch_mod, tmp_path, monkeypatch):
+    """Running watch.py on a watchlist with home and stays preserves both keys untouched."""
+    wl = {
+        "trip": "EUA 2026",
+        "home": "POA",
+        "last_run": "2026-09-20",
+        "quota_reserve": 10,
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "origin": "POA",
+                "destination": "MIA",
+                "outbound_date": "2026-11-05",
+                "adults": 1,
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-09-20",
+                    "seller": "Copa",
+                    "locator": "XYZ123",
+                    "adults": 1,
+                    "paid": {"amount": 1200.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 1", "from": "POA", "to": "MIA", "depart": "2026-11-05T06:00", "arrive": "2026-11-05T18:00"}
+                    ],
+                },
+            }
+        ],
+        "stays": [
+            {
+                "label": "Hotel Miami",
+                "check_in": "2026-11-05",
+                "check_out": "2026-11-10",
+                "status": "booked",
+                "booking": {"seller": "Expedia", "locator": "EXP456", "source": "email", "paid": {"amount": 2000.0, "currency": "BRL"}},
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-preserve.json"
+    wl_path.write_text(json.dumps(wl, indent=2), encoding="utf-8")
+
+    monkeypatch.setattr(watch_mod, "api_key", lambda: "fake-key")
+    monkeypatch.setattr(watch_mod, "searches_left", lambda key: 50)
+    monkeypatch.setattr(watch_mod, "price_leg", lambda key, leg: {"price": 100})
+    monkeypatch.setattr(watch_mod, "sweep_events", lambda key, watch: [])
+    monkeypatch.setattr(watch_mod, "LOG", tmp_path / "watch.log")
+    monkeypatch.setattr(watch_mod, "ALERTS", tmp_path / "alerts.md")
+    monkeypatch.setattr(sys, "argv", ["watch.py", str(wl_path)])
+
+    watch_exit = watch_mod.main()
+    assert watch_exit == 0
+
+    after = json.loads(wl_path.read_text(encoding="utf-8"))
+    assert after["home"] == "POA"
+    assert after["stays"] == wl["stays"]
+
+
+def test_summary_includes_coverage(ledger, tmp_path, capsys):
+    """summary command includes 'coverage' block with verdict and uncovered_nights."""
+    wl = {
+        "trip": "Summary Coverage Trip",
+        "home": "POA",
+        "last_run": "2026-09-20",
+        "legs": [
+            {
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 1", "from": "POA", "to": "CGH", "depart": "2026-05-10T16:00", "arrive": "2026-05-10T18:10"}
+                    ],
+                },
+            },
+            {
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "GOL",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 500.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "G3 2", "from": "CGH", "to": "POA", "depart": "2026-05-15T11:40", "arrive": "2026-05-15T13:30"}
+                    ],
+                },
+            },
+        ],
+        "stays": [
+            {
+                "label": "Short stay",
+                "check_in": "2026-05-10",
+                "check_out": "2026-05-12",
+                "status": "booked",
+                "booking": {"seller": "A", "locator": "L1", "source": "email", "paid": {"amount": 400.0, "currency": "BRL"}},
+            }
+        ],
+    }
+    wl_path = tmp_path / "watchlist-summary-cov.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["summary", str(wl_path), "--today", "2026-10-02"])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    assert "coverage" in trip
+    assert trip["coverage"] == {
+        "verdict": "uncovered",
+        "uncovered_nights": 3,
+    }
+

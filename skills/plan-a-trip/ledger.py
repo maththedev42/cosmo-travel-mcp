@@ -14,8 +14,14 @@ import argparse
 import json
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
+
+# Hour threshold (03:00) to determine if a night belongs to a ground gap.
+# A traveler sleeping from date d to d+1 is required to have accommodation
+# if and only if they are on the ground at 03:00 of d+1:
+# arrive <= (d+1)T03:00 < depart
+PIVOT_HOUR = 3
 
 ALLOWED_PURCHASE_KEYS = {
     "schema",
@@ -44,6 +50,38 @@ REQUIRED_PURCHASE_KEYS = {
 
 ALLOWED_SEGMENT_KEYS = {"flight", "from", "to", "depart", "arrive", "unmeasured_why"}
 REQUIRED_SEGMENT_KEYS = {"flight", "from", "to", "depart", "arrive"}
+
+ALLOWED_STAY_KEYS = {
+    "label",
+    "check_in",
+    "check_out",
+    "status",
+    "booking",
+    "why",
+    "notes",
+}
+
+REQUIRED_STAY_KEYS = {
+    "check_in",
+    "check_out",
+    "status",
+}
+
+ALLOWED_STAY_BOOKING_KEYS = {
+    "seller",
+    "locator",
+    "source",
+    "paid",
+    "refundable_until",
+    "paid_unmeasured_why",
+}
+
+REQUIRED_STAY_BOOKING_KEYS = {
+    "seller",
+    "locator",
+    "source",
+    "paid",
+}
 
 
 def state_dir() -> Path:
@@ -332,6 +370,481 @@ def atomic_write_json(path: Path, data: dict) -> None:
         raise
 
 
+def resolve_watchlist(target: str) -> Path:
+    """Resolve a watchlist file path, falling back to state_dir() if bare filename."""
+    p = Path(target)
+    if not p.exists() and not p.is_absolute() and ("/" not in target and "\\" not in target):
+        candidate = state_dir() / target
+        if candidate.exists():
+            return candidate
+    return p
+
+
+def resolve_watchlists(paths: list[str] | None) -> list[Path]:
+    """Resolve a list of watchlist files or scan state_dir() for watchlist-*.json."""
+    if paths:
+        return [Path(p) for p in paths]
+    sdir = state_dir()
+    if not sdir.exists():
+        return []
+    return sorted(
+        [p for p in sdir.glob("watchlist-*.json") if ".bak" not in p.name]
+    )
+
+
+def validate_stay(
+    stay: dict,
+    existing_stays: list[dict] | None = None,
+) -> tuple[list[str], list[str]]:
+    """Validate a stay block and check for overlap with existing stays.
+
+    Returns (errors, warnings).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not isinstance(stay, dict):
+        return ["stay must be a JSON object"], []
+
+    # 1. Allowed / required top-level keys
+    extra_keys = set(stay.keys()) - ALLOWED_STAY_KEYS
+    if extra_keys:
+        errors.append(
+            f"unknown key(s) in stay: {', '.join(sorted(extra_keys))}. "
+            f"Allowed keys: {', '.join(sorted(ALLOWED_STAY_KEYS))}"
+        )
+
+    missing_keys = REQUIRED_STAY_KEYS - set(stay.keys())
+    if missing_keys:
+        errors.append(
+            f"missing required key(s) in stay: {', '.join(sorted(missing_keys))}"
+        )
+
+    # 2. check_in and check_out
+    cin: date | None = None
+    cout: date | None = None
+    if "check_in" in stay:
+        val = stay["check_in"]
+        if not isinstance(val, str):
+            errors.append(f"check_in must be a valid ISO date string (YYYY-MM-DD), got {type(val).__name__}")
+        else:
+            try:
+                d = datetime.strptime(val, "%Y-%m-%d").date()
+                if d.strftime("%Y-%m-%d") != val:
+                    errors.append(f"check_in must be YYYY-MM-DD, got {val}")
+                else:
+                    cin = d
+            except ValueError:
+                errors.append(f"check_in must be a valid ISO date (YYYY-MM-DD), got {val}")
+
+    if "check_out" in stay:
+        val = stay["check_out"]
+        if not isinstance(val, str):
+            errors.append(f"check_out must be a valid ISO date string (YYYY-MM-DD), got {type(val).__name__}")
+        else:
+            try:
+                d = datetime.strptime(val, "%Y-%m-%d").date()
+                if d.strftime("%Y-%m-%d") != val:
+                    errors.append(f"check_out must be YYYY-MM-DD, got {val}")
+                else:
+                    cout = d
+            except ValueError:
+                errors.append(f"check_out must be a valid ISO date (YYYY-MM-DD), got {val}")
+
+    if cin and cout:
+        if cout <= cin:
+            errors.append(f"check_out ({stay['check_out']}) must be after check_in ({stay['check_in']})")
+
+    # 3. status
+    status = stay.get("status")
+    if status not in ("booked", "not_needed"):
+        errors.append(f"status must be 'booked' or 'not_needed', got '{status}'")
+    else:
+        if status == "booked":
+            if "why" in stay and stay["why"] is not None:
+                errors.append("why is not allowed when status is 'booked'")
+            if "booking" not in stay or not isinstance(stay["booking"], dict):
+                errors.append("booking object is required when status is 'booked'")
+            else:
+                b = stay["booking"]
+                extra_b_keys = set(b.keys()) - ALLOWED_STAY_BOOKING_KEYS
+                if extra_b_keys:
+                    errors.append(
+                        f"unknown key(s) in booking: {', '.join(sorted(extra_b_keys))}. "
+                        f"Allowed keys: {', '.join(sorted(ALLOWED_STAY_BOOKING_KEYS))}"
+                    )
+                missing_b_keys = REQUIRED_STAY_BOOKING_KEYS - set(b.keys())
+                if missing_b_keys:
+                    errors.append(
+                        f"missing required key(s) in booking: {', '.join(sorted(missing_b_keys))}"
+                    )
+
+                for str_field in ("seller", "locator", "source"):
+                    if str_field in b:
+                        if not isinstance(b[str_field], str) or not b[str_field].strip():
+                            errors.append(f"booking.{str_field} must be a non-empty string")
+
+                # paid
+                if "paid" in b:
+                    paid = b["paid"]
+                    if paid is None:
+                        why_unmeasured = b.get("paid_unmeasured_why") or stay.get("paid_unmeasured_why")
+                        if not why_unmeasured or not isinstance(why_unmeasured, str) or not why_unmeasured.strip():
+                            errors.append("when booking.paid is null, paid_unmeasured_why is required and cannot be empty")
+                    elif isinstance(paid, dict):
+                        if "included_in_leg" in paid:
+                            errors.append("included_in_leg is only for flights, not allowed for stays")
+                        if "amount" not in paid or "currency" not in paid:
+                            errors.append("booking.paid object must contain 'amount' and 'currency'")
+                        else:
+                            amt = paid["amount"]
+                            if not isinstance(amt, (int, float)) or isinstance(amt, bool) or amt <= 0:
+                                errors.append(f"booking.paid.amount must be a positive number (> 0), got {amt}")
+                            curr = paid["currency"]
+                            if not isinstance(curr, str) or len(curr) != 3 or not curr.isupper() or not curr.isalpha():
+                                errors.append(f"booking.paid.currency must be a 3-letter uppercase IATA/ISO code, got {curr}")
+                    else:
+                        errors.append(f"booking.paid must be an object or null, got {type(paid).__name__}")
+
+                # refundable_until
+                if "refundable_until" in b and b["refundable_until"] is not None:
+                    ref_val = b["refundable_until"]
+                    if not isinstance(ref_val, str):
+                        errors.append("booking.refundable_until must be an ISO date string (YYYY-MM-DD)")
+                    else:
+                        try:
+                            ref_d = datetime.strptime(ref_val, "%Y-%m-%d").date()
+                            if ref_d.strftime("%Y-%m-%d") != ref_val:
+                                errors.append(f"booking.refundable_until must be YYYY-MM-DD, got {ref_val}")
+                            elif cin and ref_d > cin:
+                                errors.append(
+                                    f"booking.refundable_until ({ref_val}) must be <= check_in ({stay.get('check_in')})"
+                                )
+                        except ValueError:
+                            errors.append(f"booking.refundable_until must be a valid ISO date (YYYY-MM-DD), got {ref_val}")
+
+        elif status == "not_needed":
+            if "booking" in stay and stay["booking"] is not None:
+                errors.append("booking is not allowed when status is 'not_needed'")
+            if not stay.get("why") or not isinstance(stay["why"], str) or not stay["why"].strip():
+                errors.append("why is required and cannot be empty when status is 'not_needed'")
+
+    # Overlap check with existing stays
+    if cin and cout and existing_stays:
+        for ex in existing_stays:
+            ex_in_str = ex.get("check_in")
+            ex_out_str = ex.get("check_out")
+            if ex_in_str and ex_out_str:
+                try:
+                    ex_in = datetime.strptime(ex_in_str, "%Y-%m-%d").date()
+                    ex_out = datetime.strptime(ex_out_str, "%Y-%m-%d").date()
+                    if max(cin, ex_in) < min(cout, ex_out):
+                        lbl = ex.get("label", "unlabeled stay")
+                        warnings.append(
+                            f"stay overlaps with existing stay '{lbl}' ({ex_in_str} to {ex_out_str})"
+                        )
+                except ValueError:
+                    pass
+
+    return errors, warnings
+
+
+def group_consecutive_nights(nights: list[str]) -> list[dict]:
+    """Group sorted ISO date strings of nights into check_in / check_out ranges.
+
+    Each range has:
+        - check_in: first night
+        - check_out: day after last night
+        - nights: count of nights
+    """
+    if not nights:
+        return []
+
+    dates = [datetime.strptime(n, "%Y-%m-%d").date() for n in nights]
+    ranges: list[dict] = []
+
+    start_d = dates[0]
+    prev_d = dates[0]
+    count = 1
+
+    for d in dates[1:]:
+        if d == prev_d + timedelta(days=1):
+            prev_d = d
+            count += 1
+        else:
+            ranges.append({
+                "check_in": start_d.strftime("%Y-%m-%d"),
+                "check_out": (prev_d + timedelta(days=1)).strftime("%Y-%m-%d"),
+                "nights": count,
+            })
+            start_d = d
+            prev_d = d
+            count = 1
+
+    ranges.append({
+        "check_in": start_d.strftime("%Y-%m-%d"),
+        "check_out": (prev_d + timedelta(days=1)).strftime("%Y-%m-%d"),
+        "nights": count,
+    })
+    return ranges
+
+
+def calculate_coverage(wl: dict, filename: str) -> dict:
+    """Derive flight gaps and compare against stays.
+
+    Follows the 03:00 pivot rule (PIVOT_HOUR = 3):
+    arrive <= (d+1)T03:00 < depart
+    """
+    home_val = wl.get("home")
+    if not home_val or not isinstance(home_val, str) or not home_val.strip():
+        return {
+            "file": filename,
+            "home": None,
+            "verdict": "not_derivable",
+            "gaps": [],
+            "nights_outside_any_gap": [],
+            "not_derivable": [{"reason": "missing_home"}],
+            "open_start": None,
+            "open_end": None,
+        }
+
+    home = home_val.strip()
+    home_codes = {c.strip() for c in home.split(",") if c.strip()}
+
+    not_derivable: list[dict] = []
+    schema1_legs: list[tuple[int, dict]] = []
+
+    for idx, leg in enumerate(wl.get("legs", [])):
+        if leg.get("purchased") is True:
+            purchase = leg.get("purchase")
+            if isinstance(purchase, dict) and purchase.get("schema") == 1:
+                schema1_legs.append((idx, leg))
+            else:
+                not_derivable.append({
+                    "leg": idx,
+                    "reason": "legacy_or_missing_purchase_block",
+                })
+
+    if not schema1_legs:
+        return {
+            "file": filename,
+            "home": home,
+            "verdict": "not_derivable",
+            "gaps": [],
+            "nights_outside_any_gap": [],
+            "not_derivable": not_derivable or [{"reason": "no_schema_1_purchased_legs"}],
+            "open_start": None,
+            "open_end": None,
+        }
+
+    # Sort legs by outbound_date, preserving original order on ties
+    sorted_legs = sorted(schema1_legs, key=lambda x: (x[1].get("outbound_date") or "", x[0]))
+
+    # Flatten segments in order
+    all_segments: list[dict] = []
+    for _leg_idx, leg in sorted_legs:
+        for seg in leg.get("purchase", {}).get("segments", []):
+            all_segments.append(seg)
+
+    if not all_segments:
+        return {
+            "file": filename,
+            "home": home,
+            "verdict": "not_derivable",
+            "gaps": [],
+            "nights_outside_any_gap": [],
+            "not_derivable": not_derivable or [{"reason": "no_segments_in_purchased_legs"}],
+            "open_start": None,
+            "open_end": None,
+        }
+
+    # Open start / Open end
+    first_seg = all_segments[0]
+    last_seg = all_segments[-1]
+
+    open_start = None
+    if first_seg.get("from") not in home_codes:
+        open_start = first_seg.get("depart", "")[:10] if first_seg.get("depart") else sorted_legs[0][1].get("outbound_date")
+
+    open_end = None
+    if last_seg.get("to") not in home_codes:
+        open_end = last_seg.get("arrive", "")[:10] if last_seg.get("arrive") else sorted_legs[-1][1].get("outbound_date")
+
+    # Unpurchased legs to check for pending_legs_inside
+    unpurchased_legs = [
+        (idx, leg)
+        for idx, leg in enumerate(wl.get("legs", []))
+        if leg.get("purchased") is not True
+    ]
+
+    stays = wl.get("stays", [])
+    gaps: list[dict] = []
+    all_needed_nights: set[str] = set()
+
+    for i in range(len(all_segments) - 1):
+        seg_a = all_segments[i]
+        seg_b = all_segments[i + 1]
+
+        arrive_at = seg_a.get("to")
+        arrive_str = seg_a.get("arrive")
+        depart_from = seg_b.get("from")
+        depart_str = seg_b.get("depart")
+
+        if not arrive_str or not depart_str:
+            gap: dict = {
+                "arrive_at": arrive_at,
+                "arrive": arrive_str,
+                "depart_from": depart_from,
+                "depart": depart_str,
+                "derivable": False,
+                "late_arrival": False,
+                "nights_needed": [],
+                "covered": [],
+                "uncovered": [],
+                "pending_legs_inside": [],
+            }
+            unmeasured_why = seg_a.get("unmeasured_why") or seg_b.get("unmeasured_why")
+            if unmeasured_why:
+                gap["unmeasured_why"] = unmeasured_why
+            gaps.append(gap)
+            continue
+
+        try:
+            arrive_dt = datetime.fromisoformat(arrive_str)
+            depart_dt = datetime.fromisoformat(depart_str)
+        except ValueError:
+            gap = {
+                "arrive_at": arrive_at,
+                "arrive": arrive_str,
+                "depart_from": depart_from,
+                "depart": depart_str,
+                "derivable": False,
+                "late_arrival": False,
+                "nights_needed": [],
+                "covered": [],
+                "uncovered": [],
+                "pending_legs_inside": [],
+            }
+            gaps.append(gap)
+            continue
+
+        # Derive nights needed using PIVOT_HOUR (03:00)
+        # arrive <= (d+1)T03:00 < depart
+        nights_needed: list[str] = []
+        cur_d = arrive_dt.date() - timedelta(days=1)
+        end_d = depart_dt.date()
+        while cur_d <= end_d:
+            pivot_dt = datetime.combine(cur_d + timedelta(days=1), time(PIVOT_HOUR, 0))
+            if arrive_dt.tzinfo is not None:
+                pivot_dt = pivot_dt.replace(tzinfo=arrive_dt.tzinfo)
+            if arrive_dt <= pivot_dt < depart_dt:
+                nights_needed.append(cur_d.strftime("%Y-%m-%d"))
+            cur_d += timedelta(days=1)
+
+        # Connection on same day with 0 nights is omitted completely
+        if not nights_needed:
+            continue
+
+        late_arrival = any(
+            datetime.strptime(n, "%Y-%m-%d").date() < arrive_dt.date()
+            for n in nights_needed
+        )
+
+        covered: list[str] = []
+        uncovered_nights: list[str] = []
+        for n in nights_needed:
+            # Check if covered by any stay in stays (booked or not_needed)
+            is_cov = False
+            for s in stays:
+                s_in = s.get("check_in")
+                s_out = s.get("check_out")
+                if s_in and s_out and s_in <= n < s_out:
+                    is_cov = True
+                    break
+            if is_cov:
+                covered.append(n)
+            else:
+                uncovered_nights.append(n)
+
+        uncovered = group_consecutive_nights(uncovered_nights)
+
+        # Pending legs inside this gap
+        pending_legs_inside: list[dict] = []
+        arr_date_str = arrive_dt.date().strftime("%Y-%m-%d")
+        dep_date_str = depart_dt.date().strftime("%Y-%m-%d")
+        for u_idx, u_leg in unpurchased_legs:
+            u_out = u_leg.get("outbound_date")
+            if u_out and arr_date_str <= u_out <= dep_date_str:
+                pending_legs_inside.append({
+                    "leg": u_idx,
+                    "label": u_leg.get("label", ""),
+                    "outbound_date": u_out,
+                })
+
+        gaps.append({
+            "arrive_at": arrive_at,
+            "arrive": arrive_str,
+            "depart_from": depart_from,
+            "depart": depart_str,
+            "derivable": True,
+            "late_arrival": late_arrival,
+            "nights_needed": nights_needed,
+            "covered": covered,
+            "uncovered": uncovered,
+            "pending_legs_inside": pending_legs_inside,
+        })
+        all_needed_nights.update(nights_needed)
+
+    # Nights outside any gap for booked stays
+    outside_nights: set[str] = set()
+    for s in stays:
+        if s.get("status") == "booked":
+            s_in_str = s.get("check_in")
+            s_out_str = s.get("check_out")
+            if s_in_str and s_out_str:
+                try:
+                    s_in_d = datetime.strptime(s_in_str, "%Y-%m-%d").date()
+                    s_out_d = datetime.strptime(s_out_str, "%Y-%m-%d").date()
+                    cur = s_in_d
+                    while cur < s_out_d:
+                        n_str = cur.strftime("%Y-%m-%d")
+                        if n_str not in all_needed_nights:
+                            outside_nights.add(n_str)
+                        cur += timedelta(days=1)
+                except ValueError:
+                    pass
+
+    nights_outside_any_gap = sorted(list(outside_nights))
+
+    # Verdict determination:
+    # 1. not_derivable: missing home, or 0 schema-1 legs (handled above)
+    # 2. uncovered: any gap has uncovered nights > 0
+    # 3. partial: no uncovered nights, but not_derivable non-empty, any gap derivable: false, or open_start/open_end not None
+    # 4. covered: everything derivable and covered
+    total_uncovered = sum(sum(u["nights"] for u in g.get("uncovered", [])) for g in gaps)
+    if total_uncovered > 0:
+        verdict = "uncovered"
+    else:
+        has_non_derivable_leg = len(not_derivable) > 0
+        has_non_derivable_gap = any(not g.get("derivable", True) for g in gaps)
+        has_open_ends = (open_start is not None) or (open_end is not None)
+        if has_non_derivable_leg or has_non_derivable_gap or has_open_ends:
+            verdict = "partial"
+        else:
+            verdict = "covered"
+
+    return {
+        "file": filename,
+        "home": home,
+        "verdict": verdict,
+        "gaps": gaps,
+        "nights_outside_any_gap": nights_outside_any_gap,
+        "not_derivable": not_derivable,
+        "open_start": open_start,
+        "open_end": open_end,
+    }
+
+
 def run_purchase(args: argparse.Namespace) -> int:
     watchlist_path = Path(args.watchlist)
     if not watchlist_path.exists():
@@ -579,6 +1092,13 @@ def run_summary(args: argparse.Namespace) -> int:
         }
         paid_is_partial = (legacy_gaps > 0 or unmeasured_gaps > 0)
 
+        # Coverage derivation
+        cov = calculate_coverage(wl, path.name)
+        uncovered_nights_count = sum(
+            sum(u["nights"] for u in g.get("uncovered", []))
+            for g in cov.get("gaps", [])
+        )
+
         trip_summary = {
             "file": path.name,
             "trip": trip_name,
@@ -589,6 +1109,10 @@ def run_summary(args: argparse.Namespace) -> int:
             "paid_is_partial": paid_is_partial,
             "paid_gaps": paid_gaps,
             "open_issues": open_issues,
+            "coverage": {
+                "verdict": cov["verdict"],
+                "uncovered_nights": uncovered_nights_count,
+            },
         }
         trips.append(trip_summary)
 
@@ -597,6 +1121,136 @@ def run_summary(args: argparse.Namespace) -> int:
         "trips": trips,
         "unreadable": unreadable,
     }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+def run_home(args: argparse.Namespace) -> int:
+    watchlist_path = resolve_watchlist(args.watchlist)
+    if not watchlist_path.exists():
+        print(f"error: watchlist file not found: {watchlist_path}", file=sys.stderr)
+        return 2
+
+    try:
+        wl = json.loads(watchlist_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"error reading watchlist JSON: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(wl, dict):
+        print("error: watchlist must be a JSON object", file=sys.stderr)
+        return 2
+
+    raw_codes = [c.strip() for c in args.codes.split(",") if c.strip()]
+    if not raw_codes:
+        print("error: at least one IATA code must be provided", file=sys.stderr)
+        return 2
+
+    for c in raw_codes:
+        if len(c) != 3 or not c.isalpha() or not c.isupper():
+            print(f"validation error: invalid IATA code '{c}': must be 3 uppercase letters", file=sys.stderr)
+            return 2
+
+    wl["home"] = ",".join(raw_codes)
+    try:
+        atomic_write_json(watchlist_path, wl)
+    except Exception as exc:
+        print(f"error saving watchlist: {exc}", file=sys.stderr)
+        return 2
+
+    print(json.dumps({"home": wl["home"]}, indent=2, ensure_ascii=False))
+    return 0
+
+
+def run_stay(args: argparse.Namespace) -> int:
+    watchlist_path = resolve_watchlist(args.watchlist)
+    if not watchlist_path.exists():
+        print(f"error: watchlist file not found: {watchlist_path}", file=sys.stderr)
+        return 2
+
+    try:
+        wl = json.loads(watchlist_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"error reading watchlist JSON: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(wl, dict):
+        print("error: watchlist must be a JSON object", file=sys.stderr)
+        return 2
+
+    # Read stay data
+    if args.data == "-":
+        raw_data = sys.stdin.read()
+    else:
+        data_path = Path(args.data)
+        if not data_path.exists():
+            print(f"error: data file not found: {data_path}", file=sys.stderr)
+            return 2
+        try:
+            raw_data = data_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            print(f"error reading data file: {exc}", file=sys.stderr)
+            return 2
+
+    try:
+        stay_data = json.loads(raw_data)
+    except Exception as exc:
+        print(f"error parsing data JSON: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(stay_data, dict):
+        print("error: stay data must be a JSON object", file=sys.stderr)
+        return 2
+
+    errors, warnings = validate_stay(stay_data, wl.get("stays", []))
+    if errors:
+        for err in errors:
+            print(f"validation error: {err}", file=sys.stderr)
+        return 2
+
+    for w in warnings:
+        print(f"warning: {w}", file=sys.stderr)
+
+    wl.setdefault("stays", []).append(stay_data)
+    try:
+        atomic_write_json(watchlist_path, wl)
+    except Exception as exc:
+        print(f"error saving watchlist: {exc}", file=sys.stderr)
+        return 2
+
+    result = {
+        "stay": stay_data,
+        "warnings": warnings,
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+def run_coverage(args: argparse.Namespace) -> int:
+    candidate_paths = resolve_watchlists(args.watchlist)
+    trips: list[dict] = []
+    unreadable: list[dict] = []
+
+    for path in candidate_paths:
+        if not path.is_file():
+            unreadable.append({"file": path.name, "why": f"file not found: {path}"})
+            continue
+
+        try:
+            wl = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            unreadable.append({"file": path.name, "why": f"JSON parse error: {exc}"})
+            continue
+
+        if not isinstance(wl, dict) or "legs" not in wl or not isinstance(wl["legs"], list):
+            unreadable.append({"file": path.name, "why": "missing or invalid 'legs' list in watchlist"})
+            continue
+
+        trips.append(calculate_coverage(wl, path.name))
+
+    result: dict = {"trips": trips}
+    if unreadable:
+        result["unreadable"] = unreadable
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
@@ -642,6 +1296,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reference date for calculations (YYYY-MM-DD), defaults to today",
     )
 
+    # home sub-command
+    p_home = subparsers.add_parser(
+        "home", help="Record home airport codes for a watchlist"
+    )
+    p_home.add_argument("watchlist", help="Path to watchlist JSON file")
+    p_home.add_argument("codes", help="Comma-separated 3-letter IATA airport codes (e.g., 'POA' or 'POA,NVT')")
+
+    # stay sub-command
+    p_stay = subparsers.add_parser(
+        "stay", help="Record a stay for a watchlist"
+    )
+    p_stay.add_argument("watchlist", help="Path to watchlist JSON file")
+    p_stay.add_argument(
+        "--data", required=True, help="Path to JSON file with stay block, or - for stdin"
+    )
+
+    # coverage sub-command
+    p_coverage = subparsers.add_parser(
+        "coverage", help="Derive trip night coverage against stays"
+    )
+    p_coverage.add_argument(
+        "watchlist",
+        nargs="*",
+        help="Path(s) to watchlist JSON file(s). If omitted, scans state_dir() for watchlist-*.json",
+    )
+
     return parser
 
 
@@ -653,6 +1333,12 @@ def main(argv: list[str] | None = None) -> int:
         return run_purchase(args)
     if args.subcommand == "summary":
         return run_summary(args)
+    if args.subcommand == "home":
+        return run_home(args)
+    if args.subcommand == "stay":
+        return run_stay(args)
+    if args.subcommand == "coverage":
+        return run_coverage(args)
 
     return 0
 

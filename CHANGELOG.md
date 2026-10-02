@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for schema 1 blocks, isolating legacy and unmeasured gaps with `paid_is_partial`,
   reporting observation baselines and deadlines relative to `--today`, and reporting
   corrupted files to `unreadable` without aborting other files.
+- `skills/plan-a-trip/ledger.py` — `home`, `stay`, and `coverage` subcommands:
+  tracks trip night coverage by deriving required nights from flight gaps (the
+  03:00 rule: `arrive <= (d+1)T03:00 < depart`), matching against booked or
+  `not_needed` stays, reporting grouped uncovered ranges (`check_in`,
+  `check_out`, `nights`) and paid nights outside any gap. Integrates coverage
+  into `ledger.py summary` (`coverage: {verdict, uncovered_nights}`).
 
 ## [1.5.0] - 2026-09-01
 
