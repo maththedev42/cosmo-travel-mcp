@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against official portals or airline requirements tools with source URL and date,
   keep "required" and "recommended" strictly separated, and flag re-verification
   near departure.
+- `skills/plan-a-trip/ledger.py` — `purchase` subcommand: records purchased legs
+  in a watchlist using fixed schema 1 (`purchased: true`, flight segments with
+  airport-local floating times, locator, seller, positive amount with currency or
+  explicit null with reason, or `included_in_leg` for bundled tickets). Validates
+  passenger counts and origin/destination against the watchlist, writes atomically
+  without touching untouched keys, and preserves legacy purchase blocks in
+  `purchase_legacy` when `--replace` is given.
 
 ## [1.5.0] - 2026-09-01
 
