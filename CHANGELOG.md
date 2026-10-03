@@ -62,6 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `derivable: false` with `unmeasured_why`.
 - `skills/plan-a-trip/ledger.py` — `coverage` refinement: `pending_legs_inside` filters unpurchased legs to only those still watched (`watch` omitted or true), excluding legs settled without a ticket (`watch: false`).
 
+## [1.6.1] - 2026-10-03
+
+### Fixed
+
+- **`plan_email_search`**:
+  - `window_end` exclusivity: adjusted Gmail `before:` query clause by `+1 day` so that purchases on `window_end` are not excluded by Gmail's exclusive date filter.
+  - `destination` quoting: stripped double quotes and normalized whitespace in `destination` parameter to prevent broken search syntax; omitted destination query when the cleaned value is empty.
+  - Missing senders warning: added notice in `limits` when a requested kind (e.g. `car`, `insurance`, `ticket`) has no senders registered in `EMAIL_SENDERS` and falls back solely to keyword search.
+  - Sender registry privacy and cleanup: removed personal and non-purchase senders (`seucheckin@magikey.com.br` and `sender@notifications.onfly.com.br`), and dropped uniform `seen` metadata fields from all entries.
+
 ## [1.6.0] - 2026-10-03
 
 ### Added
