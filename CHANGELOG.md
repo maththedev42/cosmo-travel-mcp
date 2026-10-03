@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nights; if zero nights are possible, the layover is omitted as a connection (allowing
   verdicts to reach `covered`); if one or more nights are possible, it is reported as
   `derivable: false` with `unmeasured_why`.
+- `skills/plan-a-trip/ledger.py` — `coverage` refinement: `pending_legs_inside` filters unpurchased legs to only those still watched (`watch` omitted or true), excluding legs settled without a ticket (`watch: false`).
 
 ## [1.5.0] - 2026-09-01
 

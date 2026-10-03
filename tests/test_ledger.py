@@ -2065,6 +2065,200 @@ def test_coverage_pending_legs_inside(ledger, tmp_path, capsys):
     assert pending["outbound_date"] == "2026-05-12"
 
 
+def test_is_leg_watched(ledger):
+    """Test is_leg_watched helper against various leg states."""
+    assert ledger.is_leg_watched({"purchased": False, "watch": True}) is True
+    assert ledger.is_leg_watched({"purchased": False}) is True
+    assert ledger.is_leg_watched({"watch": True}) is True
+    assert ledger.is_leg_watched({}) is True
+    assert ledger.is_leg_watched({"purchased": False, "watch": False}) is False
+    assert ledger.is_leg_watched({"watch": False}) is False
+    assert ledger.is_leg_watched({"purchased": True, "watch": True}) is False
+    assert ledger.is_leg_watched({"purchased": True, "watch": False}) is False
+    assert ledger.is_leg_watched({"purchased": True}) is False
+
+
+def test_coverage_pending_legs_inside_watch_false_omitted(ledger, tmp_path, capsys):
+    """Leg with watch: false inside a gap is omitted from pending_legs_inside."""
+    wl = {
+        "trip": "Pending Watch False Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 1", "from": "POA", "to": "MIA", "depart": "2026-05-10T06:00", "arrive": "2026-05-10T18:00"}
+                    ],
+                },
+            },
+            {
+                "label": "MIA → MCO (car)",
+                "outbound_date": "2026-05-12",
+                "purchased": False,
+                "watch": False,
+                "watch_off_reason": "decided by renting a car",
+            },
+            {
+                "label": "MCO → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 2", "from": "MCO", "to": "POA", "depart": "2026-05-15T11:00", "arrive": "2026-05-15T22:00"}
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-pending-watch-false.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert gap["pending_legs_inside"] == []
+
+
+def test_coverage_pending_legs_inside_watch_absent_listed(ledger, tmp_path, capsys):
+    """Leg without watch key inside a gap continues listed in pending_legs_inside."""
+    wl = {
+        "trip": "Pending Watch Absent Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 1", "from": "POA", "to": "MIA", "depart": "2026-05-10T06:00", "arrive": "2026-05-10T18:00"}
+                    ],
+                },
+            },
+            {
+                "label": "MIA → MCO",
+                "outbound_date": "2026-05-12",
+                "purchased": False,
+            },
+            {
+                "label": "MCO → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 2", "from": "MCO", "to": "POA", "depart": "2026-05-15T11:00", "arrive": "2026-05-15T22:00"}
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-pending-watch-absent.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert len(gap["pending_legs_inside"]) == 1
+    assert gap["pending_legs_inside"][0]["leg"] == 1
+    assert gap["pending_legs_inside"][0]["outbound_date"] == "2026-05-12"
+
+
+def test_coverage_pending_legs_inside_watch_true_listed(ledger, tmp_path, capsys):
+    """Leg with watch: true inside a gap continues listed in pending_legs_inside."""
+    wl = {
+        "trip": "Pending Watch True Trip",
+        "home": "POA",
+        "legs": [
+            {
+                "label": "POA → MIA",
+                "outbound_date": "2026-05-10",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC1",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 1", "from": "POA", "to": "MIA", "depart": "2026-05-10T06:00", "arrive": "2026-05-10T18:00"}
+                    ],
+                },
+            },
+            {
+                "label": "MIA → MCO",
+                "outbound_date": "2026-05-12",
+                "purchased": False,
+                "watch": True,
+            },
+            {
+                "label": "MCO → POA",
+                "outbound_date": "2026-05-15",
+                "purchased": True,
+                "purchase": {
+                    "schema": 1,
+                    "date": "2026-03-01",
+                    "seller": "Copa",
+                    "locator": "LOC2",
+                    "adults": 1,
+                    "paid": {"amount": 1000.0, "currency": "BRL"},
+                    "source": "email",
+                    "segments": [
+                        {"flight": "CM 2", "from": "MCO", "to": "POA", "depart": "2026-05-15T11:00", "arrive": "2026-05-15T22:00"}
+                    ],
+                },
+            },
+        ],
+    }
+    wl_path = tmp_path / "watchlist-pending-watch-true.json"
+    wl_path.write_text(json.dumps(wl), encoding="utf-8")
+
+    code = ledger.main(["coverage", str(wl_path)])
+    assert code == 0
+    out = json.loads(capsys.readouterr().out)
+    trip = out["trips"][0]
+    gap = trip["gaps"][0]
+    assert len(gap["pending_legs_inside"]) == 1
+    assert gap["pending_legs_inside"][0]["leg"] == 1
+    assert gap["pending_legs_inside"][0]["outbound_date"] == "2026-05-12"
+
+
 def test_watch_main_preserves_home_and_stays(ledger, watch_mod, tmp_path, monkeypatch):
     """Running watch.py on a watchlist with home and stays preserves both keys untouched."""
     wl = {
