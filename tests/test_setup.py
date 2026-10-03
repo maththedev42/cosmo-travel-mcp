@@ -8,6 +8,7 @@ import httpx
 import pytest
 import respx
 
+from cosmo_travel_mcp.onboarding import KEYLESS_TOOLS
 from cosmo_travel_mcp.tools.setup import (
     ROUTES_API_BASE,
     SERPAPI_ACCOUNT_URL,
@@ -202,7 +203,7 @@ async def test_check_setup_neither_key_set(monkeypatch):
     ]
     # These need no key at all, so "neither key set" leaves them usable —
     # they are deliberately exempt from the not-ready assertions below.
-    keyless_tools = ["check_itinerary", "build_calendar"]
+    keyless_tools = set(KEYLESS_TOOLS)
 
     for tool in result["tools"]:
         if tool["tool"] in keyless_tools:
@@ -511,9 +512,8 @@ async def test_keyless_tools_are_ready_without_any_key(monkeypatch):
     monkeypatch.delenv("GOOGLE_MAPS_API_KEY", raising=False)
 
     result = await check_setup()
-    keyless = {t["tool"]: t for t in result["tools"] if t["tool"] in
-               ("check_itinerary", "build_calendar")}
+    keyless = {t["tool"]: t for t in result["tools"] if t["tool"] in KEYLESS_TOOLS}
 
-    assert set(keyless) == {"check_itinerary", "build_calendar"}
+    assert set(keyless) == set(KEYLESS_TOOLS)
     assert all(t["ready"] for t in keyless.values())
     assert "costs nothing" in result["summary"]

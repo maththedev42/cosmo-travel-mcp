@@ -57,7 +57,7 @@ TICKETMASTER_TOOLS = ("search_ticketmaster_events",)
 
 #: No key, no network, no quota. Listed rather than inferred, because a tool
 #: absent from the readiness report reads as a tool that does not exist.
-KEYLESS_TOOLS = ("check_itinerary", "build_calendar")
+KEYLESS_TOOLS = ("check_itinerary", "build_calendar", "plan_email_search")
 
 
 def install_command() -> str:
