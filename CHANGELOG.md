@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against official portals or airline requirements tools with source URL and date,
   keep "required" and "recommended" strictly separated, and flag re-verification
   near departure.
+- `skills/plan-a-trip/SKILL.md` — rule 13: search the mailbox everywhere, including
+  trash via `includeTrash: true` or `in:anywhere`. Search by category rather than
+  only flights, prioritize confirmed mailbox senders over hypotheses, retry failed
+  thread reads with `get_message`, verify body dates and destinations to prevent
+  misattribution, treat empty results as negative claims requiring documented
+  parameters, declare unread PDF attachments as open gaps, warn on tight cancellation
+  windows, and use `plan_email_search` when available.
 - `skills/plan-a-trip/ledger.py` — `purchase` subcommand: records purchased legs
   in a watchlist using fixed schema 1 (`purchased: true`, flight segments with
   airport-local floating times, locator, seller, positive amount with currency or

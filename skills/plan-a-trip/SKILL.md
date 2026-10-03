@@ -13,7 +13,7 @@ Read **Method** before spending a single search. Then follow **Protocol**.
 
 ---
 
-## Method — twelve rules, each one a scar
+## Method — thirteen rules, each one a scar
 
 ### 1. Never compare entry doors on a single date
 Comparing three arrival cities on one date picked the wrong city. Three doors
@@ -228,6 +228,49 @@ evaluating an international itinerary:
    has an expiration date. State when to re-check (typically 2–4 weeks before
    departure).
 
+### 13. Search the mailbox everywhere, and read an empty result as a claim
+A search that returns nothing is not proof that a purchase does not exist — it is a
+claim about the query that was run.
+Scar from 2026-10-03: when checking booked lodging for two separate trips, an email
+search concluded that neither trip had any confirmation in the mailbox. In truth,
+confirmed receipts for both trips existed in the mailbox — but had been moved to the
+trash folder, which the email connector excludes by default. A broad keyword search
+separately misattributed a ticket cancellation from an unrelated event to a trip, and
+an airline confirmation hid its full itinerary inside a PDF attachment that the
+connector could not read.
+
+When retrieving booking confirmations, receipts, or tickets from email:
+
+1. **Include the trash.** Every confirmation search must run with trash included
+   (`includeTrash: true` or `in:anywhere` in Gmail syntax). The connector excludes
+   the trash folder by default; omitting it silently misses real bookings.
+2. **Search by category, not just flights.** Probe for flights, lodging, rental cars,
+   insurance, and event tickets/passes. A "closed" trip with no lodging found is an
+   uninvestigated gap, not a confirmed absence.
+3. **Observed senders first, hypotheses second.** Start with senders confirmed to
+   exist in that specific mailbox. Only then broaden to plausible platforms, and
+   state explicitly in the response which senders were unconfirmed hypotheses.
+4. **If the thread fails, read the message directly.** A permissions or fetch error
+   on `get_thread` (frequent on trashed messages) is not proof of non-existence:
+   retry with `get_message` using the individual message ID.
+5. **Broad queries misattribute.** Matching an email to a trip requires verifying dates
+   and destinations in the body text. A generic keyword search (e.g. an ticketing
+   company name) previously attributed a concert cancellation to an unrelated trip.
+6. **An empty result is a claim.** Before concluding that nothing was found, state
+   what was searched: senders queried, date windows inspected, and whether trash was
+   included. This is rule 9 (control the negative before asserting absence) applied
+   to the mailbox.
+7. **Declare unread PDF attachments out loud.** When an email delivers the confirmation
+   or itinerary only inside a PDF attachment that the connector cannot parse, declare
+   this unread attachment as an open gap rather than staying silent.
+8. **Warn on cancellation windows.** When finding a lodging reservation, check its
+   cancellation terms: some platforms offer only a 24-hour free cancellation window,
+   and today's date may fall inside it. Alert the traveller immediately.
+9. **Use `plan_email_search` when available.** If the server provides the
+   `plan_email_search` tool (v1.6.0+), begin with it — it returns the structured
+   queries, sender tiers, and connector parameters. If unavailable, follow the above
+   points manually.
+
 ---
 
 ## Protocol
@@ -338,7 +381,9 @@ Two things the schema forces you to fill in, and should:
 ### 10. Record what is already bought — `ledger.py`
 After offering the price watch for remaining unpurchased legs, record whatever has
 already been purchased (`add-leg` + `purchase`, `stay`), and run `coverage` before
-declaring a trip closed. A trip bought without prior vigil starts here; a trip
+declaring a trip closed. Before concluding that any leg or stay was not bought, apply
+rule 13 (search the mailbox everywhere, including trash) — an initial empty query is
+not proof of absence. A trip bought without prior vigil starts here; a trip
 transitioning from planning to booking records legs as they close:
 1. Append bought legs with `ledger.py add-leg` (or `add-leg --create` if starting fresh).
 2. Record flight confirmation details, local times, and costs with `ledger.py purchase`.

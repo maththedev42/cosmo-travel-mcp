@@ -192,7 +192,7 @@ and link it, or copy the directory:
 ln -s "$PWD/skills/plan-a-trip" ~/.claude/skills/plan-a-trip
 ```
 
-It carries twelve method rules, each one a mistake made while planning a real
+It carries thirteen method rules, each one a mistake made while planning a real
 15-day, three-city trip:
 
 - Never compare entry doors on a single date — three doors × three dates found
