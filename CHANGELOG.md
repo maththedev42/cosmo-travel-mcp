@@ -62,6 +62,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `derivable: false` with `unmeasured_why`.
 - `skills/plan-a-trip/ledger.py` — `coverage` refinement: `pending_legs_inside` filters unpurchased legs to only those still watched (`watch` omitted or true), excluding legs settled without a ticket (`watch: false`).
 
+## [1.6.0] - 2026-10-03
+
+### Added
+
+- **`plan_email_search`** — pure computation tool (keyless, zero API quota, zero
+  network calls) that generates structured search coordinates and query syntax to
+  find travel bookings, receipts, and vouchers across an email mailbox.
+  - Every query enforces `connector_args: {"includeTrash": true}` to ensure bookings
+    moved to trash are not missed.
+  - Structured query passes: Pass 1 probes confirmed platform senders observed in
+    real mailboxes (LATAM, Copa, AA, 123milhas, Airbnb, Magikey, Onfly); Pass 2
+    (optional) probes unconfirmed platform hypotheses.
+  - Generates broad confirmation keyword queries (`"reserva confirmada"`,
+    `"booking confirmation"`, `"recibo"`, `"voucher"`, `"sua viagem"`), dedicated
+    destination coverage queries, and direct locator searches.
+  - Returns `reading` instructions (e.g. falling back to `get_message` on trash permissions
+    errors, requesting HTML when text is empty, declaring unread PDF attachments) and
+    `extract` field schemas matching `skills/plan-a-trip/ledger.py`.
+
 ## [1.5.0] - 2026-09-01
 
 ### Added

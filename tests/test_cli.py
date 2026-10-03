@@ -449,6 +449,7 @@ def test_every_registered_tool_belongs_to_exactly_one_key_group():
         car_rentals,
         cheapest_dates,
         driving,
+        email_search,
         events,
         flights,
         hotels,
@@ -461,7 +462,7 @@ def test_every_registered_tool_belongs_to_exactly_one_key_group():
 
     registry = _Registry()
     for module in (
-        flights, car_rentals, cheapest_dates, driving, events,
+        flights, car_rentals, cheapest_dates, driving, email_search, events,
         hotels, itinerary, places, setup_tool, prompts, trip_windows,
     ):
         module.register(registry)

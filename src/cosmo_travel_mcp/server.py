@@ -10,7 +10,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 _INSTRUCTIONS = """\
-cosmo-travel-mcp bundles fourteen travel-planning tools backed by licensed data
+cosmo-travel-mcp bundles fifteen travel-planning tools backed by licensed data
 providers (SerpAPI for flights/hotels/events/places, Google Maps Routes API
 for driving, Ticketmaster Discovery API for event sales dates).
 
@@ -55,7 +55,12 @@ them back as a parameter to get the return legs for that outbound.
 `search_car_rentals` returns offices, hours and contacts — never rates. No
 free provider exposes car rental pricing, so hand the traveller the office's
 `website` to quote it and treat the rate as unmeasured until they report one
-back. Do not estimate a daily rate from this tool's output."""
+back. Do not estimate a daily rate from this tool's output.
+
+`plan_email_search` generates structured search coordinates and query syntax to
+find booking confirmations, receipts, and vouchers across a mailbox (including
+trash). It performs pure local computation without reading, fetching, or
+connecting to any email service."""
 
 mcp = FastMCP(
     "cosmo-travel-mcp",
@@ -71,6 +76,7 @@ def main() -> None:
         car_rentals,
         cheapest_dates,
         driving,
+        email_search,
         events,
         flights,
         hotels,
@@ -86,6 +92,7 @@ def main() -> None:
     car_rentals.register(mcp)
     cheapest_dates.register(mcp)
     driving.register(mcp)
+    email_search.register(mcp)
     events.register(mcp)
     hotels.register(mcp)
     itinerary.register(mcp)

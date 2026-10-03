@@ -2,7 +2,7 @@
 
 # cosmo-travel-mcp
 
-One MCP server with fourteen travel tools — flight search, multi-city itineraries,
+One MCP server with fifteen travel tools — flight search, multi-city itineraries,
 accommodations, things to do, events, event sales launch dates, car rental offices, drive-vs-fly comparisons,
 itinerary checking and calendar export — all backed
 by **licensed commercial data** (SerpAPI for flights and hotels, Google Maps Routes
@@ -57,12 +57,15 @@ The rest of this section is the same thing, for reading ahead of time.
    # then re-run the `claude mcp add` command below, with -e SERPAPI_API_KEY=…
    ```
 
-This one key unlocks nine of the fourteen tools: `search_flights`,
+This one key unlocks nine of the fifteen tools: `search_flights`,
 `search_multi_city`, `search_accommodations`, `get_accommodation_details`,
 `search_cheapest_dates`, `compare_trip_windows`, `search_events`,
 `search_things_to_do`, and `search_car_rentals`.
-`check_itinerary` and `build_calendar` need no key at all — they are pure
-computation and cost nothing.
+`check_itinerary`, `build_calendar`, and `plan_email_search` need no key at all — they are pure
+computation and cost nothing. `plan_email_search` generates structured search coordinates
+and query syntax to find booking confirmations, receipts, and vouchers across a mailbox
+(always including the trash folder) for an AI to execute via an email connector, without
+reading email itself.
 
 > **Important:** `search_cheapest_dates` costs **multiple searches per call** (up to
 > `max_calls`, default 6, max 15). Budget accordingly — a single cheapest-dates query
@@ -263,6 +266,7 @@ not something the MCP server starts on its own.
 | `compare_trip_windows` | `origin`, `destination`, `anchor_date`, `lodging_location`, `adults` (required), `min_nights?`, `max_nights?`, `max_windows?` (default 3, max 5), `currency?`, `country?`, `language?`, `max_stops?`, `min_rating?`, `hotel_class?`, `vacation_rentals?` | Prices the trip windows closest to a fixed night (e.g. a concert) — one flight search and one hotel search per window — and ranks them by **combined** total, so a date window is only cheaper once the extra nights are paid for. Reports `break_even_nightly` where a longer window saves on airfare. **Costs exactly 2 SerpAPI searches per window priced.** |
 | `check_itinerary` | `days` ([{date, stops:[{name, start, end, operating_hours?, coordinates?}]}]) | Checks a drafted itinerary for conflicts: stops on a closing day, visits outside opening hours, overlapping stops, and gaps too short to cross the distance. Returns findings (`blocker` / `warning` / `unchecked`), not prose. **Costs nothing — no API calls.** |
 | `build_calendar` | `items` ([{title, start, end?, location?, description?}]), `calendar_name?`, `timezone_name?` | Generates an RFC 5545 `.ics` plus a Google Calendar link per event. Times are floating local wall-clock. Cannot write to a calendar itself — if a calendar MCP is connected, the AI uses that (with your approval); otherwise it shows the links. **Costs nothing — no API calls.** |
+| `plan_email_search` | `kinds` (subset of `["flight", "lodging", "car", "insurance", "ticket"]`), `destination?`, `window_start?`, `window_end?`, `known_locators?`, `include_unconfirmed_senders?` | Generates structured search coordinates and query syntax to find booking confirmations and receipts across a mailbox (including trash via `includeTrash: true`). Pure computation — does not connect to, read, or search email. **Costs nothing — no API calls.** |
 | `check_setup` | _(none)_ | Validates all API keys (SerpAPI, Maps, Ticketmaster) and reports which tools are ready. |
 
 ## What each call costs
@@ -301,6 +305,7 @@ relocate that directory.
 | `search_car_rentals` | 1 | 0 | One per pickup area. Comparing an airport against a downtown branch is 2. |
 | `check_itinerary` | 0 | 0 | Pure computation. |
 | `build_calendar` | 0 | 0 | Pure computation. |
+| `plan_email_search` | 0 | 0 | Pure computation — generates search coordinates, never reads email. |
 | `search_cheapest_dates` | up to `max_calls` (default 6, cap 15) | 0 | Each sampled date costs one search. |
 | `compare_trip_windows` | 2 × windows priced (default 3, cap 5) | 0 | One flight + one hotel per window; reports the real `searches_spent`. |
 | `compare_drive_or_fly` | 0 | 1 | |

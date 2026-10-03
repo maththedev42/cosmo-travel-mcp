@@ -1,6 +1,6 @@
 # cosmo-travel-mcp
 
-Python MCP server — thirteen travel tools over SerpAPI (flights, lodging, events, places)
+Python MCP server — fifteen travel tools over SerpAPI (flights, lodging, events, places)
 and the Google Maps Routes API (driving). Published to PyPI as `cosmo-travel-mcp`.
 
 ## Commands
