@@ -705,6 +705,16 @@ def group_consecutive_nights(nights: list[str]) -> list[dict]:
     return ranges
 
 
+def is_leg_watched(leg: dict) -> bool:
+    """Return True if leg is unpurchased and still watched (omitted or true).
+
+    Matches the criterion of watch.py::legs_to_watch: a leg leaves rotation if
+    purchased is True, or if watch is False (e.g. settled without a ticket or
+    reference-only leg).
+    """
+    return not leg.get("purchased") and bool(leg.get("watch", True))
+
+
 def calculate_coverage(wl: dict, filename: str) -> dict:
     """Derive flight gaps and compare against stays.
 
@@ -786,11 +796,11 @@ def calculate_coverage(wl: dict, filename: str) -> dict:
     if last_seg.get("to") not in home_codes:
         open_end = last_seg.get("arrive", "")[:10] if last_seg.get("arrive") else sorted_legs[-1][1].get("outbound_date")
 
-    # Unpurchased legs to check for pending_legs_inside
+    # Unpurchased legs that are still watched to check for pending_legs_inside
     unpurchased_legs = [
         (idx, leg)
         for idx, leg in enumerate(wl.get("legs", []))
-        if leg.get("purchased") is not True
+        if is_leg_watched(leg)
     ]
 
     stays = wl.get("stays", [])
@@ -1154,7 +1164,7 @@ def run_summary(args: argparse.Namespace) -> int:
         for idx, leg in enumerate(wl["legs"]):
             if leg.get("purchased") is True:
                 state = "purchased"
-            elif leg.get("watch", True):
+            elif is_leg_watched(leg):
                 state = "watching"
             else:
                 state = "settled_without_ticket"
