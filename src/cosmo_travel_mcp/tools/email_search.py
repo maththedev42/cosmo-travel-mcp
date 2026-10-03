@@ -14,7 +14,7 @@ are frequently moved to the trash folder, which email connectors exclude by defa
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -29,148 +29,115 @@ EMAIL_SENDERS: tuple[dict[str, Any], ...] = (
         "kind": "flight",
         "sender": "info@info.latam.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "LATAM compra de passagem",
     },
     {
         "kind": "flight",
         "sender": "notifications@cns.copaair.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "Copa Airlines reserva de voo",
     },
     {
         "kind": "flight",
         "sender": "no-reply@info.email.aa.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "American Airlines confirmação de voo",
     },
     {
         "kind": "flight",
         "sender": "contato@123milhas.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "123milhas pedido e nota fiscal",
     },
     {
         "kind": "lodging",
         "sender": "automated@airbnb.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "Airbnb confirmação e recibo",
     },
     {
         "kind": "lodging",
         "sender": "express@airbnb.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "Airbnb conversa com anfitrião",
     },
     {
         "kind": "lodging",
         "sender": "reply@email-support.airbnb.com",
         "confirmed": True,
-        "seen": "2026-08-01",
         "what": "Airbnb suporte",
-    },
-    {
-        "kind": "lodging",
-        "sender": "seucheckin@magikey.com.br",
-        "confirmed": True,
-        "seen": "2026-08-01",
-        "what": "Magikey aviso de checkout de studio",
-    },
-    {
-        "kind": "lodging",
-        "sender": "sender@notifications.onfly.com.br",
-        "confirmed": True,
-        "seen": "2026-08-01",
-        "what": "Onfly reserva corporativa de hotel",
     },
     # Unconfirmed platform hypotheses (never observed in this mailbox)
     {
         "kind": "flight",
         "sender": "voegol.com.br",
         "confirmed": False,
-        "seen": "",
         "what": "Gol Linhas Aéreas (hipótese)",
     },
     {
         "kind": "flight",
         "sender": "voeazul.com.br",
         "confirmed": False,
-        "seen": "",
         "what": "Azul Linhas Aéreas (hipótese)",
     },
     {
         "kind": "flight",
         "sender": "united.com",
         "confirmed": False,
-        "seen": "",
         "what": "United Airlines (hipótese)",
     },
     {
         "kind": "flight",
         "sender": "decolar.com",
         "confirmed": False,
-        "seen": "",
         "what": "Decolar voos (hipótese)",
     },
     {
         "kind": "flight",
         "sender": "despegar.com",
         "confirmed": False,
-        "seen": "",
         "what": "Despegar voos (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "booking.com",
         "confirmed": False,
-        "seen": "",
         "what": "Booking.com (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "expedia.com",
         "confirmed": False,
-        "seen": "",
         "what": "Expedia (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "hoteis.com",
         "confirmed": False,
-        "seen": "",
         "what": "Hoteis.com (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "hostelworld.com",
         "confirmed": False,
-        "seen": "",
         "what": "Hostelworld (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "agoda.com",
         "confirmed": False,
-        "seen": "",
         "what": "Agoda (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "decolar.com",
         "confirmed": False,
-        "seen": "",
         "what": "Decolar hospedagem (hipótese)",
     },
     {
         "kind": "lodging",
         "sender": "despegar.com",
         "confirmed": False,
-        "seen": "",
         "what": "Despegar hospedagem (hipótese)",
     },
 )
@@ -275,7 +242,7 @@ async def plan_email_search(
         kinds: List of categories to search. Subset of ["flight", "lodging", "car", "insurance", "ticket"].
         destination: City or country to search as a broad keyword term (never combined inside sender queries).
         window_start: ISO date (YYYY-MM-DD) of the earliest probable purchase date (not travel date).
-        window_end: ISO date (YYYY-MM-DD) of the latest probable purchase date.
+        window_end: ISO date (YYYY-MM-DD) of the latest probable purchase date (inclusive; queries adjust by +1 day for Gmail before: exclusivity).
         known_locators: List of alphanumeric reservation codes (5-20 characters) to locate known purchases.
         include_unconfirmed_senders: Whether to generate pass 2 queries for unconfirmed hypothesis senders.
 
@@ -308,7 +275,7 @@ async def plan_email_search(
     if window_end:
         try:
             d_end = datetime.strptime(window_end, "%Y-%m-%d")
-            before_str = d_end.strftime("%Y/%m/%d")
+            before_str = (d_end + timedelta(days=1)).strftime("%Y/%m/%d")
         except ValueError:
             raise ValueError(
                 f"window_end must be in YYYY-MM-DD format, got {window_end!r}"
@@ -400,7 +367,7 @@ async def plan_email_search(
     })
 
     # Pass 3b: Destination query (broad coverage, separate from senders)
-    dest_clean = destination.strip()
+    dest_clean = re.sub(r"\s+", " ", destination.replace('"', "")).strip()
     if dest_clean:
         dest_term = f'"{dest_clean}"'
         dest_query = f"{dest_term} {KEYWORD_EXPRESSION}{date_suffix}"
@@ -430,6 +397,12 @@ async def plan_email_search(
         "O registro de remetentes reflete apenas plataformas observadas em caixas reais; remetentes não confirmados são hipóteses.",
         "O servidor não lê e-mail nem executa buscas: utilize as consultas geradas no conector de e-mail disponível.",
     ]
+    for k in kinds:
+        has_senders = any(s["kind"] == k for s in EMAIL_SENDERS)
+        if not has_senders:
+            limits.append(
+                f"Nenhum remetente registrado para a categoria '{k}'; apenas consultas amplas por palavras-chave foram geradas."
+            )
     if not window_start and not window_end:
         limits.append(
             "Busca irrestrita por data: nenhuma janela foi informada; considere fornecer window_start e window_end para restringir o período da busca."

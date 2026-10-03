@@ -254,7 +254,7 @@ When retrieving booking confirmations, receipts, or tickets from email:
    on `get_thread` (frequent on trashed messages) is not proof of non-existence:
    retry with `get_message` using the individual message ID.
 5. **Broad queries misattribute.** Matching an email to a trip requires verifying dates
-   and destinations in the body text. A generic keyword search (e.g. an ticketing
+   and destinations in the body text. A generic keyword search (e.g. a ticketing
    company name) previously attributed a concert cancellation to an unrelated trip.
 6. **An empty result is a claim.** Before concluding that nothing was found, state
    what was searched: senders queried, date windows inspected, and whether trash was

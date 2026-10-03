@@ -135,7 +135,16 @@ async def test_date_window_formatting_and_validation():
     )
     for q in plan["queries"]:
         assert "after:2026/09/01" in q["gmail_query"]
-        assert "before:2026/10/04" in q["gmail_query"]
+        assert "before:2026/10/05" in q["gmail_query"]
+
+    # Month-crossing and year-crossing adjustments (+1 day for Gmail before: exclusivity)
+    plan_month = await plan_email_search(kinds=["flight"], window_end="2026-09-30")
+    for q in plan_month["queries"]:
+        assert "before:2026/10/01" in q["gmail_query"]
+
+    plan_year = await plan_email_search(kinds=["flight"], window_end="2026-12-31")
+    for q in plan_year["queries"]:
+        assert "before:2027/01/01" in q["gmail_query"]
 
     # Invalid dates raise ValueError
     with pytest.raises(ValueError, match="window_start must be in YYYY-MM-DD format"):
@@ -256,12 +265,12 @@ async def test_reading_instructions_cover_required_scenarios():
 
 
 # ---------------------------------------------------------------------------
-# 8. Sender registry integrity and parity with 00-contexto.md
+# 8. Sender registry integrity and privacy
 # ---------------------------------------------------------------------------
 
 
 def test_sender_registry_integrity_and_confirmed_table_parity():
-    """All confirmed senders must match 00-contexto.md exactly, carry valid ISO seen dates,
+    """All confirmed senders must match expected set, contain no seen field,
     and contain no personal email addresses.
     """
     expected_confirmed = {
@@ -272,8 +281,6 @@ def test_sender_registry_integrity_and_confirmed_table_parity():
         "automated@airbnb.com",
         "express@airbnb.com",
         "reply@email-support.airbnb.com",
-        "seucheckin@magikey.com.br",
-        "sender@notifications.onfly.com.br",
     }
 
     confirmed_in_registry = {
@@ -281,23 +288,69 @@ def test_sender_registry_integrity_and_confirmed_table_parity():
     }
 
     assert confirmed_in_registry == expected_confirmed, (
-        f"confirmed senders in registry disagree with 00-contexto.md: "
+        f"confirmed senders in registry disagree with expected: "
         f"unexpected={confirmed_in_registry - expected_confirmed}, "
         f"missing={expected_confirmed - confirmed_in_registry}"
     )
 
     for s in EMAIL_SENDERS:
+        assert "seen" not in s, f"entry for {s['sender']} must not contain 'seen'"
         if s["confirmed"]:
-            assert s["seen"], f"confirmed sender {s['sender']} missing seen date"
-            # Verify seen is a valid ISO date
-            datetime.fromisoformat(s["seen"])
             # Ensure no personal email addresses (e.g. personal gmail/hotmail/yahoo)
             domain = s["sender"].split("@")[-1]
             assert domain not in ("gmail.com", "hotmail.com", "yahoo.com", "outlook.com")
 
 
 # ---------------------------------------------------------------------------
-# 9. Drift check: plan_email_search in KEYLESS_TOOLS
+# 9. Destination query quotes normalization and empty destination
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_destination_handling_quotes_and_empty():
+    """Destination query strips double quotes, collapses whitespace,
+    and produces no destination query if empty after cleanup.
+    """
+    # Destination with quotes should not produce odd count of quotes
+    plan_quotes = await plan_email_search(
+        kinds=["flight"],
+        destination='Lisboa "x',
+    )
+    dest_queries = [q for q in plan_quotes["queries"] if q["kind"] == "destination"]
+    assert len(dest_queries) == 1
+    gq = dest_queries[0]["gmail_query"]
+    assert gq.count('"') % 2 == 0
+    assert '"Lisboa x"' in gq
+
+    # Destination that is only quotes or whitespace generates NO destination query
+    for empty_dest in ['"', '   "   ', '   ']:
+        plan_empty = await plan_email_search(
+            kinds=["flight"],
+            destination=empty_dest,
+        )
+        dest_empty_queries = [q for q in plan_empty["queries"] if q["kind"] == "destination"]
+        assert len(dest_empty_queries) == 0, f"unexpected destination query for {empty_dest!r}"
+
+
+# ---------------------------------------------------------------------------
+# 10. Kinds without senders warning in limits
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_kinds_without_senders_warn_in_limits():
+    """Kinds without senders in EMAIL_SENDERS (like car, insurance, ticket)
+    add a warning notice in limits, while kinds with senders (flight, lodging) do not.
+    """
+    plan_car = await plan_email_search(kinds=["car"])
+    assert any("Nenhum remetente registrado para a categoria 'car'" in limit for limit in plan_car["limits"])
+
+    plan_flight = await plan_email_search(kinds=["flight"])
+    assert not any("Nenhum remetente registrado para a categoria 'flight'" in limit for limit in plan_flight["limits"])
+
+
+# ---------------------------------------------------------------------------
+# 11. Drift check: plan_email_search in KEYLESS_TOOLS
 # ---------------------------------------------------------------------------
 
 
